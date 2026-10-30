@@ -64,7 +64,9 @@ def test_windows_jobs_run_on_pull_requests_and_by_hand_but_not_on_push():
     assert set(on["pull_request"]["branches"]) == {"main", "master"}
     for name in ("unit", "tk", "browser"):
         job = workflow["jobs"][name]
-        assert job["if"] == "github.event_name != 'push'", name
+        # 30.10.2026: בריפו הציבורי (runner בלי חיוב) unit רץ גם על push ל-main; tk ו-browser נשארים ל-PR ולהרצה ידנית
+        expected = "github.event_name != 'push'" + (" || github.event.repository.private == false" if name == "unit" else "")
+        assert job["if"] == expected, name
         assert job["needs"] == "lint", name
     assert "if" not in workflow["jobs"]["lint"]
 

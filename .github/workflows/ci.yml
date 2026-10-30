@@ -15,6 +15,10 @@ name: CI
 #    וכו'); ruff ו-py_compile לא תלויים במערכת.
 #  - unit, tk ו-browser (Windows, פי 2) רק ב-PR אל master וב-workflow_dispatch; ב-push ל-master - רק lint.
 #  - הם מחכים ל-lint (needs): שגיאת lint לא משלמת על שלושה runners של Windows.
+#
+# הריפו הציבורי (30.10.2026, אותו קובץ מגיע אליו בייצוא): ב-runner ציבורי אין חיוב, אז שם unit רץ גם על push ל-main
+# (github.event.repository.private == false). tk ו-browser נשארים ל-PR ול-workflow_dispatch בשני הריפואים.
+# כל action מוצמד ל-SHA מלא (הגרסה בהערה) - OpenSSF Scorecard בודק את זה, ו-tag שזז לא משנה את מה שרץ.
 on:
   push:
     branches: [main, master]
@@ -38,6 +42,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 # windows-latest (unit, tk, browser) - הפרויקט משתמש בחבילות ייחודיות ל-Windows (winsound, pystray,
 # keyboard, winotify) שלא מותקנות/רלוונטיות בכלל בלינוקס, אז זה חייב לרוץ על
 # אותה מערכת הפעלה שהאפליקציה בפועל רצה עליה.
@@ -51,10 +58,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
@@ -80,14 +87,14 @@ jobs:
 
   unit:
     needs: lint
-    if: github.event_name != 'push'
+    if: github.event_name != 'push' || github.event.repository.private == false
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
@@ -105,10 +112,10 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
@@ -124,10 +131,10 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
@@ -142,7 +149,7 @@ jobs:
       # רגרסיה ויזואלית שנכשלה: הצילום המלא והמוקטן (tests/web/test_web_app_visual_screens_browser.py)
       - name: Upload visual regression screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-failures
           path: .cache/visual_failures/

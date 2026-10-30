@@ -21,7 +21,8 @@ def test_only_a_version_tag_runs_it():
     wf = _workflow()
     triggers = wf.get("on", wf.get(True))   # yaml קורא את המפתח on כ-True
     assert triggers == {"push": {"tags": ["v*"]}}
-    assert wf["permissions"] == {"contents": "write"}
+    # 30.10.2026: גם id-token ו-attestations, בשביל ה-attestation של מקור הבנייה
+    assert wf["permissions"] == {"contents": "write", "id-token": "write", "attestations": "write"}
     assert wf["concurrency"]["cancel-in-progress"] is False
 
 
@@ -57,7 +58,9 @@ def test_the_release_checks_and_attaches_sha256sums_and_puts_the_hash_in_the_not
                                            encoding="utf-8")
     (tmp_path / "dist").mkdir()
     (tmp_path / "dist" / "SHA256SUMS.txt").write_text("ab" * 32 + "  ClipForge-9.9.9-win64.zip\n", encoding="utf-8")
-    notes = subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env={**os.environ, "GITHUB_REF_NAME": "v9.9.9"},
+    notes = subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env={**os.environ, "GITHUB_REF_NAME": "v9.9.9",
+                                                                     "GITHUB_REPOSITORY": "DrummingBird1/clipforge-app"},
                            capture_output=True, text=True, check=True).stdout
     assert notes.startswith("### Security\n- a fix") and "old" not in notes
     assert "ab" * 32 in notes and "ClipForge-9.9.9-win64.zip" in notes
+    assert "gh attestation verify ClipForge-9.9.9-win64.zip --repo DrummingBird1/clipforge-app" in notes

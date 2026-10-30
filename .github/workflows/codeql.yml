@@ -1,0 +1,46 @@
+name: CodeQL
+
+# 30.10.2026 (הריפו הציבורי): סריקת קוד של CodeQL ל-Python ול-JavaScript (src/entrypoints/web/frontend/js). רץ רק בריפו
+# ציבורי (github.event.repository.private == false) - בריפו הפרטי code scanning הוא חלק מ-GHAS בתשלום, אז ה-job מדלג.
+# "Default setup" של code scanning בריפו הציבורי נשאר כבוי - הקובץ הזה הוא ה-advanced setup. כל action מוצמד ל-SHA מלא.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"   # פעם בשבוע, שני 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write   # העלאת התוצאות ל-code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:${{ matrix.language }}

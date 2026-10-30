@@ -7,13 +7,17 @@ name: Release
 #  - Python מ-actions/setup-python (הגרסה מ-.python-version); dev/build_portable.py מעתיק אותו לחבילה, והספריות מ-uv.lock
 #    בלי קבוצת dev. הסקריפט רץ ישירות עם python (בלי uv run) - אין צורך ב-.venv עם כל קבוצת dev.
 #  - הערות ה-Release: הפסקה של הגרסה מ-CHANGELOG.md.
+#  - 30.10.2026: attestation של מקור הבנייה (actions/attest-build-provenance) על ה-zip ועל SHA256SUMS.txt - מי שהוריד
+#    בודק עם `gh attestation verify <zip> --repo <הריפו>` שהקובץ נבנה כאן, מה-tag הזה. כל action מוצמד ל-SHA מלא.
 
 on:
   push:
     tags: ["v*"]
 
 permissions:
-  contents: write   # יצירת ה-Release והעלאת ה-zip
+  contents: write       # יצירת ה-Release והעלאת ה-zip
+  id-token: write       # attestation: חתימה דרך ה-OIDC של GitHub
+  attestations: write   # attestation: שמירה בריפו
 
 concurrency:
   group: release-${{ github.ref }}
@@ -28,15 +32,15 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version-file: .python-version
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
@@ -59,6 +63,13 @@ jobs:
         shell: bash
         run: cd dist && sha256sum -c SHA256SUMS.txt
 
+      - name: Attest the build provenance of the zip and SHA256SUMS.txt
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/ClipForge-*-win64.zip
+            dist/SHA256SUMS.txt
+
       - name: Create the Release with the zip and its SHA-256
         shell: bash
         env:
@@ -73,5 +84,6 @@ jobs:
           digest, name = open("dist/SHA256SUMS.txt", encoding="utf-8").read().split()
           print(f"\n### Download check\nSHA-256 of `{name}`:\n\n```\n{digest}\n```\n")
           print("PowerShell: `Get-FileHash .\\" + name + "` - the hash must match.")
+          print(f"\nBuilt by GitHub Actions from this tag: `gh attestation verify {name} --repo {os.environ['GITHUB_REPOSITORY']}`")
           EOF
           gh release create "$GITHUB_REF_NAME" dist/ClipForge-*-win64.zip dist/SHA256SUMS.txt --title "ClipForge $GITHUB_REF_NAME" --notes-file release_notes.md

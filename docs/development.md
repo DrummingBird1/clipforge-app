@@ -50,6 +50,7 @@ An internal automation toolkit for video processing, social media content genera
   - [Performance Benchmarks](#performance-benchmarks)
   - [Dependency Vulnerability Scan](#dependency-vulnerability-scan)
   - [Releasing a new version](#releasing-a-new-version)
+  - [CI and security workflows](#ci-and-security-workflows)
 
 ---
 
@@ -406,6 +407,25 @@ Release made by hand, upload `SHA256SUMS.txt` together with the zip.
 
 To try the zip before tagging, run `uv run python dev/build_portable.py` in the clone. Keep the clone at a short path:
 the build's staging folder sits under it, and a deep one makes Windows fail to load the packaged Python's DLLs.
+
+Each Release also carries a build-provenance attestation for the zip and `SHA256SUMS.txt`
+(`actions/attest-build-provenance`); `gh attestation verify <zip> --repo DrummingBird1/clipforge-app` checks that a
+download was built by this repository's workflow from its tag.
+
+### CI and security workflows
+| Workflow | Runs on | What it does |
+|---|---|---|
+| `ci.yml` | every PR; pushes to `main` (public repository); `workflow_dispatch` | lint (`ruff`, `mypy`, `pip-audit`) and the unit tests on `windows-latest`; the Tk and browser tests on PRs and by hand |
+| `release.yml` | a `v*` tag | builds the portable zip, attests it, and creates the Release |
+| `codeql.yml` | PRs, pushes to `main`, weekly | CodeQL for Python and JavaScript - public repository only |
+| `scorecard.yml` | pushes to `main`, branch-protection changes, weekly | OpenSSF Scorecard, published and uploaded to code scanning - public repository only |
+
+Every action is pinned to a full commit SHA, with its version in a comment; update the SHA and the comment together.
+CodeQL and Scorecard skip a private repository (`github.event.repository.private`), where code scanning needs a paid
+plan.
+
+To turn them on in the public repository: enable Actions; leave code scanning's "Default setup" off, because `codeql.yml`
+is the advanced setup; and protect `main` with a rule that requires the `lint` and `unit` checks to pass.
 
 ### Pre-push hooks (optional)
 `.pre-commit-config.yaml` now has pre-push hooks for `mypy`, a fast Tk/GUI test subset (~10s) and `pip-audit`, next to the full pytest hook. Not enabled automatically: `pip install pre-commit && pre-commit install --hook-type pre-push`. Offline push: `SKIP=pip-audit git push`.
