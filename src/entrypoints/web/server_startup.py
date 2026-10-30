@@ -9,6 +9,13 @@ import webbrowser
 
 from entrypoints import web_app as W
 
+# 30.10.2026: תפריט המגש בשפת ההתקנה (ui_language.current) - בהתקנה באנגלית הוא היה בעברית. (פתיחה, עצירה)
+TRAY_LABELS = {"en": ("Open ClipForge", "Stop server"), "he": ("פתח בדפדפן", "כבה שרת")}
+
+
+def tray_labels(language):
+    return TRAY_LABELS.get(language, TRAY_LABELS["en"])
+
 DEFAULT_PORT = 8878
 # שרת אחר כבר מחזיק את הפורט (בדרך כלל עותק קודם של עצמנו) - יוצאים בלי לגעת בקובץ הטוקן
 PORT_IN_USE_EXIT_CODE = 3
@@ -41,9 +48,11 @@ def _run_tray_icon(server, url):
         icon.stop()
         server.should_exit = True
 
+    from utils.shared import ui_language
+    open_label, stop_label = tray_labels(ui_language.current(W.CONFIG_FILE))
     menu = pystray.Menu(
-        pystray.MenuItem("פתח בדפדפן", _open_browser, default=True),
-        pystray.MenuItem("כבה שרת", _quit),
+        pystray.MenuItem(open_label, _open_browser, default=True),
+        pystray.MenuItem(stop_label, _quit),
     )
     try:
         pystray.Icon("clipforge_web", image, "ClipForge - Web", menu).run()

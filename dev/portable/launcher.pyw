@@ -58,6 +58,13 @@ def _message(text):
     ctypes.windll.user32.MessageBoxW(None, text, "ClipForge", 0x10)
 
 
+def start_failed_text(language, log_path):
+    """30.10.2026: ההודעה כשהשרת לא עלה - בשפת ההתקנה (ui_language.current), כמו תפריט המגש."""
+    if language == "he":
+        return f"ClipForge לא עלה תוך {WAIT_SECONDS} שניות.\nפרטים: {log_path}"
+    return f"ClipForge did not start within {WAIT_SECONDS} seconds.\nDetails: {log_path}"
+
+
 def main():
     token_path = data_paths.path(data_paths.WEB_TOKEN)
     if not port_open():
@@ -70,7 +77,8 @@ def main():
                              cwd=ROOT, env=isolated_env(), stdout=log, stderr=subprocess.STDOUT,
                              creationflags=CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP)
         if not wait_for_server(token_path, before):
-            _message(f"ClipForge did not start within {WAIT_SECONDS} seconds.\nDetails: {log_path}")
+            from utils.shared import ui_language
+            _message(start_failed_text(ui_language.current(), log_path))
             return 1
     try:
         with open(token_path, encoding="utf-8") as f:

@@ -1082,7 +1082,9 @@ def maybe_notify_per_file(filename, success, detail=""):
     icon = "✅" if success else "❌"
     message = f"{icon} {filename}{f' - {detail}' if detail else ''}"
     try:
-        send_toast_notification("עורך-העל (video_editor.py)", message)
+        from utils.shared import ui_language   # 30.10.2026: הכותרת בשפת ההתקנה, כמו תפריט המגש
+        send_toast_notification("Studio (video_editor.py)" if ui_language.current() == "en" else "עורך-העל (video_editor.py)",
+                                message)
         webhook_url = getattr(state, "discord_webhook_url", "")
         if webhook_url:
             send_webhook_notification(webhook_url, message)

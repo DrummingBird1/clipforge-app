@@ -974,12 +974,16 @@ async function applyUpdate() {
 }
 
 async function loadLockStatus() {
-  // מציג רק כשהמנעול תפוס - כשהוא פנוי, ההודעה הכללית בכותרת נשארת כמו שהיא.
+  // מציג רק כשהמנעול תפוס. 30.10.2026: כשהוא משתחרר, ההודעה הכללית חוזרת (קודם "רינדור אחר תפוס" נשאר עד רענון)
+  const el = document.getElementById("lockStatus");
+  if (!el.dataset.idle) el.dataset.idle = el.textContent;   // לפני ה-await: עוד בעברית, המתרגם מתרגם כשהיא חוזרת
   try {
     const res = await fetch("/api/lock_status");
     const data = await res.json();
-    const el = document.getElementById("lockStatus");
-    if (!data.locked) return;
+    if (!data.locked) {
+      if (el.textContent !== el.dataset.idle) el.textContent = el.dataset.idle;
+      return;
+    }
     const queueSuffix = data.queue_length ? ` · עוד ${data.queue_length} בתור` : "";
     const age = typeof data.age_seconds === "number" ? _formatDuration(data.age_seconds) : data.age;
     el.textContent = data.is_stale
@@ -1481,7 +1485,8 @@ function notifyJobFinished(success) {
   // עליו, הלוג בעמוד עצמו כבר מציג את התוצאה, אין טעם לכפול עם התראה.
   if (!notifyEnabled || !("Notification" in window) || Notification.permission !== "granted" || !document.hidden) return;
   const scriptName = state.scripts.find(s => s.id === state.selectedId)?.name || "";
-  new Notification(success ? "✅ ClipForge - הריצה הסתיימה בהצלחה" : "❌ ClipForge - הריצה נכשלה", {
+  const title = success ? "✅ ClipForge - הריצה הסתיימה בהצלחה" : "❌ ClipForge - הריצה נכשלה";
+  new Notification(uiTranslate(title) || title, {
     body: scriptName,
   });
 }

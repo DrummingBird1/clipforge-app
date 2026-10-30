@@ -11,6 +11,7 @@
 #                                   ה-build שמוצמד ב-release.yml (FFMPEG_ZIP), מ-CLIPFORGE_FFMPEG או מ-media/ffmpeg/ מעל הריפו
 #   src/, my_scripts/, assets/, docs/, README.md, LICENSE, THIRD_PARTY_NOTICES.md, CHANGELOG.md - הקבצים שבמעקב ב-HEAD
 #   portable.json                 - הסימן: "יש גרסה חדשה" מציג קישור ל-Release במקום git pull (utils/shared/update_checker)
+# ליד ה-zip: SHA256SUMS.txt בפורמט של sha256sum - release.yml מצרף אותו ל-Release, ומי שהוריד בודק איתו את ה-zip.
 # ‏data/ ו-workspace/ לא בחבילה - הם נוצרים בהפעלה הראשונה, ליד ClipForge.vbs. בלי .venv, ‏AGENTS.md, ‏docs/handoff ו-docs/history.
 #
 #   uv run python dev/build_portable.py                    # ffmpeg: ה-zip המוצמד, אחרי בדיקת SHA-256
@@ -38,6 +39,12 @@ APP_INCLUDE = ("src/", "my_scripts/", "assets/", "docs/", "README.md", "README.h
 APP_EXCLUDE = ("docs/handoff/", "docs/history/", "my_scripts/tools/check_pos.py")
 # הספריות שלא נכנסות: pyautogui ותלויותיו (MouseInfo ו-PyMsgBox הן GPLv3+) - רק my_scripts/tools/check_pos.py משתמש בהן
 EXCLUDED_DISTS = ("pyautogui", "mouseinfo", "pymsgbox", "pyscreeze", "pytweening", "pygetwindow", "pyrect")
+# 30.10.2026: מה שזמן הריצה לא צריך מתוך site-packages (החבילה ירדה מ-280MB): מסמכי ה-discovery של שירותי Google שהקוד לא
+# בונה - רק youtube v3 ו-youtubeAnalytics v2 (utils/bot/youtube_uploader, youtube_analytics); build() קורא אותם מהחבילה
+# (static discovery), בלי רשת - תיקיות הטסטים של הספריות עצמן (tests/, test/), וקובצי .pyi (טיפוסים לעורכי קוד)
+GOOGLE_DISCOVERY_DIR = os.path.join("googleapiclient", "discovery_cache", "documents")
+GOOGLE_DISCOVERY_KEEP = ("youtube.v3.json", "youtubeAnalytics.v2.json")
+LIBRARY_TEST_DIRS = ("tests", "test")
 # מההתקנה של Python: רק זמן הריצה. site-packages מגיע מ-uv sync, לא מההתקנה של המפתח
 RUNTIME_SKIP_DIRS = {"site-packages", "test", "tests", "idlelib", "ensurepip", "turtledemo", "__pycache__", "Scripts", "Tools",
                      "Doc", "include", "libs"}
@@ -49,6 +56,7 @@ REQUIRED_FILTERS = ("vidstabdetect", "vidstabtransform", "zscale", "drawtext")
 FFMPEG_ZIP = "ffmpeg-9.0.2-essentials_build.zip"
 FFMPEG_DIR = "9.0.2-essentials"
 FFMPEG_SHA256 = "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba"
+SHA256SUMS = "SHA256SUMS.txt"
 
 
 def read_version(root=ROOT):
@@ -118,13 +126,19 @@ def excluded_files(site_packages, dists=EXCLUDED_DISTS):
 
 def copy_site_packages(env_site, dest_site):
     skip = excluded_files(env_site)
+    discovery = os.path.normcase(GOOGLE_DISCOVERY_DIR)
     copied = 0
     for current, dirs, files in os.walk(env_site):
         rel_dir = os.path.relpath(current, env_site)
-        dirs[:] = [d for d in dirs if d != "__pycache__" and os.path.normcase(os.path.normpath(os.path.join(rel_dir, d))) not in skip]
+        # tests/ של ספרייה - רק בתוך חבילה (לא בשורש site-packages), אף פעם לא חלק מזמן הריצה
+        dirs[:] = [d for d in dirs if d != "__pycache__" and not (rel_dir != "." and d in LIBRARY_TEST_DIRS)
+                   and os.path.normcase(os.path.normpath(os.path.join(rel_dir, d))) not in skip]
+        in_discovery = os.path.normcase(os.path.normpath(rel_dir)) == discovery
         for name in files:
             rel = os.path.normpath(os.path.join(rel_dir, name))
-            if os.path.normcase(rel) in skip or name.startswith("_virtualenv") or name.endswith((".pyc", ".pyo")):
+            if os.path.normcase(rel) in skip or name.startswith("_virtualenv") or name.endswith((".pyc", ".pyo", ".pyi")):
+                continue
+            if in_discovery and name not in GOOGLE_DISCOVERY_KEEP:
                 continue
             target = os.path.join(dest_site, rel)
             os.makedirs(os.path.dirname(target), exist_ok=True)
@@ -156,13 +170,17 @@ def default_ffmpeg(root=ROOT, environ=None):
         current = parent
 
 
-def check_pinned_zip(path):
-    """ה-zip של ברירת המחדל חייב להיות בדיוק הקובץ ש-release.yml מצמיד - אחרת החבילה המקומית שונה מזו של ה-Release."""
+def sha256_of(path):
     digest = hashlib.sha256()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             digest.update(chunk)
-    if digest.hexdigest() != FFMPEG_SHA256:
+    return digest.hexdigest()
+
+
+def check_pinned_zip(path):
+    """ה-zip של ברירת המחדל חייב להיות בדיוק הקובץ ש-release.yml מצמיד - אחרת החבילה המקומית שונה מזו של ה-Release."""
+    if sha256_of(path) != FFMPEG_SHA256:
         raise SystemExit(f"ה-SHA-256 של {path} לא תואם ל-{FFMPEG_ZIP} המוצמד ({FFMPEG_SHA256[:12]}...). להוריד אותו מחדש.")
 
 
@@ -220,8 +238,12 @@ def smoke_check(stage):
     data_dir = os.path.join(stage, "data")
     with tempfile.TemporaryDirectory() as tmp:
         env = {**base_env, "PYTHONNOUSERSITE": "1", "PYTHONIOENCODING": "utf-8", "CLIPFORGE_WORKSPACE_DIR": os.path.join(tmp, "workspace")}
+        # גם: הלקוחות של YouTube נבנים מהמסמכים שנשארו בחבילה, בלי רשת (static discovery) - אם חסר מסמך, build נכשל כאן
         code = ("import sys, os; sys.path.insert(0, os.path.join(os.getcwd(), 'src')); import entrypoints.web_app as W; "
                 "W._persist_token('smoke-check'); from utils.shared import data_paths as D; print('layout=' + str(D.migrated())); "
+                "from googleapiclient.discovery import build; "
+                "[build(s, v, developerKey='offline-check', static_discovery=True) for s, v in (('youtube', 'v3'), ('youtubeAnalytics', 'v2'))]; "
+                "print('google=ok'); "
                 "from utils.shared import update_checker as U; print('portable=' + str(U.is_portable(W.BASE_DIR)))")
         try:
             result = subprocess.run([os.path.join(stage, "python", "python.exe"), "-c", code], cwd=stage, env=env,
@@ -229,7 +251,7 @@ def smoke_check(stage):
             first_run_ok = "layout=True" in result.stdout   # data_paths.migrated() בתוך החבילה - data/ אומץ למבנה לפי נושא
         finally:
             shutil.rmtree(data_dir, ignore_errors=True)  # safe: the data/ this smoke run just created inside our own stage folder
-    if result.returncode != 0 or "portable=True" not in result.stdout or not first_run_ok:
+    if result.returncode != 0 or "portable=True" not in result.stdout or "google=ok" not in result.stdout or not first_run_ok:
         raise SystemExit("בדיקת ההפעלה הראשונה בפייתון של החבילה נכשלה:\n" + (result.stderr or result.stdout)[-3000:])
 
 
@@ -243,6 +265,15 @@ def write_zip(stage, zip_path):
                 full = os.path.join(current, name)
                 zf.write(full, os.path.join(base, os.path.relpath(full, stage)))
     os.replace(tmp, zip_path)  # safe: replaces only our own build output in dist/ with the zip just written
+
+
+def write_checksums(zip_path):
+    """SHA256SUMS.txt ליד ה-zip, בפורמט של sha256sum ("<hash>  <שם>", ‏LF) - `sha256sum -c SHA256SUMS.txt` בודק אותו.
+    מחזיר את ה-hash."""
+    digest = sha256_of(zip_path)
+    with open(os.path.join(os.path.dirname(zip_path), SHA256SUMS), "wb") as f:
+        f.write(f"{digest}  {os.path.basename(zip_path)}\n".encode("utf-8"))
+    return digest
 
 
 def main(argv=None):
@@ -297,7 +328,8 @@ def main(argv=None):
     print("[5/6] בדיקת ייבוא בפייתון של החבילה: עברה")
     zip_path = os.path.join(args.out, name + ".zip")
     write_zip(stage, zip_path)
-    print(f"[6/6] {zip_path} - {os.path.getsize(zip_path) / 1024 / 1024:.0f}MB")
+    digest = write_checksums(zip_path)
+    print(f"[6/6] {zip_path} - {os.path.getsize(zip_path) / 1024 / 1024:.0f}MB, SHA-256 {digest} ({SHA256SUMS})")
     if not args.keep_stage:
         shutil.rmtree(stage)  # safe: our own staging folder under build/ - the zip above is the result
     return 0

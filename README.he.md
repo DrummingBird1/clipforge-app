@@ -2,6 +2,14 @@
 
 # ClipForge
 
+[![Latest release](https://img.shields.io/github/v/release/DrummingBird1/clipforge-app)](https://github.com/DrummingBird1/clipforge-app/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/DrummingBird1/clipforge-app/total)](https://github.com/DrummingBird1/clipforge-app/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)
+
+![קליפ נטען לסטודיו, בוחרים סגנון, מריצים, וה-Short מופיע בתוצרים](docs/images/he/demo.gif)
+
 סטודיו וידאו לקליפים ממשחקים ולסרטוני נתונים, שרץ על מחשב ה-Windows שלכם. עורכים, ממתגים ומייצאים סרטונים ל-Shorts, ל-TikTok וליוטיוב מהדפדפן, ושום דבר לא עולה לשום מקום אם לא ביקשתם.
 
 [English](README.md)
@@ -57,6 +65,33 @@
 - הכל רץ על המחשב שלכם. הסרטונים, הפרויקטים וההגדרות נשארים בתיקיית ClipForge (`data/` ו-`workspace/`).
 - מסך הדפדפן זמין רק בכתובת `127.0.0.1` (localhost), ונדרש בו טוקן גישה שמתחלף בכל הפעלה של ClipForge. פתיחה מהטלפון או מהרשת המקומית כבויה עד שמדליקים אותה.
 - ‏ClipForge מתחבר לאינטרנט רק בשביל התכונות שהגדרתם (Gemini, יוטיוב, דיסקורד, Twitch), כדי לבדוק ב-GitHub אם יש גרסה חדשה, וכדי להוריד מודל של זיהוי דיבור בפעם הראשונה שמשתמשים בכתוביות.
+
+## פתרון בעיות
+
+**"Windows protected your PC" כשפותחים את `ClipForge.vbs`.**
+‏ClipForge לא חתום בתעודת חתימת קוד, ולכן Windows SmartScreen מזהיר עליו כמו על כל קובץ לא חתום מהאינטרנט. לוחצים על **More info** (מידע נוסף), ואז על **Run anyway** (הפעל בכל זאת). כדי שהאזהרה לא תופיע על הקבצים שחולצו, לוחצים לחיצה ימנית על קובץ ה-zip *לפני* החילוץ, בוחרים **Properties** (מאפיינים), מסמנים **Unblock** (בטל חסימה) ולוחצים **OK**. כדי לוודא שה-zip הוא זה שפורסם, משווים את ה-SHA-256 שלו להערות הגרסה או לקובץ `SHA256SUMS.txt` שבעמוד ה-Release. ב-PowerShell: `Get-FileHash .\ClipForge-<version>-win64.zip`.
+
+**האנטי-וירוס חוסם קובץ או מכניס אותו להסגר.**
+‏`ClipForge.vbs` הוא סקריפט קטן שמפעיל את הפייתון שבחבילה (`launcher.pyw`) בלי חלון קונסולה, ויש תוכנות אנטי-וירוס שמסמנות מפעילים כאלה לפי היוריסטיקה. בודקים את ה-SHA-256 של ה-zip כמו למעלה, משחזרים את הקובץ, ומוסיפים את תיקיית ClipForge כחריגה. קובצי ה-zip של הגרסאות נבנים מקוד המקור של הריפו הזה ב-GitHub Actions (`.github/workflows/release.yml`).
+
+**אין לי כרטיס מסך של NVIDIA.**
+הכל עובד על המעבד, רק לאט יותר. פלט H.264 בסטודיו ופרופיל ברירת המחדל של פרסום ה-Shorts (CPU Fallback, ‏H.264) משתמשים במקודד של המעבד. ‏HEVC ו-AV1 בסטודיו, ופרופילי ה-NVENC של פרסום ה-Shorts, צריכים כרטיס NVIDIA. במקומם בוחרים H.264 או את פרופיל המעבד.
+
+**הפורט 8878 תפוס.**
+‏ClipForge מאזין בכתובת `127.0.0.1:8878`. כשמשהו כבר עונה בפורט הזה, `ClipForge.vbs` מניח ש-ClipForge כבר רץ ורק פותח את הדפדפן. לכן אם תוכנה אחרת משתמשת בפורט, נפתח הדף שלה או שגיאה במקום ClipForge. מוצאים אותה עם `netstat -ano | findstr :8878` (העמודה האחרונה היא מזהה התהליך, שמנהל המשימות מציג בלשונית Details), סוגרים אותה ומפעילים את ClipForge שוב.
+
+**איפה הנתונים שלי?**
+בתיקיית ClipForge, ליד `ClipForge.vbs`: ההגדרות, מסד הנתונים והלוגים ב-`data/`, והסרטונים, התוצרים והפרויקטים ב-`workspace/` (או בתיקיית הייצוא שבחרתם בהגדרות). המפתחות ב-`.env` באותה תיקייה, וההתחברות ליוטיוב ב-`client_secret.json` וב-`youtube_token.json`.
+
+**איך מעדכנים לגרסה חדשה?**
+‏ClipForge מודיע כשיוצאת גרסה חדשה ומקשר לעמוד ה-Release. עוצרים את ClipForge (לחיצה ימנית על הסמל שלו במגש המערכת, **כבה שרת**), מחלצים את ה-zip החדש לתיקייה חדשה, ומעתיקים אליה מהתיקייה הישנה את `data/`, ‏`workspace/`, ‏`.env` ואת קובצי יוטיוב (`client_secret.json`, ‏`youtube_token.json`). מפעילים את `ClipForge.vbs` החדש, ומוחקים את התיקייה הישנה אחרי שהכל עובד.
+
+כדי לחסוך את ההעתקה בפעם הבאה, אפשר לשמור את הנתונים מחוץ לתיקיית התוכנה: מעבירים את `data/` ואת `workspace/` לתיקיות שבוחרים, ומגדירים את משתני הסביבה של המשתמש `CLIPFORGE_DATA_DIR` ו-`CLIPFORGE_WORKSPACE_DIR` אליהן (בהגדרות של Windows: "עריכת משתני סביבה עבור החשבון שלך"). מאז, גרסה חדשה רק צריך לחלץ.
+
+**איך מסירים?**
+עוצרים את ClipForge (סמל המגש, **כבה שרת**) ומוחקים את התיקייה שלו. ‏ClipForge לא מתקין שום דבר אחר, חוץ משני מקרים:
+- אם הפעלתם את טיימר ההשכמה, מכבים אותו קודם בהגדרות, או מוחקים את המשימה `ClipForge\WakeForNextTask` ב-Task Scheduler (מתזמן המשימות).
+- אם הגדרתם webhook של דיסקורד להתראות על סרטוני נתונים, הוא שמור ב-Windows Credential Manager (מנהל האישורים, Windows Credentials, ברשומה שמסתיימת ב-`@RocketLauncher`).
 
 ## רישיון
 

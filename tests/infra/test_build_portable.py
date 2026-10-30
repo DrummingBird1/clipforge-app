@@ -131,3 +131,52 @@ def test_the_launcher_waits_for_a_fresh_token_not_the_one_left_from_last_time(tm
         assert launcher.wait_for_server(str(token), before, timeout=10, port=port) is True
     finally:
         server.close()
+
+
+def test_the_zip_gets_a_sha256sums_file_that_sha256sum_can_check(tmp_path):
+    """30.10.2026: dist/SHA256SUMS.txt ליד ה-zip - "<hash>  <שם>" ו-LF, כמו sha256sum; release.yml מצרף אותו ל-Release."""
+    import hashlib
+    zip_path = tmp_path / "ClipForge-9.9.9-win64.zip"
+    zip_path.write_bytes(b"not really a zip")
+    digest = bp.write_checksums(str(zip_path))
+    assert digest == hashlib.sha256(b"not really a zip").hexdigest()
+    assert (tmp_path / "SHA256SUMS.txt").read_bytes() == f"{digest}  ClipForge-9.9.9-win64.zip\n".encode("utf-8")
+
+
+def test_site_packages_leave_out_unused_google_discovery_docs_library_tests_and_stubs(tmp_path):
+    """30.10.2026: ה-zip ירד מ-280MB - מסמכי discovery רק ל-youtube v3 ו-youtubeAnalytics v2 (מה שהקוד בונה), בלי tests/ של
+    ספריות ובלי .pyi."""
+    env, dest = tmp_path / "env", tmp_path / "dest"
+    docs = env / "googleapiclient" / "discovery_cache" / "documents"
+    for name in ("youtube.v3.json", "youtubeAnalytics.v2.json", "drive.v3.json", "youtubeAnalytics.v1.json"):
+        _touch(docs / name, "{}")
+    _touch(env / "googleapiclient" / "discovery_cache" / "__init__.py")
+    _touch(env / "pandas" / "tests" / "test_frame.py")
+    _touch(env / "numpy" / "_core" / "tests" / "test_x.py")
+    _touch(env / "numpy" / "testing" / "__init__.py")   # numpy.testing הוא קוד, לא tests/
+    _touch(env / "numpy" / "__init__.pyi")
+    _touch(env / "numpy" / "__init__.py")
+    bp.copy_site_packages(str(env), str(dest))
+    got = sorted(str(p.relative_to(dest)).replace(os.sep, "/") for p in dest.rglob("*") if p.is_file())
+    assert got == ["googleapiclient/discovery_cache/__init__.py", "googleapiclient/discovery_cache/documents/youtube.v3.json",
+                   "googleapiclient/discovery_cache/documents/youtubeAnalytics.v2.json", "numpy/__init__.py",
+                   "numpy/testing/__init__.py"]
+
+
+def test_the_kept_discovery_docs_are_the_clients_the_code_builds():
+    import re
+    builds = set()
+    for root in ("src", "my_scripts"):
+        for current, _dirs, files in os.walk(os.path.join(PROJECT_ROOT, root)):
+            for name in files:
+                if name.endswith(".py"):
+                    text = open(os.path.join(current, name), encoding="utf-8").read()
+                    builds |= set(re.findall(r'\bbuild\("(\w+)", "(v\d+)"', text))
+    assert {f"{service}.{version}.json" for service, version in builds} == set(bp.GOOGLE_DISCOVERY_KEEP)
+
+
+def test_the_launcher_error_follows_the_install_language():
+    """30.10.2026: חלון השגיאה של הלאנצ'ר בשפת ההתקנה, כמו תפריט המגש."""
+    assert launcher.start_failed_text("en", "C:/x/log.txt").startswith("ClipForge did not start within")
+    assert launcher.start_failed_text("he", "C:/x/log.txt").startswith("ClipForge לא עלה תוך")
+    assert "C:/x/log.txt" in launcher.start_failed_text("he", "C:/x/log.txt")

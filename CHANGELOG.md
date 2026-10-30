@@ -2,6 +2,18 @@
 
 What changed in each ClipForge release, by topic. Dates are release dates (YYYY-MM-DD).
 
+## 1.1.2 - 2026-10-30
+
+### Public release
+- README: a demo GIF, badges and a Troubleshooting section, in English and Hebrew.
+- `SHA256SUMS.txt` next to every portable zip, and the zip's hash in the release notes.
+- A smaller portable package: about 133MB less unpacked (only the YouTube discovery documents, no library tests or type
+  stubs).
+- The tray menu, the launcher's error message and Windows notifications follow the install language.
+
+### Fixes
+- The "another render is running" badge clears when the render lock is released.
+
 ## 1.1.1 - 2026-10-30
 
 ### Security

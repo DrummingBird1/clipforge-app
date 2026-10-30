@@ -1,5 +1,13 @@
 # ClipForge
 
+[![Latest release](https://img.shields.io/github/v/release/DrummingBird1/clipforge-app)](https://github.com/DrummingBird1/clipforge-app/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/DrummingBird1/clipforge-app/total)](https://github.com/DrummingBird1/clipforge-app/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)
+
+![A clip loads into the studio, a style is picked, Run, and the Short is in outputs](docs/images/demo.gif)
+
 A video studio for gameplay clips and data videos that runs on your own Windows PC. Edit, brand and export Shorts, TikToks and YouTube videos from your browser, with nothing uploaded anywhere unless you ask for it.
 
 [עברית](README.he.md)
@@ -55,6 +63,33 @@ Keys go in a text file named `.env` in the ClipForge folder, one per line, for e
 - Everything runs on your PC. Your videos, projects and settings stay in the ClipForge folder (`data/` and `workspace/`).
 - The browser screen is served on `127.0.0.1` (localhost) only, and it needs an access token that changes every time ClipForge starts. Opening it from your phone or your local network is off until you turn it on.
 - ClipForge goes online only for the features you set up (Gemini, YouTube, Discord, Twitch), to check GitHub for a new version, and to download a speech-to-text model the first time you use captions.
+
+## Troubleshooting
+
+**"Windows protected your PC" when I open `ClipForge.vbs`.**
+ClipForge isn't signed with a code-signing certificate, so Windows SmartScreen warns about it like any unsigned file from the internet. Click **More info**, then **Run anyway**. To avoid the warning for the extracted files, right-click the zip *before* extracting it, choose **Properties**, tick **Unblock** and click **OK**. To check that the zip is the one that was published, compare its SHA-256 with the release notes or with `SHA256SUMS.txt` on the release page. In PowerShell: `Get-FileHash .\ClipForge-<version>-win64.zip`.
+
+**My antivirus blocks or quarantines a file.**
+`ClipForge.vbs` is a small script that starts the bundled Python (`launcher.pyw`) without a console window, and some antivirus programs flag launchers like that by heuristics. Check the zip's SHA-256 as above, restore the file, and add the ClipForge folder as an exception. Release zips are built from this repository's source by GitHub Actions (`.github/workflows/release.yml`).
+
+**I don't have an NVIDIA graphics card.**
+Everything works on the CPU, just slower. The studio's H.264 output and the Shorts publisher's default preset (CPU Fallback, H.264) use the CPU encoder. HEVC and AV1 in the studio, and the NVENC presets of the Shorts publisher, need an NVIDIA card; choose H.264 or the CPU preset instead.
+
+**Port 8878 is in use.**
+ClipForge listens on `127.0.0.1:8878`. When something already answers on that port, `ClipForge.vbs` assumes ClipForge is running and only opens the browser, so if another program uses the port you get its page or an error instead of ClipForge. Find it with `netstat -ano | findstr :8878` (the last column is the process ID; Task Manager shows it on the Details tab), close it, and start ClipForge again.
+
+**Where is my data?**
+In the ClipForge folder, next to `ClipForge.vbs`: settings, the database and logs in `data/`, and your videos, outputs and projects in `workspace/` (or in the export folder you chose in the settings). Keys are in `.env` in the same folder, and the YouTube sign-in in `client_secret.json` and `youtube_token.json`.
+
+**How do I update to a new version?**
+ClipForge tells you when a new version is out and links to the release page. Stop ClipForge (right-click its tray icon and choose **Stop server**), extract the new zip to a new folder, and copy `data/`, `workspace/`, `.env` and your YouTube files (`client_secret.json`, `youtube_token.json`) from the old folder into it. Start the new `ClipForge.vbs`, and delete the old folder once everything works.
+
+To skip the copying next time, keep your data outside the app folder: move `data/` and `workspace/` to folders of your choice and set the user environment variables `CLIPFORGE_DATA_DIR` and `CLIPFORGE_WORKSPACE_DIR` to them (Windows settings: "Edit environment variables for your account"). After that, a new version only needs to be extracted.
+
+**How do I uninstall?**
+Stop ClipForge (tray icon, **Stop server**) and delete its folder. ClipForge doesn't install anything else, with two exceptions:
+- If you turned on the wake timer, turn it off in the settings first, or delete the `ClipForge\WakeForNextTask` task in Task Scheduler.
+- If you set a Discord webhook for data-video notifications, it's saved in Windows Credential Manager (Windows Credentials, an entry ending in `@RocketLauncher`).
 
 ## License
 

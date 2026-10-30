@@ -398,7 +398,11 @@ its history never needs a force-push:
 3. Review the commit in the clone, then push it: `git -C ..\clipforge-app push`.
 4. Tag the version there and push the tag: `git tag v1.2.0` and `git push origin v1.2.0`. The tag starts
    `.github/workflows/release.yml`, which checks that the tag matches the version, builds the portable zip with the
-   pinned FFmpeg (`dev/build_portable.py`), and creates the GitHub Release with the zip and the `CHANGELOG.md` section.
+   pinned FFmpeg (`dev/build_portable.py`), and creates the GitHub Release with the zip, `SHA256SUMS.txt` and the
+   `CHANGELOG.md` section, with the zip's SHA-256 in the notes.
+
+`dev/build_portable.py` writes `dist/SHA256SUMS.txt` next to the zip (`sha256sum -c SHA256SUMS.txt` checks it). For a
+Release made by hand, upload `SHA256SUMS.txt` together with the zip.
 
 To try the zip before tagging, run `uv run python dev/build_portable.py` in the clone. Keep the clone at a short path:
 the build's staging folder sits under it, and a deep one makes Windows fail to load the packaged Python's DLLs.

@@ -55,7 +55,11 @@ jobs:
       - name: Build the portable package
         run: python dev/build_portable.py --ffmpeg ffmpeg.zip
 
-      - name: Create the Release with the zip
+      - name: Check the zip against SHA256SUMS.txt
+        shell: bash
+        run: cd dist && sha256sum -c SHA256SUMS.txt
+
+      - name: Create the Release with the zip and its SHA-256
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -66,5 +70,8 @@ jobs:
           text = open("CHANGELOG.md", encoding="utf-8").read()
           match = re.search(rf"^## {re.escape(version)}\b.*?$(.*?)(?=^## |\Z)", text, re.M | re.S)
           print(match.group(1).strip() if match else f"ClipForge {version}")
+          digest, name = open("dist/SHA256SUMS.txt", encoding="utf-8").read().split()
+          print(f"\n### Download check\nSHA-256 of `{name}`:\n\n```\n{digest}\n```\n")
+          print("PowerShell: `Get-FileHash .\\" + name + "` - the hash must match.")
           EOF
-          gh release create "$GITHUB_REF_NAME" dist/ClipForge-*-win64.zip --title "ClipForge $GITHUB_REF_NAME" --notes-file release_notes.md
+          gh release create "$GITHUB_REF_NAME" dist/ClipForge-*-win64.zip dist/SHA256SUMS.txt --title "ClipForge $GITHUB_REF_NAME" --notes-file release_notes.md
