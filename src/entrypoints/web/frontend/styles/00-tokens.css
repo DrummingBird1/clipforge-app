@@ -1,0 +1,266 @@
+  /* ==========================================================================
+     גל 15 - מערכת העיצוב: tokens.
+     כל צבע/גודל/ריווח/עיגול/צל/תנועה בדף מגיע מכאן. הטסט
+     tests/test_web_design_system.py נכשל על צבע גולמי (hex/rgb) בכל קובץ CSS
+     אחר, ועל var(--x) שלא מוגדר באף מקום.
+
+     סדר השכבות (cascade layers) קבוע כאן פעם אחת - שכבה מאוחרת גוברת על
+     מוקדמת בלי קשר לספציפיות, כך שלא צריך !important כדי שהסטודיו ידרוס את
+     העורך או ש-utility ידרוס רכיב.
+     ========================================================================== */
+  @layer reset, tokens, components, shell, editor, studio, utilities;
+
+  /* --- פונטים (גל 16): Heebo לעברית/לטינית, JetBrains Mono ללוגים ולזמנים.
+     קבצי variable (משקל 100-900 בקובץ אחד), מאוחסנים מקומית ב-assets/fonts -
+     האפליקציה עובדת גם בלי אינטרנט. רישיון OFL ליד הקבצים. --- */
+  @font-face {
+    font-family: "Heebo"; font-style: normal; font-weight: 100 900; font-display: swap;
+    src: url(/assets/fonts/heebo-hebrew.woff2) format("woff2");
+    unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+  }
+  @font-face {
+    font-family: "Heebo"; font-style: normal; font-weight: 100 900; font-display: swap;
+    src: url(/assets/fonts/heebo-latin.woff2) format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: "JetBrains Mono"; font-style: normal; font-weight: 100 800; font-display: swap;
+    src: url(/assets/fonts/jetbrains-mono-latin.woff2) format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+
+  @layer tokens {
+    :root {
+      color-scheme: dark;
+
+      /* --- אפורים (גרפיט קריר), 0 = הכי כהה --- */
+      --n-0: #07080a; --n-1: #0b0c0f; --n-2: #101217; --n-3: #15181e; --n-4: #1b1f27;
+      --n-5: #222733; --n-6: #2c3240; --n-7: #3a4252; --n-8: #545d70; --n-9: #7d8699;
+      --n-10: #a2aabb; --n-11: #c9ced8; --n-12: #e9ecf1;
+
+      /* --- מותג: ציאן מעודן (במקום #00e5ff הניאוני) --- */
+      --brand: #22d3ee;
+      --brand-strong: #67e8f9;
+      --brand-deep: #0891b2;
+
+    }
+
+    /* סמנטיים + כינויים: מוגדרים גם על body.ve-focus (כהה) כדי שיחושבו מחדש מהפרימיטיבים
+       של "Pro Dark" - משתנה שמפנה למשתנה אחר נפתר במקום שבו הוא מוגדר. */
+    :root, :root:not([data-theme="light"], [data-theme="contrast"]) body.ve-focus, :root:not([data-theme="light"], [data-theme="contrast"]) body.dvz-focus {
+      /* --- צבעים סמנטיים --- */
+      --color-bg: var(--n-1);
+      --color-surface-1: var(--n-2);          /* פאנלים, סרגלים */
+      --color-surface-2: var(--n-3);          /* כרטיסים */
+      --color-surface-3: var(--n-4);          /* מורם / hover */
+      --color-sunken: var(--n-1);             /* שדות, שבבים, קופסאות מידע */
+      --color-selected: var(--n-5);
+      --color-border: #20242e;
+      --color-border-strong: #2d3341;
+      --color-text: var(--n-12);
+      --color-text-2: var(--n-10);            /* משני */
+      --color-text-3: var(--n-9);             /* דהוי (עדיין AA על הרקע) */
+
+      --color-accent: var(--brand);
+      --color-accent-strong: var(--brand-strong);
+      --color-accent-soft: color-mix(in srgb, var(--color-accent) 14%, transparent);
+      --color-accent-line: color-mix(in srgb, var(--color-accent) 45%, transparent);
+      --color-on-accent: #04161b;
+
+      --color-success: #34d399;
+      --color-success-soft: color-mix(in srgb, var(--color-success) 14%, transparent);
+      --color-warning: #fbbf24;
+      --color-warning-soft: color-mix(in srgb, var(--color-warning) 14%, transparent);
+      --color-danger: #f87171;
+      --color-danger-soft: color-mix(in srgb, var(--color-danger) 14%, transparent);
+      --color-danger-solid: #dc2626;
+      --color-info: #60a5fa;
+      --color-on-solid: #ffffff;
+      --color-on-light: #0b0c0f;
+
+      --color-run: #22c55e;
+      --color-run-hover: #4ade80;
+      --color-pause: #f59e0b;
+
+      --color-focus: var(--brand-strong);
+      --color-overlay: rgba(3, 4, 7, 0.66);
+      --color-scrim: rgba(0, 0, 0, 0.6);
+      --color-shadow: rgba(0, 0, 0, 0.45);
+
+      --color-console-bg: #06070a;
+      --color-console-text: #9ae6b4;
+      --color-console-border: #1a2a22;
+
+      /* --- מדיה: נגן/ציר-זמן (תמיד כהים, גם בערכה בהירה) --- */
+      --media-bg: #000000;
+      --media-bg-2: #111214;
+      --media-bg-3: #222428;
+      --media-text: #ffffff;
+      --media-text-2: rgba(255, 255, 255, 0.55);
+      --media-scrim: rgba(0, 0, 0, 0.6);
+      /* גל 25: גלגל תיקון הצבע - ספקטרום מלא, אדום למעלה ובכיוון השעון (כמו ההמרה ב-70-editor-grade.js) */
+      --grade-wheel: conic-gradient(from 0deg, #ff2d2d, #ffd400 60deg, #2ee84a 120deg, #22d3ee 180deg, #3b5bff 240deg, #e83aff 300deg, #ff2d2d 360deg);
+      --media-scrim-strong: rgba(0, 0, 0, 0.62);
+      --media-scrim-soft: rgba(0, 0, 0, 0.35);
+      --color-playhead: #facc15;
+      --color-trim: #22c55e;
+      --color-trim-focus: #86efac;
+      --color-cut: #ef4444;
+      --color-cut-fill: rgba(239, 68, 68, 0.42);
+      --color-cut-draft: rgba(239, 68, 68, 0.3);
+      --color-scene: rgba(167, 139, 250, 0.75);
+      --color-snap: #f0abfc;
+      --color-safe-zone: rgba(255, 64, 64, 0.28);
+      --color-region: #f43f5e;
+      --color-region-fill: rgba(244, 63, 94, 0.22);
+      --color-handle: rgba(34, 211, 238, 0.9);
+      --color-on-handle: #021016;
+      --color-handle-alert: rgba(248, 113, 113, 0.95);
+      --color-hdr: #7c3aed;
+
+      /* --- פלטה קטגוריאלית (גבולות אזורים/קטגוריות) --- */
+      --hue-amber: #fbbf24; --hue-violet: #a78bfa; --hue-cyan: #22d3ee; --hue-pink: #f472b6;
+      --hue-purple: #c084fc; --hue-sky: #38bdf8; --hue-emerald: #34d399; --hue-rose: #fb7185;
+      --hue-orange: #f97316; --hue-teal: #2dd4bf; --hue-indigo: #818cf8; --hue-blue: #60a5fa;
+      --hue-slate: #94a3b8; --hue-yellow: #facc15;
+
+      /* --- טיפוגרפיה --- */
+      --font-sans: "Heebo", "Segoe UI", system-ui, sans-serif;
+      --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+      --fs-2xs: 11px; --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px;
+      --fs-lg: 16px; --fs-xl: 20px; --fs-2xl: 24px; --fs-3xl: 32px;
+      --lh-tight: 1.25; --lh-normal: 1.5;
+      --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
+
+      /* --- ריווח (בסיס 4px), עיגול, צללים --- */
+      --sp-0: 2px; --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
+      --r-xs: 4px; --r-sm: 6px; --r-md: 10px; --r-lg: 16px; --r-pill: 999px;
+      --shadow-1: 0 1px 2px var(--color-shadow);
+      --shadow-2: 0 6px 18px var(--color-shadow);
+      --shadow-3: 0 16px 40px var(--color-shadow);
+      --ring: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-focus);
+
+      /* --- שכבות-z --- */
+      --z-sticky: 6; --z-menu: 25; --z-modal: 40; --z-banner: 60; --z-sheet: 70; --z-toast: 90;
+
+      /* --- תנועה --- */
+      --dur-1: 90ms; --dur-2: 160ms; --dur-3: 240ms;
+      --ease-out: cubic-bezier(.2, .8, .2, 1);
+      --ease-in-out: cubic-bezier(.4, 0, .2, 1);
+
+      /* --- מידות מעטפת --- */
+      --rail-w: 76px;
+      --topbar-h: 52px;
+      --control-h: 32px;
+      --control-h-sm: 26px;
+      --icon-size: 1.15em;
+      --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a2aabb' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
+      /* --- שמות ישנים (לפני גל 15) - כינויים, כדי שכל ה-CSS/JS הקיים ימשיך לעבוד --- */
+      --bg: var(--color-bg);
+      --surface: var(--color-surface-1);
+      --surface2: var(--color-surface-2);
+      --surface3: var(--color-sunken);
+      --border: var(--color-border);
+      --border2: var(--color-border-strong);
+      --text: var(--color-text);
+      --text-muted: var(--color-text-2);
+      --text-faint: var(--color-text-3);
+      --accent: var(--color-accent);
+      --accent-text: var(--color-on-accent);
+      --accent-soft: var(--color-accent-soft);
+      --ok: var(--color-success);
+      --success: var(--color-success);
+      --fail: var(--color-danger);
+      --warn: var(--color-warning);
+      --overlay: var(--color-overlay);
+      --console-bg: var(--color-console-bg);
+      --console-text: var(--color-console-text);
+      --console-border: var(--color-console-border);
+    }
+
+    [data-theme="light"] {
+      color-scheme: light;
+      --n-0: #ffffff; --n-1: #f4f5f8; --n-2: #fbfbfd; --n-3: #ffffff; --n-4: #eef0f4;
+      --n-5: #e4e8ef; --n-6: #d3d8e1; --n-7: #b9c0cc; --n-8: #8a93a3; --n-9: #626b7c;
+      --n-10: #4a5262; --n-11: #2d3340; --n-12: #12151c;
+      --brand: #0e7490;
+      --brand-strong: #0891b2;
+      --brand-deep: #155e75;
+      --color-sunken: #f1f3f7;
+      --color-border: #e1e5ec;
+      --color-border-strong: #cdd3dd;
+      --color-on-accent: #ffffff;
+      /* גל 21: כהים מספיק ל-AA (4.5:1) גם כטקסט על המשטח המורם (--n-4) */
+      --color-success: #166534;
+      --color-warning: #92400e;
+      --color-danger: #b91c1c;
+      --color-danger-solid: #dc2626;
+      --color-info: #1d4ed8;
+      --color-run: #16a34a;
+      --color-run-hover: #15803d;
+      --color-pause: #d97706;
+      --color-focus: #0891b2;
+      --color-overlay: rgba(15, 20, 30, 0.35);
+      --color-shadow: rgba(15, 23, 42, 0.12);
+      --color-console-bg: #fbfbfc;
+      --color-console-text: #146c35;
+      --color-console-border: #c9e3cf;
+      --hue-amber: #d97706; --hue-violet: #7c3aed; --hue-cyan: #0891b2; --hue-pink: #db2777;
+      --hue-purple: #9333ea; --hue-sky: #0284c7; --hue-emerald: #059669; --hue-rose: #e11d48;
+      --hue-orange: #ea580c; --hue-teal: #0d9488; --hue-indigo: #4f46e5; --hue-blue: #2563eb;
+      --hue-slate: #64748b; --hue-yellow: #ca8a04;
+      --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234a5262' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    }
+
+    /* גל 18 - "Pro Dark": בסטודיו (מסך מלא) אפורים ניטרליים, רוויה נמוכה, והמותג רק
+       לבחירה/פוקוס/ראש-הניגון - כמו תוכנות עריכה מקצועיות. לא חל על הערכה הבהירה
+       ולא על ניגודיות גבוהה. גל 56: גם עורך הגרפים במסך המלא שלו (body.dvz-focus). */
+    :root:not([data-theme="light"], [data-theme="contrast"]) body.ve-focus, :root:not([data-theme="light"], [data-theme="contrast"]) body.dvz-focus {
+      --n-0: #070708;
+      --n-1: #0d0d0f; --n-2: #131316; --n-3: #18181c; --n-4: #1f1f24; --n-5: #28282e;
+      --color-border: #232328; --color-border-strong: #303037;
+      --color-sunken: #0a0a0c;
+      --color-text: #e8e8ea; --color-text-2: #a4a4ab; --color-text-3: #8a8a92;
+    }
+
+    /* גל 21 - ניגודיות גבוהה: שחור מלא, טקסט לבן, קווים בהירים ופוקוס צהוב.
+       בלי "Pro Dark" (הסטודיו נשאר באותה ערכה). */
+    [data-theme="contrast"] {
+      color-scheme: dark;
+      --n-0: #000000; --n-1: #000000; --n-2: #0a0a0a; --n-3: #121212; --n-4: #1c1c1c;
+      --n-5: #2a2a2a; --n-6: #3a3a3a; --n-7: #6b6b6b; --n-8: #a3a3a3; --n-9: #d4d4d4;
+      --n-10: #ebebeb; --n-11: #f5f5f5; --n-12: #ffffff;
+      --brand: #5ee9ff;
+      --brand-strong: #b3f5ff;
+      --brand-deep: #22d3ee;
+      --color-sunken: #000000;
+      --color-border: #8f8f8f;
+      --color-border-strong: #d4d4d4;
+      --color-on-accent: #000000;
+      --color-success: #5cf09a;
+      --color-warning: #ffe14d;
+      --color-danger: #ff9b9b;
+      --color-danger-solid: #b91c1c;
+      --color-info: #9cc8ff;
+      --color-focus: #ffd400;
+      --ring: 0 0 0 2px var(--color-bg), 0 0 0 5px var(--color-focus);
+      --color-overlay: rgba(0, 0, 0, 0.82);
+      --color-console-bg: #000000;
+      --color-console-text: #b9f6ca;
+      --color-console-border: #8f8f8f;
+    }
+
+    /* גל 21 - צבע הדגשה לבחירת המשתמש (ברירת המחדל = ציאן, בלי מאפיין).
+       --brand הוא המקור לכל הגוונים הנגזרים; בערכה הבהירה גוון כהה יותר (AA על לבן). */
+    :root[data-accent="emerald"] { --brand: #34d399; --brand-strong: #6ee7b7; --brand-deep: #059669; --color-on-accent: #03170f; }
+    :root[data-accent="violet"] { --brand: #a78bfa; --brand-strong: #c4b5fd; --brand-deep: #7c3aed; --color-on-accent: #12082b; }
+    :root[data-accent="amber"] { --brand: #fbbf24; --brand-strong: #fcd34d; --brand-deep: #d97706; --color-on-accent: #1c1302; }
+    :root[data-accent="rose"] { --brand: #fb7185; --brand-strong: #fda4af; --brand-deep: #e11d48; --color-on-accent: #1f0509; }
+    :root[data-theme="light"][data-accent="emerald"] { --brand: #047857; --brand-strong: #059669; --brand-deep: #065f46; --color-on-accent: #ffffff; --color-focus: #059669; }
+    :root[data-theme="light"][data-accent="violet"] { --brand: #6d28d9; --brand-strong: #7c3aed; --brand-deep: #5b21b6; --color-on-accent: #ffffff; --color-focus: #7c3aed; }
+    :root[data-theme="light"][data-accent="amber"] { --brand: #92400e; --brand-strong: #b45309; --brand-deep: #78350f; --color-on-accent: #ffffff; --color-focus: #b45309; }
+    :root[data-theme="light"][data-accent="rose"] { --brand: #be123c; --brand-strong: #e11d48; --brand-deep: #9f1239; --color-on-accent: #ffffff; --color-focus: #e11d48; }
+    /* בניגודיות גבוהה ההדגשה נשארת הציאן הבהיר - הצבעים האחרים לא עומדים ב-7:1 */
+    :root[data-theme="contrast"][data-accent] { --brand: #5ee9ff; --brand-strong: #b3f5ff; --brand-deep: #22d3ee; --color-on-accent: #000000; }
+  }

@@ -1,0 +1,18 @@
+{
+  "files": {
+    "car_sales.csv": "series",
+    "rainfall_annual.csv": "raw_unused"
+  },
+  "series_files": [
+    "car_sales.csv"
+  ],
+  "first_file": "car_sales.csv",
+  "time": "month",
+  "period": "month",
+  "entity": "brand",
+  "value": "cars_sold",
+  "unit": "כלי רכב",
+  "kind": "amount",
+  "chart": "bar_race",
+  "notes": "Two unrelated datasets; SOURCES.md says the episode is car sales and rainfall_annual.csv is not part of it."
+}

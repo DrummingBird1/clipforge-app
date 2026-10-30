@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest an idea or an improvement.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The task or the problem, in your own words - not the solution yet.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: How you imagine it working. Screenshots or examples from other tools are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What do you do today instead?
+      description: A workaround, another tool, or nothing.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of ClipForge?
+      options:
+        - Studio (editing and export)
+        - Data videos
+        - Publishing (YouTube, TikTok)
+        - Discord bot
+        - Install and updates
+        - Something else

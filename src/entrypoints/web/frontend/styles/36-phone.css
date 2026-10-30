@@ -1,0 +1,14 @@
+/* מסך "📱 בטלפון" (36-phone-screen.js, LAZY_CSS["phone"]): עמודה אחת, כפתורים גדולים למגע */
+  @layer shell {
+    .phone-screen { display: flex; flex-direction: column; gap: var(--sp-3); max-inline-size: 560px; margin-inline: auto; }
+    .phone-screen > .tc-section { margin: 0; }   /* ה-auto של .tc-section ממרכז במקום למתוח - כל הכרטיסים באותו רוחב */
+    .phone-actions { display: flex; gap: var(--sp-2); margin-block-start: var(--sp-2); }
+    .phone-btn { flex: 1; min-block-size: 48px; font-size: var(--fs-md); }
+    .phone-danger { color: var(--color-danger); border-color: var(--color-danger); }
+    .phone-title { font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+    #phoneNow progress { inline-size: 100%; block-size: 12px; margin-block-start: var(--sp-2); }
+    .phone-approval { display: flex; flex-direction: column; gap: var(--sp-1); padding-block: var(--sp-2); border-block-end: 1px solid var(--color-border); }
+    .phone-approval video { inline-size: 100%; max-block-size: 50vh; background: var(--media-bg); border-radius: var(--r-md); }
+    .phone-run { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding-block: var(--sp-2); border-block-end: 1px solid var(--color-border); }
+    .phone-run .phone-btn { flex: 0 0 auto; }
+  }

@@ -1,0 +1,17 @@
+{
+  "files": {
+    "store_sales.tsv": "series"
+  },
+  "series_files": [
+    "store_sales.tsv"
+  ],
+  "first_file": "store_sales.tsv",
+  "time": "period",
+  "period": "month",
+  "entity": "store",
+  "value": "sales_usd",
+  "unit": "$",
+  "kind": "amount",
+  "chart": "bar_race",
+  "notes": "Tab-separated; months as 'Jan-2021'. Sales add up -> amount."
+}

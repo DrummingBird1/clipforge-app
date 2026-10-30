@@ -1,0 +1,17 @@
+{
+  "files": {
+    "budget_by_ministry.csv": "series"
+  },
+  "series_files": [
+    "budget_by_ministry.csv"
+  ],
+  "first_file": "budget_by_ministry.csv",
+  "time": "fiscal_year",
+  "period": "year",
+  "entity": "ministry",
+  "value": "budget_nis_billion",
+  "unit": "₪ (מיליארד)",
+  "kind": "level",
+  "chart": "bar_race",
+  "notes": "Fiscal years '2014/15'. Each year's budget is that year's value, not added across years -> level."
+}

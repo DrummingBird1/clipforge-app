@@ -1,0 +1,86 @@
+  <div class="tab-content" data-tab-panel="phone" hidden>
+    <!-- lazy-html:phone -->
+    <div class="phone-screen">
+      <section class="tc-section">
+        <h3>▶️ עכשיו</h3>
+        <div id="phoneNow"></div>
+        <div class="phone-actions">
+          <button id="phonePauseBtn" class="phone-btn" onclick="phoneRunAction('pause')" disabled>⏸️ השהה</button>
+          <button id="phoneResumeBtn" class="phone-btn" onclick="phoneRunAction('resume')" disabled>▶️ המשך</button>
+          <button id="phoneStopBtn" class="phone-btn phone-danger" onclick="phoneStopRun()" disabled>🛑 עצור</button>
+        </div>
+      </section>
+      <section class="tc-section">
+        <h3>🗂️ בתור</h3>
+        <div id="phoneQueue"></div>
+        <div class="phone-actions">
+          <button id="phoneQueueBtn" class="phone-btn" onclick="phoneToggleQueue()">⏸️ השהה את התור</button>
+        </div>
+      </section>
+      <section class="tc-section">
+        <h3>✅ ממתינים לאישור</h3>
+        <div id="phoneApprovals"></div>
+      </section>
+      <section class="tc-section">
+        <h3>🔁 להריץ שוב</h3>
+        <div id="phoneRuns"></div>
+      </section>
+    </div>
+    <!-- /lazy-html:phone -->
+  </div>
+
+  <div class="tab-content" data-tab-panel="approvals" hidden>
+    <div class="tc-section">
+      <h3>✅ אישור קליפים</h3>
+      <div class="hint u-block u-margin-bottom-8px">קליפים שממתינים לאישור לפני רינדור (אותה תור שהבוט שולח לערוץ הדיסקורד שהוגדר ב-/set_review_channel) - נוח לשימוש גם מהטלפון (במצב --lan).</div>
+      <div id="approvalsList"></div>
+    </div>
+    <div class="tc-section">
+      <h3>📊 סרטוני נתונים לפרסום</h3>
+      <div class="hint u-block u-margin-bottom-8px">חבילות הפרסום של סרטוני הנתונים (תמונה ממוזערת, כותרת ו-SEO). אישור או דחייה רק מסמנים סטטוס - שום דבר לא מועלה אוטומטית.</div>
+      <div id="datavizPackagesList"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab-panel="archive" hidden>
+    <div class="tc-section">
+      <h3>🗄️ ארכיון</h3>
+      <div class="hint u-block u-margin-bottom-8px">סקריפטים שעורך-העל (video_editor.py) כבר מכסה במלואם - לא נמחקו וניתנים להרצה כרגיל, רק הוצאו מרשימת הסקריפטים הראשית כדי לא לבלבל.</div>
+      <div id="archiveList"></div>
+    </div>
+  </div>
+
+
+  <div class="tab-content" data-tab-panel="outputs" hidden>
+    <!-- lazy-html:outputs -->
+    <div class="tc-section">
+      <h3>📦 תוצרים</h3>
+      <div class="hint u-block u-margin-bottom-8px">כל הסרטונים שהכלים ייצרו, מ-workspace ומתיקיות הייצוא, החדשים ראשונים. הקבצים עצמם לא זזים ולא נמחקים מכאן.</div>
+      <div class="tc-row">
+        <input type="search" id="outputsFilterName" placeholder="🔍 חיפוש לפי שם..." aria-label="חיפוש תוצר לפי שם" oninput="renderOutputs()">
+        <select id="outputsFilterTool" aria-label="סינון לפי כלי" onchange="renderOutputs()">
+          <option value="">כל הכלים</option>
+        </select>
+        <select id="outputsFilterDate" aria-label="סינון לפי תאריך" onchange="renderOutputs()">
+          <option value="">כל התאריכים</option>
+          <option value="1">היום</option>
+          <option value="7">בשבוע האחרון</option>
+          <option value="30">בחודש האחרון</option>
+        </select>
+        <button class="btn-sm btn-outline" onclick="loadOutputs()">🔄 רענן</button>
+      </div>
+      <div class="hint u-margin-bottom-8px" id="outputsSummary"></div>
+      <div id="outputsList"></div>
+    </div>
+    <div class="tc-section">
+      <div id="outputsStatus" class="hint u-block u-margin-bottom-8px">בחר סרטון מהרשימה</div>
+      <video id="outputsPreview" controls class="u-w-full u-max-height-360px u-bg-media u-rounded u-margin-bottom-10px" hidden></video>
+      <div class="tc-row">
+        <button id="outputsFolderBtn" class="output-action" disabled onclick="openOutputFolder()">📂 פתח תיקייה</button>
+        <button id="outputsStudioBtn" class="output-action" disabled onclick="openOutputInStudio()">🎬 פתח בסטודיו</button>
+        <button id="outputsTiktokBtn" class="output-action" disabled onclick="publishOutput('tiktok')">🎵 פרסם ב-TikTok</button>
+        <button id="outputsYoutubeBtn" class="output-action" disabled onclick="publishOutput('youtube')">📺 פרסם ביוטיוב</button>
+      </div>
+    </div>
+    <!-- /lazy-html:outputs -->
+  </div>

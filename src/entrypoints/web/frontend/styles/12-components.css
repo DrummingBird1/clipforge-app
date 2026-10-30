@@ -1,0 +1,245 @@
+  /* ==========================================================================
+     גל 15 - ספריית הרכיבים: כפתורים, שדות, בוררים, תגיות, כרטיסים, דיאלוגים,
+     תפריטים, התקדמות וקונסולה. הכל מ-tokens (00-tokens.css), כל רכיב מוצג
+     בעמוד /styleguide. סלקטורים בסיסיים עטופים ב-:where() - ספציפיות אפס, כך
+     שכל כלל של מסך מסוים (shell/editor) דורס אותם בלי מאבק.
+     ========================================================================== */
+  @layer components {
+    /* --- כפתורים --- */
+    :where(button) {
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-1);
+      padding: 6px 12px;
+      border: 1px solid var(--color-border-strong); border-radius: var(--r-sm);
+      background: var(--color-surface-3); color: var(--color-text);
+      font-size: var(--fs-sm); font-weight: var(--fw-medium); line-height: 1.25;
+      cursor: pointer; user-select: none;
+      transition: background-color var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out),
+                  color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), transform var(--dur-1) var(--ease-out);
+    }
+    :where(button):hover:not(:disabled) { background: var(--color-selected); border-color: var(--n-7); }
+    :where(button):active:not(:disabled) { transform: translateY(1px); }
+    :where(button):disabled { opacity: .45; cursor: not-allowed; }
+    :where(button):focus-visible { outline: none; box-shadow: var(--ring); }
+
+    .btn-primary { background: var(--color-accent); border-color: transparent; color: var(--color-on-accent); font-weight: var(--fw-semibold); }
+    .btn-primary:hover:not(:disabled) { background: var(--color-accent-strong); border-color: transparent; }
+    .btn-run { background: var(--color-run); border-color: transparent; color: var(--color-on-light); font-weight: var(--fw-semibold); }
+    .btn-run:hover:not(:disabled) { background: var(--color-run-hover); border-color: transparent; }
+    .btn-stop, .btn-danger { background: var(--color-danger-solid); border-color: transparent; color: var(--color-on-solid); font-weight: var(--fw-semibold); }
+    .btn-stop:hover:not(:disabled), .btn-danger:hover:not(:disabled) { background: var(--color-danger); border-color: transparent; }
+    .btn-pause { background: var(--color-pause); border-color: transparent; color: var(--color-on-light); font-weight: var(--fw-semibold); }
+    .btn-pause:hover:not(:disabled) { background: var(--hue-amber); border-color: transparent; }
+    .btn-ghost { background: transparent; border-color: transparent; }
+    .btn-ghost:hover:not(:disabled) { background: var(--color-surface-3); border-color: transparent; }
+    .btn-outline { background: transparent; }
+    .btn-sm { padding: 3px 8px; font-size: var(--fs-xs); gap: 3px; }
+    .btn-xs { padding: 1px 6px; font-size: var(--fs-2xs); gap: 2px; border-radius: var(--r-xs); }
+    .btn-icon { padding: 6px; aspect-ratio: 1; }
+    .btn-block { display: flex; width: 100%; }
+
+    /* --- שדות --- */
+    :where(input:not([type]), input[type=text], input[type=number], input[type=search], input[type=url],
+           input[type=password], input[type=email], input[type=date], input[type=time], input[type=datetime-local],
+           select, textarea) {
+      background: var(--color-sunken); color: var(--color-text);
+      border: 1px solid var(--color-border-strong); border-radius: var(--r-sm);
+      padding: 5px 10px; font-size: var(--fs-sm); line-height: 1.4; min-width: 0;
+      transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
+    }
+    :where(input:not([type]), input[type=text], input[type=number], input[type=search], input[type=url],
+           input[type=password], input[type=email], input[type=date], input[type=time], input[type=datetime-local],
+           select, textarea):hover:not(:disabled) { border-color: var(--n-7); }
+    :where(input:not([type]), input[type=text], input[type=number], input[type=search], input[type=url],
+           input[type=password], input[type=email], input[type=date], input[type=time], input[type=datetime-local],
+           select, textarea):focus {
+      outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft);
+    }
+    :where(input, select, textarea):disabled { opacity: .5; cursor: not-allowed; }
+    ::placeholder { color: var(--color-text-3); opacity: 1; }
+    :where(select):not([multiple]):not([size]) {
+      appearance: none; -webkit-appearance: none;
+      padding-inline-end: 28px;
+      background-image: var(--select-chevron); background-repeat: no-repeat; background-size: 14px;
+      background-position: left 8px center;
+      cursor: pointer;
+    }
+    :where([dir="ltr"]) :where(select):not([multiple]):not([size]) { background-position: right 8px center; }
+    :where(select) option { background: var(--color-surface-1); color: var(--color-text); }
+    :where(input[type=checkbox], input[type=radio]) { accent-color: var(--color-accent); width: 15px; height: 15px; margin: 0; cursor: pointer; flex-shrink: 0; }
+    :where(input[type=range]) { accent-color: var(--color-accent); cursor: pointer; }
+    :where(input[type=color]) { background: transparent; border: 1px solid var(--color-border-strong); border-radius: var(--r-xs); padding: 0; cursor: pointer; }
+    :where(input[type=number]) { font-variant-numeric: tabular-nums; }
+    :where(label) { cursor: default; }
+    :where(label:has(> input[type=checkbox]), label:has(> input[type=radio])) { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    :where(textarea) { resize: vertical; }
+
+    /* --- טקסט, קישורים, מקשים, טבלאות --- */
+    :where(a) { color: var(--color-accent); text-decoration: none; }
+    :where(a):hover { text-decoration: underline; }
+    :where(kbd) {
+      display: inline-block; padding: 0 6px; min-width: 20px; text-align: center;
+      font-size: var(--fs-2xs); line-height: 18px; color: var(--color-text-2);
+      background: var(--color-surface-3); border: 1px solid var(--color-border-strong); border-bottom-width: 2px; border-radius: var(--r-xs);
+    }
+    .kbd-combo { display: inline-flex; gap: 3px; unicode-bidi: isolate; vertical-align: 1px; }
+    :where(table) { border-collapse: collapse; }
+    :where(summary) { cursor: pointer; }
+    :where(hr) { border: none; border-top: 1px solid var(--color-border); margin: var(--sp-3) 0; }
+    .hint { font-size: var(--fs-xs); color: var(--color-text-2); }
+    .t-muted { color: var(--color-text-2); }
+    .t-faint { color: var(--color-text-3); }
+    .t-mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .visually-hidden {
+      position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+      overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+    }
+
+    /* --- אייקונים (גל 16): האימוג'י נשאר בטקסט (חיפוש/טסטים/העתקה), מוסתר, ובמקומו
+       אייקון SVG חד-צבעי שמקבל את צבע הטקסט. המסכות עצמן ב-02-icons.css (נוצר אוטומטית). --- */
+    .ei {
+      display: inline-block; flex-shrink: 0;
+      width: var(--icon-size); height: var(--icon-size); vertical-align: -0.2em;
+      overflow: hidden; color: inherit; text-indent: 150%; white-space: nowrap; line-height: 1;
+      background-color: currentColor;
+      -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat;
+    }
+    .ei[data-tone="ok"] { color: var(--color-success); }
+    .ei[data-tone="bad"] { color: var(--color-danger); }
+    .ei[data-tone="warn"] { color: var(--color-warning); }
+    .ei[data-tone="star"] { color: var(--hue-amber); }
+    .ei[data-tone="hot"] { color: var(--hue-orange); }
+    .ei[data-tone="info"] { color: var(--color-info); }
+    .ei[data-tone="violet"] { color: var(--hue-violet); }
+    .ei[data-tone="neutral"] { color: var(--color-text-2); }
+    .ei[data-tone="light"] { color: var(--n-11); }
+    .ei[data-tone="dark"] { color: var(--n-8); }
+    .ei[data-tone="accent"] { color: var(--color-accent); }
+
+    /* --- תגיות / שבבים / סטטוס --- */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px;
+      border-radius: var(--r-pill); border: 1px solid var(--color-border);
+      background: var(--color-surface-3); color: var(--color-text-2);
+      font-size: var(--fs-2xs); font-weight: var(--fw-medium); line-height: 18px; white-space: nowrap;
+    }
+    .badge.accent { background: var(--color-accent-soft); color: var(--color-accent); border-color: var(--color-accent-line); }
+    .badge.ok { background: var(--color-success-soft); color: var(--color-success); border-color: transparent; }
+    .badge.bad { background: var(--color-danger-soft); color: var(--color-danger); border-color: transparent; }
+    .badge.warn { background: var(--color-warning-soft); color: var(--color-warning); border-color: transparent; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px 1px 8px; border-radius: var(--r-pill);
+      font-size: var(--fs-2xs); font-weight: var(--fw-semibold); line-height: 18px; white-space: nowrap;
+      background: var(--color-surface-3); color: var(--color-text-2);
+    }
+    .status-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status-pill[data-status="ok"] { background: var(--color-success-soft); color: var(--color-success); }
+    .status-pill[data-status="bad"] { background: var(--color-danger-soft); color: var(--color-danger); }
+    .status-pill[data-status="running"] { background: var(--color-accent-soft); color: var(--color-accent); }
+    .status-pill[data-status="running"]::before { animation: ui-pulse 1.2s var(--ease-in-out) infinite; }
+    .status-pill[data-status="queued"] { background: var(--color-warning-soft); color: var(--color-warning); }
+    .status-pill[data-status="cancelled"] { color: var(--color-text-3); }
+
+    /* --- משטחים --- */
+    .card { background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-md); }
+    .card-pad { padding: var(--sp-3) var(--sp-4); }
+    .section-title { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-text-3); letter-spacing: .02em; margin: var(--sp-3) 0 var(--sp-1); }
+    .empty-msg { padding: 10px; color: var(--color-text-2); font-size: var(--fs-sm); }
+    .empty-msg.bad { color: var(--color-danger); }
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2);
+      padding: var(--sp-6) var(--sp-4); text-align: center; color: var(--color-text-2);
+      border: 1px dashed var(--color-border-strong); border-radius: var(--r-md);
+    }
+    .empty-state .ei { width: 32px; height: 32px; color: var(--color-text-3); }
+    .empty-state-title { font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--color-text); }
+
+    /* --- דיאלוגים --- */
+    .modal-bg {
+      position: fixed; inset: 0; z-index: var(--z-modal);
+      display: none; align-items: center; justify-content: center; padding: var(--sp-4);
+      background: var(--color-overlay); backdrop-filter: blur(3px);
+    }
+    .modal-bg.show { display: flex; animation: ui-fade-in var(--dur-2) var(--ease-out); }
+    .modal-bg.modal-top { z-index: calc(var(--z-modal) + 5); }
+    .modal {
+      display: flex; flex-direction: column;
+      width: 480px; max-width: 100%; max-height: 82vh;
+      padding: var(--sp-5); overflow: auto;
+      background: var(--color-surface-1); color: var(--color-text);
+      border: 1px solid var(--color-border-strong); border-radius: var(--r-lg);
+      box-shadow: var(--shadow-3);
+    }
+    .modal-bg.show > .modal { animation: ui-pop-in var(--dur-3) var(--ease-out); }
+    .modal > :is(h3, h2):is(:first-child, .modal-close + *) { margin: 0 0 var(--sp-3); font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+    .modal .path { font-size: var(--fs-xs); color: var(--color-text-2); margin-bottom: var(--sp-2); word-break: break-all; font-family: var(--font-mono); direction: ltr; text-align: start; }
+    .modal .drives { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--sp-3); }
+    .modal .drives button { padding: 4px 10px; font-size: var(--fs-xs); }
+    .modal .drives button.active { background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); font-weight: var(--fw-semibold); }
+    .modal .list { flex: 1; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--r-sm); margin-bottom: var(--sp-3); background: var(--color-sunken); }
+    .modal .list div { padding: 6px 10px; cursor: pointer; font-size: var(--fs-sm); color: var(--color-text); }
+    .modal .list div:hover { background: var(--color-surface-3); }
+    .modal .list a { color: var(--color-accent); text-decoration: none; padding: 2px 6px; }
+    .modal .actions { display: flex; justify-content: space-between; gap: var(--sp-2); }
+    .dlg-sm { width: min(92vw, 420px); }
+    .dlg-md { width: min(92vw, 480px); }
+    .dlg-lg { width: min(94vw, 760px); }
+    .dlg-xl { width: min(94vw, 900px); }
+    .dlg-2xl { width: min(94vw, 960px); }
+
+    /* --- תפריט נפתח --- */
+    .menu {
+      position: absolute; z-index: var(--z-menu); min-width: 210px; padding: var(--sp-1);
+      display: flex; flex-direction: column; gap: 2px;
+      background: var(--color-surface-1); border: 1px solid var(--color-border-strong); border-radius: var(--r-md);
+      box-shadow: var(--shadow-2);
+    }
+
+    /* --- התקדמות --- */
+    .progress-wrap { height: 6px; background: var(--color-surface-3); border-radius: var(--r-pill); overflow: hidden; margin-bottom: 6px; }
+    .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong)); border-radius: var(--r-pill); transition: width .2s var(--ease-out); }
+    .pct { font-size: var(--fs-xs); color: var(--color-text-2); margin-bottom: var(--sp-3); font-variant-numeric: tabular-nums; }
+
+    /* --- קונסולה ---
+       item: log spam - content-visibility:auto נמדד בפועל: בלעדיו, כל appendChild
+       בקונסולה גדולה (אלפי שורות) קורא c.scrollTop=c.scrollHeight, ש-Chromium מחשב
+       על בסיס reflow של *כל* התוכן המצטבר - וכל batch התייקר בהדרגה (עד ~1.4 שניות
+       ליד תקרת 4000 השורות). עם content-visibility:auto התוכן שגלל מחוץ לתצוגה מדולג. */
+    .console {
+      flex: 1; overflow-y: auto; padding: var(--sp-3);
+      background: var(--color-console-bg); color: var(--color-console-text);
+      border: 1px solid var(--color-console-border); border-radius: var(--r-md);
+      font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.55; white-space: pre-wrap;
+      content-visibility: auto; contain-intrinsic-size: auto 500px;
+    }
+    .console .red { color: var(--color-danger); }
+
+    /* --- חיפוש --- */
+    .search-input { width: 100%; }
+
+    /* --- הודעות קופצות (toast) --- */
+    .toast-host {
+      position: fixed; inset-inline: 0; bottom: var(--sp-5); z-index: var(--z-toast);
+      display: flex; flex-direction: column-reverse; gap: var(--sp-2); align-items: center; pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto; display: flex; align-items: center; gap: var(--sp-2);
+      max-width: min(92vw, 560px); padding: 10px 14px;
+      background: var(--color-surface-1); color: var(--color-text);
+      border: 1px solid var(--color-border-strong); border-inline-start: 3px solid var(--color-accent);
+      border-radius: var(--r-md); box-shadow: var(--shadow-3);
+      font-size: var(--fs-sm); animation: ui-toast-in var(--dur-3) var(--ease-out);
+    }
+    .toast[data-tone="ok"] { border-inline-start-color: var(--color-success); }
+    .toast[data-tone="bad"] { border-inline-start-color: var(--color-danger); }
+    .toast[data-tone="warn"] { border-inline-start-color: var(--color-warning); }
+    .toast.leaving { opacity: 0; translate: 0 8px; transition: opacity var(--dur-3) var(--ease-out), translate var(--dur-3) var(--ease-out); }
+    .toast-msg { flex: 1; white-space: pre-wrap; }
+    .toast-close { padding: 2px 6px; background: transparent; border-color: transparent; color: var(--color-text-2); }
+
+    /* --- אנימציות בסיס --- */
+    @keyframes ui-fade-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes ui-pop-in { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }
+    @keyframes ui-toast-in { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
+    @keyframes ui-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  }

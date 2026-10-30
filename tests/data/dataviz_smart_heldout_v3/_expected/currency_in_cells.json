@@ -1,0 +1,17 @@
+{
+  "files": {
+    "branch_revenue.csv": "series"
+  },
+  "series_files": [
+    "branch_revenue.csv"
+  ],
+  "first_file": "branch_revenue.csv",
+  "time": "year",
+  "period": "year",
+  "entity": "branch",
+  "value": "revenue",
+  "unit": "₪",
+  "kind": "amount",
+  "chart": "bar_race",
+  "notes": "Values are quoted strings like '₪4,800,000' - symbol and thousands separators inside the cell; the unit comes from them."
+}

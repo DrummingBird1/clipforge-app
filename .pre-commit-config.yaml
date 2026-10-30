@@ -1,0 +1,56 @@
+# .pre-commit-config.yaml
+#
+# "language: system" בכל hook (לא venv מבודד משלו של pre-commit) - כדי
+# ש-ruff/pytest שרצים כאן יהיו בדיוק הגרסאות הנעולות ב-uv.lock, לא עותק נפרד
+# עם סיכון ל-drift. הפעלה חד-פעמית: pip install pre-commit && pre-commit install
+# && pre-commit install --hook-type pre-push (כדי שגם ה-hook של pytest ירוץ).
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check
+        language: system
+        files: \.(py|pyw)$
+        pass_filenames: false
+
+      - id: py-compile
+        name: py_compile (changed files)
+        entry: uv run python -m py_compile
+        language: system
+        files: \.(py|pyw)$
+
+      - id: pytest
+        name: pytest (full suite - runs on push, not every commit)
+        entry: uv run pytest tests/ -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: mypy
+        name: mypy (type check, same as CI)
+        entry: uv run mypy
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      # תת-קבוצה מהירה (~10 שנ') של בדיקות ה-Tk/GUI - לתפיסת שבירה בממשק שולחן העבודה בלי להריץ את כל הסוויטה
+      - id: tk-fast
+        name: Tk/GUI fast subset
+        entry: uv run pytest tests/test_widgets_spinner.py tests/test_sidebar_selection.py tests/test_rtl_tab_order.py tests/test_global_drop_routing.py -q -n 4
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      # סריקת פגיעויות של התלויות הנעולות (אותו דבר כמו ב-CI). דורש רשת; לדחיפה בלי רשת: SKIP=pip-audit git push
+      - id: pip-audit
+        name: pip-audit (dependency vulnerabilities)
+        entry: uv run pip-audit
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+

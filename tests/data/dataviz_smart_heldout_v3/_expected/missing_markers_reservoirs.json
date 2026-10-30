@@ -1,0 +1,17 @@
+{
+  "files": {
+    "reservoir_levels.csv": "series"
+  },
+  "series_files": [
+    "reservoir_levels.csv"
+  ],
+  "first_file": "reservoir_levels.csv",
+  "time": "date",
+  "period": "month",
+  "entity": "reservoir",
+  "value": "water_height_m",
+  "unit": "מטר",
+  "kind": "level",
+  "chart": "line_race",
+  "notes": "Missing values as '-', 'n/a' and blanks (~9%). Dates are the 15th of each month -> monthly. Water height is a level (Lowland is negative, below sea level)."
+}

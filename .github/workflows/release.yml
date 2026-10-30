@@ -1,0 +1,70 @@
+name: Release
+
+# 30.10.2026 (הכנה להפצה ציבורית, פריט 4): tag בצורת v* (למשל v1.1.0) בונה את החבילה הניידת ומצרף אותה ל-GitHub Release.
+#  - רק על tag - לא על push ולא על PR. ריצה אחת לכל tag, ולא מבטלים ריצה באמצע (cancel-in-progress: false).
+#  - ה-tag חייב להתאים ל-APP_VERSION ב-src/utils/shared/version.py, אחרת עוצרים לפני הבנייה.
+#  - ffmpeg: ה-build של gyan.dev, ‏GPLv3 essentials (libx264 ו-vidstab - הקוד צריך את שניהם), נעול ל-SHA-256 שמ-GitHub.
+#  - Python מ-actions/setup-python (הגרסה מ-.python-version); dev/build_portable.py מעתיק אותו לחבילה, והספריות מ-uv.lock
+#    בלי קבוצת dev. הסקריפט רץ ישירות עם python (בלי uv run) - אין צורך ב-.venv עם כל קבוצת dev.
+#  - הערות ה-Release: הפסקה של הגרסה מ-CHANGELOG.md.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # יצירת ה-Release והעלאת ה-zip
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FFMPEG_URL: https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-essentials_build.zip
+  FFMPEG_SHA256: 60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba
+
+jobs:
+  portable:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: The tag matches the app version
+        shell: bash
+        run: |
+          version=$(python -c "import re; print(re.search(r'^APP_VERSION = \"([^\"]+)\"', open('src/utils/shared/version.py', encoding='utf-8').read(), re.M).group(1))")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != APP_VERSION v$version"; exit 1; }
+
+      - name: Download FFmpeg (pinned)
+        shell: bash
+        run: |
+          curl -fsSL -o ffmpeg.zip "$FFMPEG_URL"
+          echo "$FFMPEG_SHA256  ffmpeg.zip" | sha256sum -c -
+
+      - name: Build the portable package
+        run: python dev/build_portable.py --ffmpeg ffmpeg.zip
+
+      - name: Create the Release with the zip
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'EOF' > release_notes.md
+          import os, re
+          version = os.environ["GITHUB_REF_NAME"].lstrip("v")
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          match = re.search(rf"^## {re.escape(version)}\b.*?$(.*?)(?=^## |\Z)", text, re.M | re.S)
+          print(match.group(1).strip() if match else f"ClipForge {version}")
+          EOF
+          gh release create "$GITHUB_REF_NAME" dist/ClipForge-*-win64.zip --title "ClipForge $GITHUB_REF_NAME" --notes-file release_notes.md

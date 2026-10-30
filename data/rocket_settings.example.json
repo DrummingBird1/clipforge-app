@@ -1,0 +1,12 @@
+{
+    "input_dir": "",
+    "output_dir": "",
+    "watermark_image_path": "",
+    "counter_file_path": "",
+    "encoder": "libx264",
+    "ffmpeg_preset": "medium",
+    "quality_cq": 22,
+    "watermark_opacity": 0.05,
+    "enable_weekly_recap": false,
+    "weekly_recap_day": 6
+}

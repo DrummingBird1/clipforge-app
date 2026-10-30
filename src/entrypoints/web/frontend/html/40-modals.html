@@ -1,0 +1,528 @@
+  <div class="modal-bg" id="veProfileModalBg">
+    <div class="modal ve-profile-modal">
+      <h3 class="u-margin-0-0-10px">🗂️ סגנונות</h3>
+      <div class="ve-row u-wrap">
+        <label title="סינון רשימת הסגנונות לפי תגית">🏷️ תגית:</label>
+        <select id="veProfileTagFilter" onchange="loadVideoEditorProfiles()" aria-label="סינון לפי תגית"><option value="">כל התגיות</option></select>
+        <label title="סדר רשימת הסגנונות">מיון:</label>
+        <select id="veProfileSort" onchange="_veSavePref('veProfileSort', this.value); loadVideoEditorProfiles()" aria-label="מיון סגנונות">
+          <option value="name">לפי שם</option>
+          <option value="recent">בשימוש לאחרונה</option>
+          <option value="count">הכי הרבה הרצות</option>
+          <option value="created">נוצרו לאחרונה</option>
+        </select>
+      </div>
+      <div class="ve-profile-current">
+        <div class="ve-subcat-title">הסגנון הנבחר</div>
+        <div class="ve-row u-wrap">
+          <span id="veProfileMetaInfo" class="u-fs-sm u-muted"></span>
+          <button type="button" id="vePullParentBtn" onclick="pullVeProfileFromParent()" hidden class="u-fs-xs u-padding-3px-8px" title="מעדכן את כל השדות שהסגנון הזה לא שינה בעצמו לערכים הנוכחיים של ההורה">⬇️ משוך שינויים מההורה</button>
+        </div>
+        <div class="ve-row" id="veProfileNotesRow" hidden><span id="veProfileNotesText" class="ve-profile-notes"></span></div>
+        <div class="ve-profile-actions">
+          <button type="button" id="veUpdateProfileBtn" onclick="updateVideoEditorProfile()" hidden title="שומר את ההגדרות הנוכחיות לסגנון הנבחר (Ctrl+S)">🔄 עדכן</button>
+          <button type="button" id="veRenameProfileBtn" onclick="renameVideoEditorProfile()" hidden>✏️ שנה שם</button>
+          <button type="button" id="veDuplicateProfileBtn" onclick="duplicateVideoEditorProfile()" hidden>🔀 שמור בשם...</button>
+          <button type="button" id="veHistoryProfileBtn" onclick="openProfileHistoryDialog()" hidden>↩️ היסטוריה</button>
+          <button type="button" id="veExportProfileBtn" onclick="exportVideoEditorProfile()" hidden>⬇️ ייצוא</button>
+          <button type="button" onclick="openVeAnnotateDialog()">🏷️ תגיות, צבע והערות...</button>
+          <button type="button" id="veDefaultProfileBtn" onclick="toggleVeDefaultProfile()">⭐ קבע כברירת מחדל</button>
+          <button type="button" onclick="createVeChildProfile()" title="עותק שזוכר ממי הוא נוצר - שינויים בהורה אפשר למשוך אליו אחר כך">🧬 צור סגנון יורש...</button>
+          <button type="button" onclick="openVeShareDialog()">🔗 שתף בקישור / QR...</button>
+          <button type="button" id="veDeleteProfileBtn" onclick="deleteVideoEditorProfile()" hidden>🗑️ מחק (לסל המחזור)</button>
+        </div>
+      </div>
+      <div class="ve-subcat-title">סגנון חדש מההגדרות הנוכחיות</div>
+      <div class="ve-row u-wrap">
+        <input type="text" id="veProfileName" placeholder="שם, למשל: קליפים של משחקים" class="u-grow" aria-label="שם לסגנון החדש">
+        <label title="שומר גם את סדר וסימון הקבצים בתור - נטען מחדש כשהסגנון נטען על אותה תיקייה"><input type="checkbox" id="veSaveQueueWithProfile" onchange="_veSavePref('veSaveQueueWithProfile', this.checked)"> 📋 כולל התור</label>
+        <button type="button" class="btn-run" onclick="saveVideoEditorProfile()">💾 שמור</button>
+      </div>
+      <div class="ve-subcat-title">ניהול</div>
+      <div class="ve-profile-actions">
+        <input type="file" id="veImportProfileFile" accept=".json" hidden onchange="_handleImportProfileFileChosen(event)">
+        <button type="button" onclick="openImportProfileDialog()">⬆️ ייבוא סגנון...</button>
+        <button type="button" onclick="openCompareProfilesDialog()">🔍 השווה סגנונות...</button>
+        <button type="button" onclick="exportAllVideoEditorProfiles()">📦 ייצוא כל הסגנונות</button>
+        <button type="button" onclick="openVeImportAllDialog()">📥 ייבוא קובץ סגנונות מלא...</button>
+        <button type="button" onclick="openProfileBackupsDialog()" title="גיבוי אוטומטי נשמר לפני כל שינוי - אפשר לשחזר משם סגנונות שאבדו">🛟 שחזר מגיבוי...</button>
+        <button type="button" onclick="openProfileTrashDialog()" title="סגנונות שנמחקו - אפשר להחזיר אותם">🗑️ סל מחזור...</button>
+      </div>
+      <div class="actions">
+        <span></span>
+        <button type="button" onclick="closeVeProfileManager()">סגור</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-bg" id="veTranscriptModalBg">
+    <div class="modal ve-transcript-modal">
+      <h3 class="u-margin-0-0-10px">📝 עורך תמלול (לפני שריפה)</h3>
+      <div class="ve-row u-wrap">
+        <select id="veTranscriptFile" class="u-max-width-240px" aria-label="קובץ לתמלול"></select>
+        <button type="button" onclick="startVeTranscription()" title="מתמלל את הקובץ ב-Whisper (לפי השפה/מודל שבחרת) ופותח את הטקסט לעריכה">🎙️ תמלל לעריכה</button>
+        <button type="button" onclick="loadVeEditedTranscript()">📂 טען תמלול ערוך</button>
+        <span id="veTranscriptStatus" class="ve-field-msg" aria-live="polite"></span>
+      </div>
+      <div id="veTranscriptEditor" class="ve-transcript-editor" hidden>
+        <div id="veTranscriptRows"></div>
+        <div class="ve-row u-wrap">
+          <button type="button" onclick="addVeTranscriptRow()">➕ שורה</button>
+          <button type="button" class="btn-run" onclick="saveVeEditedTranscript()">💾 שמור תמלול ערוך</button>
+          <button type="button" onclick="deleteVeEditedTranscript()">🗑️ מחק תמלול ערוך</button>
+        </div>
+        <span class="ve-field-msg">תמלול ערוך נשרף במקום התמלול האוטומטי בריצה הבאה על הקובץ הזה.</span>
+      </div>
+      <div class="actions">
+        <span class="ve-field-msg">השפה והמודל נלקחים מ"🔊 שמע וכתוביות".</span>
+        <button type="button" onclick="closeVeTranscriptDialog()">סגור</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-bg" id="modalBg">
+    <div class="modal">
+      <div class="path" id="modalPath"></div>
+      <div class="drives" id="modalDrives"></div>
+      <div class="list" id="modalList"></div>
+      <div class="actions">
+        <button onclick="closeBrowser()">ביטול</button>
+        <button class="btn-run" id="modalChooseFolderBtn" onclick="chooseCurrentFolder()">✅ בחר תיקייה זו</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="statsModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">📊 סטטיסטיקות</h3>
+      <div id="statsTiles" class="stat-tiles" aria-label="סיכום"></div>
+      <div class="section-title">זמן רינדור ממוצע לכל סקריפט</div>
+      <div class="list" id="statsList"></div>
+      <div id="hwaccelSavings" class="hint u-block u-margin-top-8px"></div>
+      <h3 class="u-margin-14px-0-6px">📈 היסטוריית חומרה (24 שעות אחרונות)</h3>
+      <div class="chart-legend" id="hwHistoryLegend"></div>
+      <canvas id="hwHistoryCanvas" width="500" height="100" class="u-w-full u-max-width-500px u-bg u-rounded"></canvas>
+      <h3 class="u-margin-14px-0-6px">🎮 שעות משחק</h3>
+      <div id="gamePlaytimeList" class="hint u-block"></div>
+      <h3 class="u-margin-14px-0-6px">📅 קליפים שנלכדו (30 ימים אחרונים)</h3>
+      <canvas id="clipsHistoryCanvas" width="500" height="80" class="u-w-full u-max-width-500px u-bg u-rounded"></canvas>
+      <div class="actions">
+        <span></span>
+        <button onclick="closeStats()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="diagnosticsModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">🩺 אבחון מערכת</h3>
+      <div class="list" id="diagnosticsList"></div>
+      <div class="hint u-block u-margin-top-8px">בדיקת "מוגדר" בלבד, לא תוקף בפועל (לא שולחת שום בקשת רשת) - ⚡ לבדיקת תוקף אמיתית מול Gemini/Twitch/Discord:</div>
+      <button onclick="checkCredentialValidity()" class="u-margin-top-6px">🔑 בדוק תוקף Credentials</button>
+      <div id="credentialValidityResult"></div>
+      <div class="hint u-block u-margin-top-10px">🔄 גיל המפתחות (מתי כל credential הוחלף לאחרונה) - בלי קריאת רשת:</div>
+      <div id="credentialRotationList"></div>
+      <div class="actions">
+        <span></span>
+        <button onclick="closeDiagnostics()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="paletteModalBg">
+    <div class="modal">
+      <input id="paletteInput" placeholder="🔍 חפש סקריפט... (Ctrl+K)" oninput="_renderPaletteList(this.value)" onkeydown="if (event.key === 'Escape') closeCommandPalette()" class="u-w-full u-padding-8px u-margin-bottom-10px u-bg-surface u-border u-rounded u-text">
+      <div class="list" id="paletteList"></div>
+      <div class="actions">
+        <span></span>
+        <button onclick="closeCommandPalette()">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="profileHistoryModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">↩️ היסטוריית סגנון</h3>
+      <p class="u-fs-sm u-muted u-margin-0-0-8px">גרסאות קודמות של הסגנון, לפני כל דריסה - עד 5 אחרונות. שחזור דוחף את המצב הנוכחי להיסטוריה גם הוא, כך שאפשר לבטל שחזור.</p>
+      <div class="list u-max-height-50vh" id="profileHistoryList"></div>
+      <div class="actions">
+        <span></span>
+        <span></span>
+        <button onclick="closeProfileHistoryDialog()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="veScheduleModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">⏰ תזמון ריצה של עורך-העל</h3>
+      <div class="ve-field-msg" id="veScheduleFolder"></div>
+      <div class="ve-row">
+        <label for="veScheduleType">מתי:</label>
+        <select id="veScheduleType" onchange="_veSyncScheduleFields()">
+          <option value="daily">כל יום</option>
+          <option value="weekly">כל שבוע</option>
+          <option value="interval_hours">כל X שעות</option>
+        </select>
+        <select id="veScheduleWeekday" aria-label="יום בשבוע">
+          <option value="sun">ראשון</option><option value="mon">שני</option><option value="tue">שלישי</option><option value="wed">רביעי</option>
+          <option value="thu">חמישי</option><option value="fri">שישי</option><option value="sat">שבת</option>
+        </select>
+        <input type="time" id="veScheduleTime" value="03:00" aria-label="שעה">
+        <input type="number" id="veScheduleHours" value="24" min="1" max="168" class="u-width-60px" aria-label="כל כמה שעות">
+      </div>
+      <div class="ve-row">
+        <label for="veScheduleLabel">שם:</label>
+        <input type="text" id="veScheduleLabel" maxlength="80" class="u-grow" placeholder="למשל: רינדור לילי של הקלטות">
+      </div>
+      <div class="ve-field-msg" id="veScheduleStatus" aria-live="polite"></div>
+      <div class="actions">
+        <button type="button" onclick="document.getElementById('veScheduleModalBg').classList.remove('show')">ביטול</button>
+        <button type="button" class="btn-run" onclick="saveVeSchedule()">⏰ תזמן</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-bg" id="veSleepBannerHost" hidden></div>
+  <div class="modal-bg" id="compareProfilesModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">🔍 השוואת סגנונות</h3>
+      <div class="ve-row">
+        <select id="compareProfileA"></select>
+        <span>מול</span>
+        <select id="compareProfileB"></select>
+        <button type="button" onclick="_runProfileComparison()">השווה</button>
+      </div>
+      <div class="list u-max-height-45vh u-margin-top-8px" id="compareProfilesResult"></div>
+      <div class="actions">
+        <span></span>
+        <span></span>
+        <button onclick="closeCompareProfilesDialog()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="profileBackupsModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">🛟 שחזור סגנונות מגיבוי</h3>
+      <p class="u-fs-sm u-muted u-margin-0-0-8px">גיבוי אוטומטי נוצר לפני כל שינוי בקובץ הסגנונות ובכל הפעלה של השרת (30 אחרונים + אחד לכל יום בחודש האחרון). "הוסף חסרים" לא נוגע בסגנונות קיימים; "החלף הכל" מחליף את כל הקובץ (גם זה מגובה קודם, אז הפיך).</p>
+      <div class="list u-max-height-50vh" id="profileBackupsList"></div>
+      <div class="actions">
+        <span></span>
+        <span></span>
+        <button onclick="closeProfileBackupsDialog()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="profileTrashModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">🗑️ סל מחזור - סגנונות שנמחקו</h3>
+      <p class="u-fs-sm u-muted u-margin-0-0-8px">מחיקת סגנון מעבירה אותו לכאן (כולל ההיסטוריה שלו) - "החזר" משחזר אותו במלואו.</p>
+      <div class="list u-max-height-50vh" id="profileTrashList"></div>
+      <div class="actions">
+        <span></span>
+        <span></span>
+        <button onclick="closeProfileTrashDialog()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- גל 22: קלט טקסט בתוך הדף (vePrompt) במקום prompt() של הדפדפן -->
+  <div class="modal-bg modal-top" id="vePromptModalBg">
+    <div class="modal u-width-min-92vw-420px" role="dialog" aria-modal="true" aria-labelledby="vePromptMessage">
+      <label id="vePromptMessage" for="vePromptInput" class="prompt-message"></label>
+      <input id="vePromptInput" type="text" autocomplete="off" class="prompt-input">
+      <div class="actions">
+        <button id="vePromptCancelBtn" type="button">ביטול</button>
+        <button id="vePromptOkBtn" type="button" class="btn-run">אישור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg modal-top" id="veConfirmModalBg">
+    <div class="modal u-width-min-92vw-420px" role="alertdialog" aria-modal="true" aria-labelledby="veConfirmMessage">
+      <div id="veConfirmMessage" class="u-fs-md u-lh-relaxed u-margin-bottom-14px u-pre-line"></div>
+      <div class="actions">
+        <button id="veConfirmCancelBtn" type="button">ביטול</button>
+        <button id="veConfirmOkBtn" type="button" class="btn-run">אישור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="veShortcutsModalBg" onclick="if (event.target === this) closeVeShortcutsDialog()">
+    <div class="modal u-width-min-92vw-460px">
+      <h3 class="u-margin-0-0-10px">⌨️ קיצורי מקלדת - עורך-העל</h3>
+      <div id="veShortcutsList" class="ve-shortcuts-list"></div>
+      <div class="actions u-margin-top-12px">
+        <button onclick="closeVeShortcutsDialog(); openGlossaryDialog()">📖 מקראה</button>
+        <button type="button" onclick="resetVeShortcuts()" title="כל הקיצורים חוזרים לברירת המחדל">↺ אפס קיצורים</button>
+        <button onclick="closeVeShortcutsDialog()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="veAnnotateModalBg">
+    <div class="modal u-width-min-92vw-460px">
+      <h3 class="u-margin-0-0-10px">🏷️ תגיות, צבע והערות - <span id="veAnnotateName"></span></h3>
+      <label class="u-block u-fs-sm u-margin-bottom-4px">תגיות (מופרדות בפסיק):</label>
+      <input type="text" id="veAnnotateTags" placeholder="למשל: שורטס, טיקטוק, מצחיק" class="u-w-full u-border-box u-margin-bottom-10px">
+      <label class="u-block u-fs-sm u-margin-bottom-4px">צבע:</label>
+      <div id="veAnnotateColors" class="ve-color-choices" role="radiogroup" aria-label="צבע סגנון"></div>
+      <label class="u-block u-fs-sm u-margin-10px-0-4px">הערות:</label>
+      <textarea id="veAnnotateNotes" rows="4" class="u-w-full u-border-box" placeholder="למה הסגנון הזה, למה משתמשים בו..."></textarea>
+      <div class="actions u-margin-top-10px">
+        <button type="button" onclick="document.getElementById('veAnnotateModalBg').classList.remove('show')">ביטול</button>
+        <button type="button" class="btn-run" onclick="saveVeAnnotations()">💾 שמור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="veShareModalBg">
+    <div class="modal u-width-min-92vw-480px">
+      <h3 class="u-margin-0-0-8px">🔗 שיתוף סגנון - <span id="veShareName"></span></h3>
+      <p class="u-fs-sm u-muted u-margin-0-0-8px">הקישור מכיל רק את ההגדרות ששונו מברירת המחדל (דחוס). פתיחה שלו בעורך מייבאת את הסגנון. נתיבי קבצים (watermark/LUT...) מתייחסים למחשב שמריץ את השרת.</p>
+      <label class="u-fs-sm"><input type="checkbox" id="veShareIncludeToken" onchange="renderVeShare()"> כלול טוקן גישה בקישור (רק למכשירים שלך - מי שמקבל אותו יכול להריץ סקריפטים)</label>
+      <div id="veShareLanHint" class="ve-field-msg u-margin-6px-0"></div>
+      <div class="ve-row"><input type="text" id="veShareUrl" readonly class="u-grow u-ltr u-fs-xs"><button type="button" onclick="copyVeShareUrl()">📋 העתק</button></div>
+      <div class="u-center u-margin-top-10px"><img id="veShareQr" alt="קוד QR לקישור" class="u-width-220px u-height-220px u-bg-white u-rounded u-padding-6px"></div>
+      <div id="veShareQrError" class="ve-field-msg bad"></div>
+      <div class="actions u-margin-top-8px">
+        <span></span>
+        <button type="button" onclick="document.getElementById('veShareModalBg').classList.remove('show')">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="veImportAllModalBg">
+    <div class="modal u-width-min-92vw-460px">
+      <h3 class="u-margin-0-0-8px">📥 ייבוא קובץ סגנונות מלא</h3>
+      <input type="file" id="veImportAllFile" accept=".json,application/json" class="u-margin-bottom-10px">
+      <div class="u-fs-sm u-margin-bottom-4px">סגנון שכבר קיים באותו שם:</div>
+      <label class="u-block u-fs-sm"><input type="radio" name="veImportAllStrategy" value="skip" checked> דלג (אל תיגע בסגנונות קיימים)</label>
+      <label class="u-block u-fs-sm"><input type="radio" name="veImportAllStrategy" value="rename"> ייבא בשם חדש ("... (מיובא)")</label>
+      <label class="u-block u-fs-sm"><input type="radio" name="veImportAllStrategy" value="overwrite"> דרוס (הגרסה הקודמת נשמרת בהיסטוריה ובגיבוי)</label>
+      <div id="veImportAllResult" class="ve-field-msg u-margin-top-8px"></div>
+      <div class="actions u-margin-top-10px">
+        <button type="button" onclick="document.getElementById('veImportAllModalBg').classList.remove('show')">סגור</button>
+        <button type="button" class="btn-run" onclick="runVeImportAll()">📥 ייבא</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- גל 31: גיליון "לפני הרצה" - מה ירונדר, זמן וגודל משוערים, אזהרות - ואז "הרץ" -->
+  <div class="modal-bg" id="veRunSheetBg" onclick="if (event.target === this) closeVeRunSheet()">
+    <div class="modal ve-run-sheet" role="dialog" aria-modal="true" aria-labelledby="veRunSheetTitle">
+      <h3 id="veRunSheetTitle" class="u-margin-0-0-10px">▶ לפני הרצה</h3>
+      <div class="ve-run-sheet-tiles">
+        <div class="ve-run-sheet-tile ve-run-sheet-what"><span>מה ירונדר</span><strong id="veRunSheetWhat"></strong></div>
+        <div class="ve-run-sheet-tile"><span>זמן משוער</span><strong id="veRunSheetTime"></strong></div>
+        <div class="ve-run-sheet-tile"><span>גודל משוער</span><strong id="veRunSheetSize"></strong></div>
+      </div>
+      <div id="veRunSheetNotes" class="ve-field-msg"></div>
+      <div id="veRunSheetTargets" class="ve-chips" aria-label="יעדים"></div>
+      <div id="veRunSheetFolder" class="ve-run-sheet-folder" dir="ltr" title="תיקיית הקלט"></div>
+      <div id="veRunSheetWarnTitle" class="ve-subcat-title"></div>
+      <div id="veRunSheetWarnings" class="ve-run-sheet-warnings"></div>
+      <div class="actions u-gap-6px u-wrap">
+        <label class="u-fs-sm" title="אפשר להחזיר גם מתפריט ההרצה (▾)"><input type="checkbox" id="veRunSheetAlways" onchange="_veSavePref('veRunSheet', this.checked)"> הצג לפני כל הרצה</label>
+        <span class="u-grow"></span>
+        <button type="button" onclick="closeVeRunSheet()">ביטול</button>
+        <button type="button" onclick="scheduleFromVeRunSheet()" title="במקום עכשיו - בשעה שתבחר (פעם אחת או קבוע)">⏰ תזמן...</button>
+        <button type="button" class="btn-run" id="veRunSheetGo" onclick="confirmVeRunSheet()">▶ הרץ</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="vePlayerModalBg">
+    <div class="modal u-width-min-94vw-900px">
+      <h3 class="u-margin-0-0-8px" id="vePlayerTitle">▶ נגן</h3>
+      <video id="vePlayer" controls class="u-w-full u-max-height-65vh u-bg-media u-rounded"></video>
+      <div class="actions">
+        <span></span>
+        <button type="button" onclick="closeVePlayer()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="veRegionModalBg">
+    <div class="modal u-width-min-94vw-960px u-max-height-88vh">
+      <h3 class="u-margin-0-0-6px">🖱️ סמן את אזור הלוגו הישן</h3>
+      <p class="u-fs-sm u-muted u-margin-0-0-8px">גרור מלבן על הלוגו שרוצים לטשטש (מעט מרווח סביבו עוזר). אפשר לשנות את הזמן כדי למצוא פריים שבו הלוגו ברור.</p>
+      <div class="ve-row u-margin-bottom-6px">
+        <label>זמן במקור:</label>
+        <input type="text" id="veRegionTime" value="1" class="u-width-70px">
+        <button type="button" onclick="loadVeRegionFrame()">טען פריים</button>
+        <span id="veRegionInfo" class="ve-field-msg"></span>
+      </div>
+      <div class="u-scroll u-center">
+        <div id="veRegionStage" class="ve-region-stage">
+          <img id="veRegionImg" alt="פריים מהמקור" draggable="false">
+          <div id="veRegionRect" class="ve-region-rect" hidden></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" onclick="closeVeRegionDialog()">ביטול</button>
+        <button type="button" class="btn-run" onclick="saveVeRegion()">✅ שמור אזור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="veImageResultModalBg">
+    <div class="modal u-width-min-92vw-900px">
+      <h3 class="u-margin-0-0-10px" id="veImageResultTitle">🖼️ תצוגה מקדימה</h3>
+      <div class="u-scroll u-max-height-65vh u-center"><img id="veImageResultImg" alt="" class="u-max-width-100"></div>
+      <div class="actions">
+        <span id="veImageResultPath" class="u-fs-xs u-muted u-break-all"></span>
+        <button onclick="document.getElementById('veImageResultModalBg').classList.remove('show')">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- lazy-html:dataviz -->
+  <!-- גל 42: מדריך המנוע של עורך הגרפים -->
+  <div class="modal-bg" id="dvzHelpBg" onclick="if (event.target === this) dvzCloseHelp()">
+    <div class="modal u-width-min-92vw-460px dvz-help-modal" role="dialog" aria-labelledby="dvzHelpTitle">
+      <h3 class="u-margin-0-0-10px" id="dvzHelpTitle">📖 מדריך המנוע</h3>
+      <input type="search" id="dvzHelpSearch" placeholder="🔍 חיפוש בהסברים..." aria-label="חיפוש במדריך" oninput="dvzRenderHelp()">
+      <nav id="dvzHelpToc" class="dvz-help-toc" aria-label="פרקי המדריך"></nav>
+      <div id="dvzHelpBody" class="dvz-help-body"></div>
+      <div class="actions u-margin-top-12px">
+        <button type="button" onclick="dvzCloseHelp()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- גל 41: אשף פרסום לסרטון נתונים -->
+  <div class="modal-bg" id="dvzWizardBg" onclick="if (event.target === this) closeDvzWizard()">
+    <div class="modal u-width-min-92vw-460px">
+      <h3 class="u-margin-0-0-10px" id="dvzWizardTitle">📦 אשף פרסום</h3>
+      <ol id="dvzWizardSteps" class="dvz-wizard-steps" aria-label="שלבי האשף"></ol>
+      <div id="dvzWizardBody" class="dvz-wizard-body"></div>
+      <div class="hint u-block" id="dvzWizardStatus" role="status" aria-live="polite"></div>
+      <div class="actions u-margin-top-12px">
+        <button type="button" id="dvzWizardBack" onclick="dvzWizardStep(-1)">→ הקודם</button>
+        <button type="button" id="dvzWizardNext" class="btn-primary" onclick="dvzWizardStep(1)">הבא ←</button>
+        <button type="button" onclick="closeDvzWizard()">סגור</button>
+      </div>
+    </div>
+  </div>
+  <!-- /lazy-html:dataviz -->
+
+  <!-- גל 36: השוואה בין שתי ריצות -->
+  <div class="modal-bg" id="veRunCompareModalBg" onclick="if (event.target === this) closeVeRunCompare()">
+    <div class="modal u-width-min-92vw-460px">
+      <h3 class="u-margin-0-0-10px">⇆ השוואת ריצות</h3>
+      <div id="veRunCompareNote" class="ve-field-msg"></div>
+      <div id="veRunCompareBody" class="ve-run-compare"></div>
+      <div class="actions u-margin-top-12px">
+        <span></span>
+        <span></span>
+        <button type="button" onclick="closeVeRunCompare()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- גל 34: ספרייה אחת - סגנונות, מיתוג, יעדים ושכבות מוכנות -->
+  <div class="modal-bg" id="veLibraryModalBg" onclick="if (event.target === this) closeVeLibrary()">
+    <div class="modal u-width-min-92vw-460px">
+      <h3 class="u-margin-0-0-10px">📚 ספרייה</h3>
+      <div id="veLibraryTabs" class="ve-library-tabs" role="tablist" aria-label="סוג"></div>
+      <div id="veLibraryList" class="ve-library-list" role="list"></div>
+      <div class="actions u-margin-top-12px">
+        <span></span>
+        <span></span>
+        <button type="button" onclick="closeVeLibrary()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- גל 34: מה חדש -->
+  <div class="modal-bg" id="veWhatsNewModalBg" onclick="if (event.target === this) closeVeWhatsNew()">
+    <div class="modal u-width-min-92vw-460px">
+      <h3 class="u-margin-0-0-10px">🆕 מה חדש בעורך</h3>
+      <div id="veWhatsNewList" class="ve-whats-new"></div>
+      <div class="actions u-margin-top-12px">
+        <span></span>
+        <button type="button" onclick="closeVeWhatsNew(); startVeTour()">👋 סיור בעורך</button>
+        <button type="button" onclick="closeVeWhatsNew()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- גל 34: בועת הסיור (ממוקמת ליד האזור שמוסבר) -->
+  <div id="veTour" class="ve-tour" role="dialog" aria-labelledby="veTourTitle" hidden>
+    <strong id="veTourTitle"></strong>
+    <p id="veTourText"></p>
+    <div class="ve-tour-actions">
+      <button type="button" id="veTourPrev" onclick="veTourPrev()">→ הקודם</button>
+      <button type="button" id="veTourNext" onclick="veTourNext()">הבא ←</button>
+      <button type="button" onclick="endVeTour()" aria-label="סיום הסיור">✕</button>
+    </div>
+  </div>
+
+  <!-- גל 33: הסעיף בתיעוד (docs/video_editor.md) של הגדרה -->
+  <div class="modal-bg" id="veDocsModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px" id="veDocsTitle">📖 תיעוד</h3>
+      <div class="ve-docs-body u-max-height-50vh" id="veDocsBody" dir="ltr"></div>
+      <div class="actions">
+        <span></span>
+        <span></span>
+        <button type="button" onclick="closeVeDocs()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="glossaryModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">📖 מקראה - כל ההגדרות בעורך-העל</h3>
+      <input type="text" id="glossarySearch" placeholder="חפש מונח..." class="u-padding-8px u-margin-bottom-8px u-bg-surface u-border u-rounded u-text" oninput="_renderGlossaryList(this.value)">
+      <div class="list u-max-height-50vh" id="glossaryList"></div>
+      <div class="actions">
+        <span></span>
+        <span></span>
+        <button onclick="closeGlossaryDialog()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="commandPreviewModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">⌨️ הפקודה שתישלח בפועל</h3>
+      <p class="u-fs-sm u-muted u-margin-0-0-8px">נבנה מהגדרות הטופס הנוכחיות (לפני שמירה) - בדיוק מה שירוץ בפועל בלחיצה על "הרץ".</p>
+      <textarea id="commandPreviewText" readonly class="u-w-full u-min-height-120px u-mono u-fs-sm u-padding-8px u-bg-surface u-border u-rounded u-text u-ltr u-ta-left"></textarea>
+      <div class="actions">
+        <span></span>
+        <button onclick="_copyCommandPreview()">📋 העתק</button>
+        <button onclick="closeCommandPreviewDialog()">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="settingsModalBg">
+    <div class="modal">
+      <h3 class="u-margin-0-0-10px">⚙️ ייצוא/ייבוא הגדרות</h3>
+      <div class="settings-actions">
+        <div>
+          <a id="settingsExportLink" href="/api/settings/export" download="clipforge_settings.json"><button class="u-w-full">⬇️ הורד קובץ הגדרות (config.json)</button></a>
+        </div>
+        <div>
+          <input type="file" id="settingsImportFile" accept="application/json,.json" class="u-w-full">
+          <button class="u-w-full u-margin-top-6px" onclick="importSettings()">⬆️ ייבא מקובץ</button>
+          <div class="hint">מגבה את ההגדרות הקיימות ל-config.json.bak קודם. השינוי נכנס לתוקף רק אחרי הפעלה מחדש של ה-GUI/הבוט.</div>
+        </div>
+      </div>
+      <h3 class="u-margin-16px-0-10px">🔐 גיבוי מוצפן (config + DB + מצב תזמון)</h3>
+      <div class="settings-actions">
+        <div>
+          <input type="password" id="backupPassphrase" placeholder="סיסמה לגיבוי" class="u-w-full">
+          <button class="u-w-full u-margin-top-6px" onclick="createEncryptedBackup()">🔐 צור גיבוי מוצפן</button>
+          <div class="hint">קובץ יחיד מוצפן שאפשר להעביר בבטחה לדיסק חיצוני/ענן - לא כמו הגיבוי היומי האוטומטי הגלוי. הסיסמה לא נשמרת בשום מקום - איבוד שלה = איבוד הגישה לגיבוי.</div>
+        </div>
+      </div>
+      <div id="backupList" class="u-margin-top-10px"></div>
+      <div class="actions">
+        <span></span>
+        <button onclick="closeSettingsModal()">סגור</button>
+      </div>
+    </div>
+  </div>
+

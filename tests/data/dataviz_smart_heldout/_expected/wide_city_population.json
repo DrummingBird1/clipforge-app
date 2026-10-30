@@ -1,0 +1,17 @@
+{
+  "files": {
+    "city_population.csv": "series"
+  },
+  "series_files": [
+    "city_population.csv"
+  ],
+  "first_file": "city_population.csv",
+  "time": "<years-as-columns>",
+  "period": "year",
+  "entity": "city",
+  "value": "<cells>",
+  "unit": "תושבים",
+  "kind": "level",
+  "chart": "bar_race",
+  "notes": "Wide table: years are the column headers, so a correct draft melts it. '<years-as-columns>' and '<cells>' mark that; any real column name here is wrong."
+}

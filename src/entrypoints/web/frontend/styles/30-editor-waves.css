@@ -1,0 +1,155 @@
+/* גלים 33-42: סידור עורך-העל ועורך הגרפים - קובץ סגנונות משותף לגלים החדשים, באותה שכבה כמו הסטודיו */
+@layer studio {
+  /* --- גל 33: מסלול ניווט --- */
+  .ve-crumbs { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; padding: 2px 8px 4px; font-size: var(--fs-xs); color: var(--color-text-3); min-height: 22px; }
+  .ve-crumbs:empty { display: none; }
+  /* גל 58: במצב הפשוט אין מפקח - הצעדים כבר מראים תיקייה וקובץ, והנגן את הקובץ */
+  #videoEditorOptions.ve-simple .ve-crumbs { display: none; }
+  .ve-crumb { background: none; border: 0; padding: 1px 6px; border-radius: 6px; color: var(--color-text-2); font-size: var(--fs-xs); cursor: pointer; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ve-crumb:hover, .ve-crumb:focus-visible { background: var(--color-surface-2); color: var(--color-text); }
+  .ve-crumb-sep { color: var(--color-text-3); }
+
+  /* --- גל 33: כלי המפקח --- */
+  .ve-inspector-tools { display: flex; align-items: center; gap: 6px; padding: 4px 2px 6px; flex-wrap: wrap; }
+  .ve-inspector-tools #veSearchInput { flex: 1 1 160px; min-width: 120px; padding-block: 4px; }
+  .ve-inspector-tools .ve-chip.ve-chip-on { background: var(--color-accent-soft); border-color: var(--color-accent-line); color: var(--color-text); }
+
+  /* הערות שנפתחות מתחת לשדה - שורה מלאה בתוך שורת ההגדרה */
+  #videoEditorOptions .ve-row:has(> .ve-rel-note, > .ve-dep-note, > .ve-inline-warn, > .ve-help-inline) { flex-wrap: wrap; }
+  .ve-rel-note, .ve-dep-note, .ve-inline-warn, .ve-help-inline { flex: 1 0 100%; font-size: var(--fs-xs); line-height: 1.45; }
+  .ve-rel-note, .ve-dep-note { color: var(--color-text-3); }
+  .ve-ctl-irrelevant { opacity: .45; }
+  .ve-inline-warn { padding: 3px 8px; border-radius: 6px; }
+  .ve-inline-warn.warn { background: var(--color-warning-soft); color: var(--color-text); }
+  .ve-inline-warn.info { background: var(--color-surface-2); color: var(--color-text-2); }
+  .ve-help-toggle { inline-size: 18px; block-size: 18px; padding: 0; border-radius: 50%; font-size: var(--fs-2xs); line-height: 1; flex: 0 0 auto; color: var(--color-text-3); background: var(--color-surface-2); border: 1px solid var(--color-border); }
+  /* ה-"?" לוקח מרוחב התווית, כדי שהבקרים יישארו באותו טור כמו בשורות בלי הסבר */
+  #veCategories .ve-category-body .ve-row > label:first-child:not(:has(input, select, textarea)):has(+ .ve-help-toggle) { flex-basis: calc(var(--ve-label-w, 124px) - 26px); }
+  .ve-help-toggle[aria-expanded="true"] { color: var(--color-text); border-color: var(--color-accent-line); }
+  .ve-help-inline { display: flex; gap: 8px; align-items: baseline; padding: 4px 8px; border-radius: 6px; background: var(--color-surface-2); color: var(--color-text-2); }
+  .ve-help-docs { flex: 0 0 auto; font-size: var(--fs-xs); padding: 1px 8px; }
+  .ve-docs-body { white-space: pre-wrap; font-size: var(--fs-sm); line-height: 1.55; overflow: auto; text-align: start; }
+
+  /* כלי קבוצה ושורת "מה זה עושה" */
+  .ve-group-tools { display: inline-flex; gap: 2px; margin-inline-start: auto; opacity: 0; transition: opacity .15s; }
+  .ve-subcat-title:hover .ve-group-tools, .ve-subcat-title:focus-within .ve-group-tools { opacity: 1; }
+  .ve-group-tool { padding: 0 6px; font-size: var(--fs-xs); line-height: 1.6; background: none; border: 1px solid transparent; border-radius: 6px; }
+  .ve-group-tool:hover:not(:disabled) { border-color: var(--color-border); background: var(--color-surface-2); }
+  .ve-group-tool:disabled { opacity: .35; cursor: default; }
+  .ve-subcat-desc { margin: 0 0 6px; font-size: var(--fs-xs); color: var(--color-text-3); }
+  @media (hover: none) { .ve-group-tools { opacity: 1; } }
+
+  /* --- גל 34: "רגיל" - ההגדרות הטכניות הנדירות מוסתרות, חוץ ממה ששונה ובזמן חיפוש --- */
+  #videoEditorOptions.ve-regular #veCategories:not(.ve-searching) .ve-rare:not(.ve-row-changed):not(:has(.ve-row-changed)) { display: none; }
+
+  /* ספרייה */
+  .ve-library-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-block-end: 8px; }
+  .ve-library-tabs button.active { background: var(--color-accent-soft); border-color: var(--color-accent-line); }
+  .ve-library-list { display: flex; flex-direction: column; gap: 4px; max-height: 55vh; overflow: auto; }
+  .ve-library-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--r-sm); background: var(--color-surface-2); }
+  .ve-library-item.active { outline: 1px solid var(--color-accent-line); }
+  .ve-library-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ve-library-footer { align-self: flex-start; margin-block-start: 6px; }
+  .ve-library-empty { padding: 12px 4px; }
+
+  /* מסך מלא לנגן */
+  #veViewer:fullscreen { overflow: auto; max-height: none; padding: 12px; background: var(--color-surface-1); }
+  #veViewer:fullscreen :is(.ve-preview-stage img, .ve-preview-stage video) { max-height: 80vh; }
+
+  /* מעבר בין אזורים, סיור ומה חדש */
+  .ve-region-flash { animation: ve-region-flash .7s ease-out; }
+  @keyframes ve-region-flash { from { box-shadow: 0 0 0 3px var(--color-accent-line); } to { box-shadow: 0 0 0 3px transparent; } }
+  .ve-tour { position: fixed; z-index: 60; max-width: min(340px, 92vw); padding: 12px 14px; border-radius: var(--r-md); background: var(--color-surface-3); border: 1px solid var(--color-accent-line); box-shadow: var(--shadow-3); }
+  .ve-tour p { margin: 6px 0 10px; font-size: var(--fs-sm); color: var(--color-text-2); }
+  .ve-tour-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .ve-tour-target { outline: 2px solid var(--color-accent); outline-offset: 3px; border-radius: var(--r-sm); }
+  #veHelpMenuBtn.ve-has-news { position: relative; }
+  #veHelpMenuBtn.ve-has-news::after { content: ""; position: absolute; inset-block-start: 3px; inset-inline-end: 3px; inline-size: 7px; block-size: 7px; border-radius: 50%; background: var(--color-accent); }
+  .ve-whats-new ul { margin: 4px 0 12px; padding-inline-start: 18px; font-size: var(--fs-sm); line-height: 1.55; }
+
+  /* קיצורים שאפשר לשנות */
+  .ve-shortcut-edit { padding: 0 6px; font-size: var(--fs-xs); background: none; border: 1px solid transparent; }
+  .ve-shortcut-edit:hover { border-color: var(--color-border); }
+  .ve-shortcut-custom kbd { border-color: var(--color-accent-line); }
+
+  /* --- גל 35: תור - רשת, קיבוץ, תגיות צבע --- */
+  .ve-queue-list.ve-queue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 6px; }
+  .ve-queue-grid .ve-queue-row { flex-direction: column; align-items: stretch; gap: 4px; position: relative; padding: 4px; }
+  .ve-queue-grid .ve-queue-thumb { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .ve-queue-grid .ve-queue-row > input[type="checkbox"] { position: absolute; inset-block-start: 8px; inset-inline-start: 8px; z-index: 1; }
+  .ve-queue-grid .ve-queue-badge, .ve-queue-grid .ve-queue-clip-btn, .ve-queue-grid .ve-queue-tag { position: absolute; inset-block-start: 6px; inset-inline-end: 6px; }
+  .ve-queue-grid .ve-queue-clip-btn { inset-block-start: auto; inset-block-end: 6px; }
+  .ve-queue-grid .ve-queue-tag { inset-inline-end: auto; inset-inline-start: 30px; }
+  .ve-queue-grid .ve-queue-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ve-queue-row[data-group-label] { margin-block-start: 18px; }
+  .ve-queue-row[data-group-label]::before { content: attr(data-group-label); position: absolute; inset-block-start: -17px; inset-inline-start: 2px; font-size: var(--fs-2xs); font-weight: var(--fw-semibold); color: var(--color-text-3); }
+  .ve-queue-list:not(.ve-queue-grid) .ve-queue-row[data-group-label] { position: relative; }
+  .ve-queue-tag { font-size: var(--fs-xs); line-height: 1; flex: 0 0 auto; }
+  .ve-queue-tag-picker { display: inline-flex; gap: 1px; }
+  .ve-queue-tag-picker button { padding: 0 3px; background: none; border: 0; }
+  .ve-badge-status[role="button"] { cursor: pointer; }
+  .ve-badge-status[role="button"]:hover { filter: brightness(1.2); }
+
+  /* --- גל 35: ציר-זמן - סימנים, עריכת קליפ, מיני-מפה, מסלולים --- */
+  .ve-tl-marker { position: absolute; top: 0; transform: translateX(-50%); z-index: 3; font-size: var(--fs-sm); line-height: 1; cursor: pointer; text-shadow: 0 0 3px var(--media-bg); }
+  .ve-tl-marker::after { content: attr(data-name); position: absolute; top: 2px; left: 14px; padding: 0 4px; border-radius: 3px; white-space: nowrap; font-size: var(--fs-2xs); background: var(--media-scrim); color: var(--media-text); pointer-events: none; } /* ltr: הציר עצמו LTR */
+  #veTimelineDock.ve-timeline-clip { box-shadow: inset 0 0 0 2px var(--color-warning); border-radius: var(--r-sm); position: relative; }
+  #veTimelineDock.ve-timeline-clip::before { content: attr(data-clip-label); display: block; padding: 2px 8px; font-size: var(--fs-xs); background: var(--color-warning-soft); color: var(--color-text); }
+  .ve-tl-minimap { position: relative; direction: ltr; height: 10px; margin-block: 2px; border-radius: 3px; background: var(--media-bg); cursor: pointer; touch-action: none; }
+  .ve-tl-minimap-keep { position: absolute; top: 3px; bottom: 3px; background: var(--color-accent-line); border-radius: 2px; }
+  .ve-tl-minimap-view { position: absolute; top: 0; bottom: 0; border: 1px solid var(--color-text-2); border-radius: 3px; }
+  .ve-tl-minimap-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--color-warning); }
+  .ve-track-tag-row[data-track] .ve-track-tag { pointer-events: auto; }
+  .ve-track-name { cursor: text; }
+  .ve-track-lock { padding: 0 3px; font-size: var(--fs-2xs); line-height: 1.3; background: none; border: 0; color: inherit; }
+  #veTimecodeInput.ve-invalid { border-color: var(--color-danger); }
+
+  /* --- גל 36: קבוצות שכבות, שורת המיתוג, יישור, קווי עזר --- */
+  .ve-ll-group { display: flex; align-items: center; gap: 4px; padding: 3px 6px; margin-block-start: 4px; font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-text-2); border-block-end: 1px solid var(--color-border); }
+  .ve-ll-group-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ve-ll-in-group { margin-inline-start: 12px; }
+  .ve-ll-brand { cursor: pointer; background: var(--color-surface-2); }
+  .ve-ll-lock-mark { margin-inline-start: auto; font-size: var(--fs-xs); opacity: .7; }
+  .ve-layer-align-bar { gap: 2px; }
+  .ve-layer-align-bar button { min-inline-size: 28px; padding-inline: 4px; }
+  #vePreviewStage.ve-guides-on::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+    background:
+      linear-gradient(var(--media-text-2), var(--media-text-2)) 33.333% 0 / 1px 100% no-repeat,
+      linear-gradient(var(--media-text-2), var(--media-text-2)) 66.667% 0 / 1px 100% no-repeat,
+      linear-gradient(var(--media-text-2), var(--media-text-2)) 0 33.333% / 100% 1px no-repeat,
+      linear-gradient(var(--media-text-2), var(--media-text-2)) 0 66.667% / 100% 1px no-repeat,
+      linear-gradient(var(--color-accent-line), var(--color-accent-line)) 50% 0 / 1px 100% no-repeat,
+      linear-gradient(var(--color-accent-line), var(--color-accent-line)) 0 50% / 100% 1px no-repeat;
+  }
+
+  /* שכבות מוכנות עם תצוגה בספרייה */
+  .ve-library-item.ve-library-with-preview { grid-template-columns: 72px minmax(0, 1fr) auto auto; }
+  .ve-ready-preview { position: relative; display: flex; inline-size: 72px; aspect-ratio: 16 / 9; padding: 3px; border-radius: var(--r-xs); background: var(--media-bg-2); overflow: hidden; direction: ltr; }
+  .ve-ready-preview[data-position^="top"] { align-items: flex-start; }
+  .ve-ready-preview[data-position^="bottom"] { align-items: flex-end; }
+  .ve-ready-preview[data-position="center"] { align-items: center; justify-content: center; }
+  .ve-ready-preview[data-position$="center"] { justify-content: center; }
+  .ve-ready-preview[data-position$="right"] { justify-content: flex-end; }
+  .ve-ready-sample { font-size: var(--fs-2xs); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--media-text); }
+  .ve-ready-box { padding: 0 3px; border-radius: 2px; background: var(--media-scrim); }
+
+  /* מרכז ריצות, שמות ותגיות, השוואה */
+  .ve-hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; margin-block-end: 6px; }
+  .ve-hub-card { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px; text-align: start; border-radius: var(--r-sm); background: var(--color-surface-2); border: 1px solid var(--color-border); }
+  .ve-run-label { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-text); }
+  .ve-run-compare-pick { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-xs); color: var(--color-text-3); }
+  .ve-run-compare { max-height: 55vh; overflow: auto; }
+  .ve-run-compare-table { inline-size: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+  .ve-run-compare-table td { padding: 3px 6px; border-block-end: 1px solid var(--color-border); vertical-align: top; overflow-wrap: anywhere; }
+  .ve-run-compare-table tr.ve-compare-meta td:first-child, .ve-run-compare-table tr.ve-compare-diff td:first-child { color: var(--color-text-2); white-space: nowrap; }
+  .ve-run-compare-table tr.ve-compare-diff td:not(:first-child) { background: var(--color-warning-soft); }
+
+  /* יחידות שאפשר לגרור */
+  #videoEditorOptions .ve-unit.ve-scrub { cursor: ew-resize; user-select: none; touch-action: none; }
+}
+
+/* גל 47: קיבוץ לפי תיקייה - תתי-התיקיות מתחת לתור */
+.ve-queue-subfolders { display: grid; gap: 4px; margin-block-start: var(--sp-2); }
+.ve-queue-subfolder summary { cursor: pointer; font-size: var(--fs-sm); color: var(--color-text-2); }
+.ve-queue-subfolder ul { margin: 2px 0 0; padding-inline-start: var(--sp-4); font-size: var(--fs-xs); color: var(--color-text-3); }

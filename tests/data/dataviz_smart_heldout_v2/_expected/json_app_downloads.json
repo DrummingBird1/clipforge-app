@@ -1,0 +1,17 @@
+{
+  "files": {
+    "downloads.json": "series"
+  },
+  "series_files": [
+    "downloads.json"
+  ],
+  "first_file": "downloads.json",
+  "time": "month",
+  "period": "month",
+  "entity": "app",
+  "value": "downloads",
+  "unit": "הורדות",
+  "kind": "amount",
+  "chart": "bar_race",
+  "notes": "A JSON list of records (not CSV). Downloads per month add up -> amount."
+}

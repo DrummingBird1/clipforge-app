@@ -1,0 +1,55 @@
+name: Bug report
+description: Something in ClipForge doesn't work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the [open issues](../issues) first.
+        For a security problem, don't open an issue - see [SECURITY.md](../blob/main/SECURITY.md).
+        Leave out anything private: API keys, tokens, your channel names, file paths with your user name.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the studio
+        2. Pick a clip and the "Vertical" preset
+        3. Click Export
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ClipForge version
+      description: Shown in the update check, or in portable.json in the portable package.
+      placeholder: "1.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run it?
+      options:
+        - Portable package (ClipForge.vbs)
+        - From the source code (uv)
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Windows version and GPU
+      placeholder: "Windows 11 24H2, NVIDIA RTX 3060 (or: no NVIDIA GPU)"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error messages or logs
+      description: The error text from the screen, or the end of the relevant file in data/logs/. Check it for private details first.
+      render: text

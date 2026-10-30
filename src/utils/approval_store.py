@@ -1,0 +1,13 @@
+# utils/approval_store.py - shim: המודול עבר ל-utils/bot/approval_store.py (19.10.2026).
+# הנתיב הישן מצביע על אותו אובייקט מודול בדיוק (sys.modules), כך ש-import ישן, monkeypatch ו-mock.patch
+# על "utils.approval_store.X" פוגעים במודול האמיתי. קוד חדש מייבא מ-utils.bot.approval_store.
+import sys
+
+from utils.bot import approval_store as _module
+from utils.bot.approval_store import *  # noqa: F401,F403 - לשמות שבדיקת הטיפוסים רואה
+
+
+def __getattr__(name: str):  # לבדיקת הטיפוסים בלבד: שמות פרטיים (_x) שה-* לא מביא. בזמן ריצה המודול כבר הוחלף
+    return getattr(_module, name)
+
+sys.modules[__name__] = _module

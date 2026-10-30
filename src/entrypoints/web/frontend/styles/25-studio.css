@@ -1,0 +1,574 @@
+  /* ==========================================================================
+     גל 18 - הסטודיו: המראה של עורך-העל כתוכנת עריכה מקצועית.
+     שכבת studio גוברת על editor (20-video-editor.css) בלי !important - כאן רק
+     המראה; ההתנהגות והמבנה נשארים שם. מסך מלא (body.ve-focus) = "Pro Dark"
+     (ה-tokens ב-00-tokens.css), בלי פס עליון ו-rail, פקד הרצה אחד.
+     ========================================================================== */
+  @layer studio {
+    /* --- מסגרת העורך --- */
+    #videoEditorOptions.options-card { padding: var(--sp-3); gap: var(--sp-2); background: var(--color-surface-1); }
+    body.ve-focus .main { padding: var(--sp-2) var(--sp-3) var(--sp-2); }
+    body.ve-focus #videoEditorOptions.options-card {
+      background: var(--color-bg); border: none; border-radius: 0; padding: 0 0 var(--sp-2); margin-bottom: var(--sp-2);
+      max-height: calc(100vh - 150px);
+    }
+    body.ve-focus .run-row { display: none; }
+    body.ve-focus .main > .row:not(.run-row) { margin-bottom: var(--sp-2); }
+    body.ve-focus .main > .row:not(.run-row) input[type=text] { padding-block: 4px; font-size: var(--fs-xs); font-family: var(--font-mono); direction: ltr; text-align: start; }
+    body.ve-focus .console { max-height: 120px; }
+
+    /* --- פס הכלים העליון --- */
+    .ve-topbar.ve-sticky-bar {
+      background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: var(--r-md);
+      padding: 6px 8px; gap: 6px; box-shadow: none;
+    }
+    body.ve-focus .ve-topbar.ve-sticky-bar { border-radius: 0; border-width: 0 0 1px; background: var(--color-surface-1); top: 0; }
+    .ve-topbar .ve-topbar-row { gap: 4px; }
+    .ve-topbar button { padding: 5px 9px; font-size: var(--fs-sm); }
+    .ve-topbar-spacer { flex: 1; }
+    .ve-topbar #vePreset { max-width: 220px; padding-block: 4px; font-weight: var(--fw-semibold); }
+    .ve-topbar .btn-run { padding-inline: 14px; }
+    .ve-topbar .btn-stop, .ve-topbar .btn-pause, #veFocusBtn, #veScheduleBtn, #veViewMenuBtn, #veRunControlBtn { padding: 5px 8px; }
+    .ve-topbar .btn-stop:disabled, .ve-topbar .btn-pause:disabled { background: var(--color-surface-3); color: var(--color-text-3); border-color: var(--color-border-strong); }
+    .ve-topbar-status { font-size: var(--fs-xs); color: var(--color-text-2); gap: var(--sp-2); }
+
+    /* בורר מקטעים (פשוט/מתקדם, סביבות עבודה) */
+    .ve-mode-toggle { gap: 2px; padding: 2px; border-radius: var(--r-sm); background: var(--color-sunken); border: 1px solid var(--color-border); }
+    .ve-mode-toggle button { padding: 3px 10px; font-size: var(--fs-xs); border-radius: 4px; border: 1px solid transparent; background: transparent; color: var(--color-text-2); }
+    .ve-mode-toggle button:hover:not(:disabled) { background: var(--color-surface-3); color: var(--color-text); border-color: transparent; }
+    .ve-mode-toggle button[aria-pressed="true"] { background: var(--color-surface-3); color: var(--color-text); border-color: var(--color-border-strong); box-shadow: var(--shadow-1); }
+
+    /* כרטיס התקציר */
+    .ve-summary-card { background: transparent; border: none; padding: 2px 4px; margin-bottom: 4px; line-height: 2; font-size: var(--fs-xs); color: var(--color-text-2); }
+    .ve-summary-chip { background: var(--color-surface-3); border: 1px solid var(--color-border); border-radius: var(--r-pill); padding: 0 9px; font-size: var(--fs-xs); color: var(--color-text); }
+
+    /* --- אזורים (details) = פאנלים עם כותרת --- */
+    #videoEditorOptions .ve-category {
+      background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: var(--r-md);
+      overflow: clip;
+    }
+    #videoEditorOptions .ve-category > summary {
+      display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 12px;
+      font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text);
+      background: var(--color-surface-1);
+    }
+    #videoEditorOptions .ve-category > summary:hover { background: var(--color-surface-2); }
+    #videoEditorOptions .ve-category[open] > summary { border-bottom: 1px solid var(--color-border); }
+    #videoEditorOptions .ve-category > summary::before { content: none; }
+    #videoEditorOptions .ve-category > summary::after {
+      content: ""; flex-shrink: 0; width: 14px; height: 14px; margin-inline-start: 2px;
+      background: var(--color-text-3);
+      -webkit-mask: var(--select-chevron) center / 14px no-repeat; mask: var(--select-chevron) center / 14px no-repeat;
+      transform: rotate(90deg); transition: transform var(--dur-2) var(--ease-out);
+    }
+    #videoEditorOptions .ve-category[open] > summary::after { transform: none; }
+    #videoEditorOptions .ve-cat-title .ei { color: var(--cat-color, var(--color-text-2)); width: 16px; height: 16px; }
+    #videoEditorOptions .ve-category[open] { border-inline-start: 2px solid var(--cat-color, var(--color-border)); }
+    #videoEditorOptions .ve-cat-summary { font-size: var(--fs-2xs); font-weight: var(--fw-regular); color: var(--color-text-3); }
+    #videoEditorOptions .ve-category-body { padding: 10px 12px 12px; gap: 10px; }
+    .ve-subcat { border-top: 1px solid var(--color-border); padding-top: 10px; }
+    .ve-subcat-title { font-size: var(--fs-2xs); font-weight: var(--fw-semibold); color: var(--color-text-3); letter-spacing: .04em; display: flex; align-items: center; gap: 6px; }
+
+    /* --- מפקח: רשת מאפיינים (תווית | ערך) --- */
+    #veCategories .ve-row { gap: 8px; min-height: 30px; }
+    #veCategories .ve-row > label:first-child:not(:has(input, select)) {
+      flex: 0 0 var(--ve-label-w, 124px); color: var(--color-text-2); font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #veCategories .ve-row > label.ve-scrub { cursor: ew-resize; user-select: none; touch-action: none; }
+    #veCategories .ve-row > label.ve-scrub:hover { color: var(--color-accent); }
+    #veCategories .ve-row > label.ve-scrub.scrubbing { color: var(--color-accent); }
+    #veCategories .ve-row.ve-row-changed > label:first-child::before {
+      content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--color-accent); margin-inline-end: 6px; vertical-align: 1px;
+    }
+    #veCategories .ve-row input[type=text], #veCategories .ve-row input[type=number], #veCategories .ve-row select { padding-block: 4px; }
+    .ve-info-btn, .ve-field-reset { background: transparent; border-color: transparent; color: var(--color-text-3); padding: 2px 5px; }
+    .ve-info-btn:hover:not(:disabled), .ve-field-reset:hover:not(:disabled) { background: var(--color-surface-3); color: var(--color-text); border-color: transparent; }
+    .ve-info-box { background: var(--color-sunken); border: 1px solid var(--color-border); color: var(--color-text-2); }
+
+    /* מתג (switch) במקום תיבת סימון בשורות המפקח. RTL: כבוי = ידית בימין */
+    #veCategories .ve-row input[type=checkbox] {
+      appearance: none; -webkit-appearance: none; width: 30px; height: 18px; flex-shrink: 0;
+      border-radius: var(--r-pill); border: 1px solid var(--color-border-strong);
+      background: var(--color-selected) radial-gradient(circle at calc(100% - 8px) 50%, var(--n-11) 5.5px, transparent 6px) no-repeat;
+      transition: background-color var(--dur-2) var(--ease-out); cursor: pointer;
+    }
+    #veCategories .ve-row input[type=checkbox]:checked {
+      background: var(--color-accent) radial-gradient(circle at 8px 50%, var(--color-on-accent) 5.5px, transparent 6px) no-repeat;
+      border-color: transparent;
+    }
+    #veCategories .ve-row input[type=checkbox]:focus-visible { box-shadow: var(--ring); outline: none; }
+
+    /* סליידר */
+    #videoEditorOptions input[type=range] { appearance: none; -webkit-appearance: none; height: 18px; background: transparent; min-width: 80px; }
+    #videoEditorOptions input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: var(--r-pill); background: var(--color-selected); }
+    #videoEditorOptions input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%;
+      background: var(--color-text); border: 2px solid var(--color-accent); box-shadow: var(--shadow-1);
+    }
+    #videoEditorOptions input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: var(--ring); }
+    #videoEditorOptions input[type=range]::-moz-range-track { height: 4px; border-radius: var(--r-pill); background: var(--color-selected); }
+    #videoEditorOptions input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--color-text); border: 2px solid var(--color-accent); }
+    .ve-range-number { font-family: var(--font-mono); font-size: var(--fs-xs); }
+
+    /* שבבים (בחירה מרובה/יחידה) */
+    .ve-chips { gap: 4px; }
+    .ve-chips button { padding: 3px 10px; font-size: var(--fs-xs); border-radius: var(--r-pill); background: var(--color-surface-2); border-color: var(--color-border-strong); color: var(--color-text-2); font-weight: var(--fw-medium); }
+    .ve-chips button:hover:not(:disabled) { color: var(--color-text); }
+    .ve-chips button[aria-checked="true"], #videoEditorOptions .ve-targets-row .ve-chips button[aria-pressed="true"],
+    #videoEditorOptions .ve-steps .ve-chips button[aria-pressed="true"] {
+      background: var(--color-accent-soft); color: var(--color-accent); border-color: var(--color-accent-line);
+    }
+    /* יעדים: צורת יחס הרוחב לפני השם */
+    .ve-targets-row .ve-chips button[data-ar]::before, .ve-steps .ve-chips button[data-ar]::before {
+      content: ""; flex-shrink: 0; width: calc(10px * var(--ar-w, 1)); height: calc(10px * var(--ar-h, 1));
+      border: 1.5px solid currentColor; border-radius: 2px; opacity: .8;
+    }
+
+    /* --- קבצים (תור) = כרטיסי מדיה --- */
+    .ve-queue-list { gap: 4px; }
+    .ve-queue-row {
+      padding: 6px 8px; gap: 10px; border-radius: var(--r-sm);
+      background: var(--color-surface-2); border: 1px solid transparent; font-size: var(--fs-sm);
+      transition: background-color var(--dur-2), border-color var(--dur-2);
+    }
+    .ve-queue-row:hover { background: var(--color-surface-3); }
+    .ve-queue-row.ve-queue-picked { background: var(--color-accent-soft); border-color: var(--color-accent-line); }
+    .ve-queue-thumb { width: 72px; height: 40px; border-radius: 5px; box-shadow: 0 0 0 1px var(--color-border); }
+    .ve-queue-name { font-weight: var(--fw-medium); }
+    .ve-queue-meta { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--color-text-3); }
+    .ve-queue-badge { background: var(--color-surface-3); border: 1px solid var(--color-border); color: var(--color-text-2); font-size: var(--fs-2xs); }
+
+    /* --- נגן --- */
+    .ve-viewer .ve-category-body { gap: 8px; }
+    .ve-preview-stage-wrap { gap: 0; padding: 10px; border-radius: var(--r-md); background: var(--media-bg); }
+    .ve-preview-stage { border-radius: 4px; box-shadow: 0 0 0 1px var(--media-bg-3); }
+    .ve-stage-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center;
+      min-height: 240px; padding: var(--sp-6) var(--sp-4); border-radius: var(--r-md);
+      background: radial-gradient(ellipse at center, var(--media-bg-2), var(--media-bg)); color: var(--media-text-2);
+      border: 1px dashed var(--media-bg-3);
+    }
+    .ve-preview-stage-wrap:not([hidden]) + .ve-stage-empty { display: none; }
+    .ve-stage-empty-ico .ei { width: 40px; height: 40px; color: var(--color-accent); opacity: .85; }
+    .ve-stage-empty-title { font-size: var(--fs-lg); font-weight: var(--fw-semibold); color: var(--media-text); }
+    .ve-stage-empty-text { max-width: 420px; font-size: var(--fs-sm); line-height: 1.6; }
+    .ve-stage-empty-actions { display: flex; gap: 8px; margin-top: 6px; }
+    #videoEditorOptions:not(.ve-has-folder) .ve-when-folder, #videoEditorOptions.ve-has-folder .ve-when-no-folder { display: none; }
+    /* פס הנגינה (transport) */
+    .ve-live-bar {
+      gap: 8px; margin-top: 8px; padding: 6px 8px; border-radius: var(--r-sm);
+      background: var(--media-bg-2); color: var(--media-text); border: 1px solid var(--media-bg-3);
+    }
+    .ve-live-bar button, .ve-live-bar label { color: var(--media-text); background: transparent; border-color: transparent; padding: 4px 6px; }
+    .ve-live-bar button:hover:not(:disabled) { background: var(--media-bg-3); border-color: transparent; }
+    #veLivePlayBtn { width: 32px; height: 32px; padding: 0; border-radius: 50%; background: var(--color-accent); color: var(--color-on-accent); }
+    #veLivePlayBtn:hover:not(:disabled) { background: var(--color-accent-strong); }
+    #veLiveTime { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--media-text-2); direction: ltr; }
+    .ve-live-bar input[type=range]::-webkit-slider-runnable-track { background: var(--media-bg-3); }
+
+    /* --- ציר-זמן עם מסלולים --- */
+    .ve-timeline-dock { background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: var(--r-md); padding: 8px 10px 10px; }
+    .ve-timeline-scroll { position: relative; border-radius: 6px; background: var(--media-bg); padding: 4px 0; }
+    .ve-timeline { border-radius: 0; background: var(--media-bg-2); }
+    .ve-waveform { background: var(--media-bg); border-radius: 0; margin-top: 2px; }
+    .ve-track-tag {
+      position: sticky; left: 4px; z-index: 3; display: inline-flex; align-items: center; gap: 4px; /* ltr: הציר עצמו LTR */
+      padding: 1px 6px; margin: 2px 0; border-radius: 4px; font-size: var(--fs-2xs); line-height: 1.5;
+      background: var(--media-scrim); color: var(--media-text); pointer-events: none;
+    }
+    .ve-track-tag-row { height: 0; overflow: visible; direction: ltr; position: relative; z-index: 3; width: calc(var(--tl-zoom, 1) * 100%); }
+    .ve-tl-layers { position: relative; margin-top: 2px; background: var(--media-bg); direction: ltr; width: calc(var(--tl-zoom, 1) * 100%); min-height: 22px; }
+    .ve-tl-layer {
+      position: absolute; height: 18px; display: flex; align-items: center; gap: 4px; padding: 0 6px; min-width: 6px;
+      overflow: hidden; white-space: nowrap; font-size: var(--fs-2xs); line-height: 1; cursor: pointer;
+      border-radius: 4px; color: var(--color-on-light);
+      background: color-mix(in srgb, var(--hue-pink) 78%, var(--media-bg));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hue-pink) 60%, white);
+    }
+    .ve-tl-layer[data-type="image"] { background: color-mix(in srgb, var(--hue-sky) 78%, var(--media-bg)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hue-sky) 60%, white); }
+    .ve-tl-layer[data-type="timer"], .ve-tl-layer[data-type="timestamp"] { background: color-mix(in srgb, var(--hue-amber) 78%, var(--media-bg)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hue-amber) 60%, white); }
+    .ve-tl-layer:hover { filter: brightness(1.12); }
+    .ve-tl-layer .ei { width: 12px; height: 12px; }
+    .ve-tl-tools button { padding: 2px 7px; font-size: var(--fs-xs); }
+    #veTimelineCursorText { font-family: var(--font-mono); direction: ltr; }
+
+    /* --- פריסת הסטודיו: מפרידים נגררים בין העמודות --- */
+    @container ve (min-width: 1100px) {
+      .ve-shell { grid-template-columns: var(--ve-side-w, minmax(220px, 19%)) minmax(0, 1.2fr) var(--ve-main-w, minmax(360px, 1fr)); }
+      .ve-shell > .ve-resizer { display: block; }
+    }
+    .ve-shell { position: relative; }
+    /* המיקום האופקי מחושב ב-JS (66-ui-studio.js) לפי הגבול האמיתי בין העמודות */
+    .ve-resizer { display: none; position: absolute; top: 0; bottom: 0; width: 12px; z-index: 8; cursor: col-resize; touch-action: none; }
+    .ve-resizer::after { content: ""; position: absolute; top: 12px; bottom: 12px; inset-inline-start: 5px; width: 2px; border-radius: 2px; background: transparent; transition: background-color var(--dur-2); }
+    .ve-resizer:hover::after, .ve-resizer.dragging::after { background: var(--color-accent); }
+    .ve-shell { gap: 12px; }
+    body.ve-focus .ve-side, body.ve-focus .ve-viewer { top: 52px; }
+
+    /* --- תפריטים, מסך עבודות --- */
+    .ve-menu { background: var(--color-surface-1); border-color: var(--color-border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-2); padding: 4px; }
+    .ve-menu button { border: 1px solid transparent; border-radius: 5px; }
+    .ve-menu button:hover:not(:disabled) { border-color: transparent; }
+    .ve-jobs { background: var(--color-surface-1); border-color: var(--color-border); }
+    .ve-job-card { background: var(--color-surface-2); border-color: var(--color-border); transition: border-color var(--dur-2), transform var(--dur-2) var(--ease-out); }
+    .ve-job-card:hover { border-color: var(--color-accent-line); transform: translateY(-1px); }
+    .ve-onboarding { background: var(--color-accent-soft); border-color: var(--color-accent-line); color: var(--color-text); }
+
+    /* ==========================================================================
+       גל 27: לנקות את המסך - פס עליון בשורה אחת, פס סטטוס בתחתית, כלי נגן בפינה
+       ========================================================================== */
+    /* שבב התיקייה: שם קצר, הנתיב המלא והתיקיות האחרונות בתפריט */
+    .ve-folder-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 210px; font-weight: var(--fw-semibold); }
+    .ve-folder-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ve-folder-chip.ve-folder-empty { color: var(--color-accent); border-color: var(--color-accent-line); }
+    .ve-folder-menu { inset-inline-end: auto; inset-inline-start: 0; min-width: 260px; max-width: 420px; }
+    #veFolderMenuPath { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--color-text-3); word-break: break-all; text-align: start; }
+    .ve-recent-folders { display: flex; flex-direction: column; gap: 2px; }
+    .ve-recent-folders button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* בסטודיו שבב התיקייה מחליף את שורת הנתיב של האפליקציה */
+    body.ve-focus .main > .row:has(#folderInput) { display: none; }
+
+    /* הפס העליון בשורה אחת; מה שלא נכנס מתכווץ (ובמסך צר - נשבר לשתי שורות) */
+    .ve-topbar .ve-topbar-row { flex-wrap: nowrap; min-width: 0; width: 100%; }
+    .ve-topbar #vePreset { flex: 0 1 auto; min-width: 90px; }
+    .ve-topbar .btn-pause:disabled { display: none; }
+    @container ve (max-width: 760px) {
+      .ve-topbar .ve-topbar-row { flex-wrap: wrap; }
+    }
+    .ve-menu .ve-menu-check { cursor: pointer; }
+
+    /* פס הסטטוס - תקציר הפלט, קבצים, זמן משוער, שמירה ואזהרות - שורה אחת בתחתית */
+    .ve-statusbar {
+      position: sticky; bottom: calc(-1 * var(--sp-3)); z-index: 6;
+      display: flex; align-items: center; gap: var(--sp-2); min-height: 30px;
+      padding: 3px 10px; margin-top: var(--sp-1);
+      background: var(--color-surface-1); border-top: 1px solid var(--color-border);
+      font-size: var(--fs-xs); color: var(--color-text-2);
+    }
+    body.ve-focus .ve-statusbar { bottom: calc(-1 * var(--sp-2)); }
+    .ve-statusbar .ve-summary-card { flex: 1 1 260px; min-width: 0; margin: 0; padding: 0; overflow: hidden; }
+    .ve-statusbar #veSummaryText { display: flex; gap: 4px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+    .ve-statusbar .ve-summary-chip { flex-shrink: 0; }
+    .ve-statusbar .ve-topbar-status { flex-wrap: nowrap; flex-shrink: 0; }
+    .ve-statusbar-spacer { flex: 0 1 var(--sp-2); }
+    .ve-statusbar .ve-unsaved, .ve-statusbar #veProjectStatus { white-space: nowrap; font-size: var(--fs-xs); }
+    .ve-statusbar-warn-wrap { position: relative; flex-shrink: 0; }
+    .ve-statusbar-warn { padding: 1px 9px; font-size: var(--fs-xs); border-radius: var(--r-pill); }
+    .ve-statusbar-warn.ve-has-warn { color: var(--color-warning); border-color: var(--color-warning); background: var(--color-warning-soft); }
+    .ve-statusbar .ve-warnings {
+      position: absolute; bottom: calc(100% + 6px); inset-inline-end: 0; z-index: 30; margin: 0;
+      width: min(440px, 80vw); max-height: 280px; overflow: auto; padding: 6px;
+      background: var(--color-surface-1); border: 1px solid var(--color-border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-2);
+    }
+    @container ve (max-width: 760px) {
+      .ve-statusbar { flex-wrap: wrap; position: static; }
+    }
+
+    /* קליק ימני על שדה ששונה - תפריט "אפס לברירת המחדל" ליד העכבר */
+    .ve-menu.ve-row-menu { position: fixed; top: var(--ve-ctx-y, 0); inset-inline-end: auto; left: var(--ve-ctx-x, 0); /* ltr - מיקום העכבר */ z-index: var(--z-menu); min-width: 200px; }
+
+    /* הנגן: בורר אחד לסוג התצוגה, והכלים (גרירה/אזורי בטיחות/סקופים/אוטומטי) בפינה */
+    .ve-preview-modes { gap: 6px; align-items: center; }
+    .ve-compact-select { padding-block: 2px; font-size: var(--fs-xs); }
+    .ve-stage-tools { display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin-bottom: 4px; align-self: stretch; width: 100%; }
+    .ve-stage-tool { font-size: var(--fs-xs); padding: 2px 6px; border-radius: var(--r-sm); }
+    label.ve-stage-tool { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--color-border); background: var(--color-surface-2); cursor: pointer; }
+    label.ve-stage-tool:has(input:checked) { border-color: var(--color-accent-line); background: var(--color-accent-soft); }
+    select.ve-stage-tool { padding-block: 1px; max-width: 170px; }
+
+    /* תור: חיפוש + סינון מתקפל; פעולות קבוצתיות בפס צף רק כשמסמנים שורות */
+    #veQueueSearch { min-width: 0; padding-block: 3px; font-size: var(--fs-xs); }
+    .ve-queue-bulkbar {
+      position: sticky; bottom: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+      padding: 6px; margin-top: 6px; background: var(--color-surface-2);
+      border: 1px solid var(--color-accent-line); border-radius: var(--r-md); box-shadow: var(--shadow-2);
+    }
+    .ve-queue-bulkbar button { padding: 2px 8px; font-size: var(--fs-xs); }
+    .ve-queue-bulkbar #veQueuePickedCount { flex: 1 0 100%; }
+
+    /* ==========================================================================
+       גל 28: מפקח שאפשר להתמצא בו - לשוניות, תתי-אזורים מתקפלים, עמודת תוויות
+       ========================================================================== */
+    /* לשוניות האזורים בסטודיו - פס דביק בראש המפקח */
+    body.ve-focus #veCatTabs {
+      position: sticky; top: 0; z-index: 5; margin: 0 0 var(--sp-2); padding: 4px;
+      display: flex; flex-wrap: wrap; gap: 2px; background: var(--color-surface-1);
+      border: 1px solid var(--color-border); border-radius: var(--r-md);
+    }
+    body.ve-focus #veCatTabs button {
+      position: relative; padding: 5px 9px; font-size: var(--fs-xs); font-weight: var(--fw-medium);
+      background: transparent; border: 1px solid transparent; border-radius: var(--r-sm); color: var(--color-text-2);
+    }
+    body.ve-focus #veCatTabs button:hover:not(:disabled) { background: var(--color-surface-3); color: var(--color-text); }
+    body.ve-focus #veCatTabs button.active { background: var(--color-accent-soft); border-color: var(--color-accent-line); color: var(--color-text); font-weight: var(--fw-semibold); }
+    .ve-tab-changed {
+      display: inline-grid; place-items: center; min-width: 16px; height: 16px; margin-inline-start: 5px; padding: 0 4px;
+      border-radius: var(--r-pill); background: var(--color-accent); color: var(--color-on-accent); font-size: var(--fs-2xs); font-weight: var(--fw-bold);
+    }
+    /* בלשוניות כותרת האזור מיותרת (היא הלשונית) - נשאר רק ↺ והאזהרה בשורה קטנה */
+    body.ve-focus #veCategories.ve-layout-tabs > .ve-category > summary .ve-cat-title { font-size: var(--fs-xs); color: var(--color-text-3); }
+
+    /* תת-אזור מתקפל: הכותרת היא כפתור, ומקופל נשארת שורת תקציר */
+    .ve-subcat-title.ve-subcat-toggle { cursor: pointer; user-select: none; border-radius: var(--r-sm); padding: 2px 4px; margin-inline: -4px; }
+    .ve-subcat-title.ve-subcat-toggle:hover { background: var(--color-surface-3); color: var(--color-text); }
+    .ve-subcat-title.ve-subcat-toggle::before { content: "▾"; display: inline-block; transition: transform var(--dur-2); }
+    .ve-subcat.ve-subcat-collapsed > .ve-subcat-title.ve-subcat-toggle::before { transform: rotate(90deg); }
+    .ve-subcat-summary { margin-inline-start: auto; font-weight: var(--fw-regular); letter-spacing: 0; color: var(--color-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; max-width: 65%; }
+    .ve-subcat-summary.ve-empty { color: var(--color-text-3); }
+    .ve-subcat:not(.ve-subcat-collapsed) > .ve-subcat-title .ve-subcat-summary { display: none; }
+    #veCategories:not(.ve-searching) .ve-subcat.ve-subcat-collapsed > :not(.ve-subcat-title) { display: none !important; }
+    .ve-subcat.ve-subcat-changed > .ve-subcat-title { color: var(--color-text-2); }
+
+    /* פקדים אחידים: עמודת תוויות ברוחב קבוע, סליידרים ורשימות שממלאים את השאר */
+    #veCategories .ve-category-body .ve-row > label:first-child:not(:has(input, select, textarea)) { flex: 0 0 var(--ve-label-w, 124px); min-width: 0; }
+    #veCategories .ve-category-body .ve-row > input[type=range] { flex-grow: 1; max-width: 240px; }
+    #veCategories .ve-category-body .ve-row > select { flex: 1 1 auto; min-width: 0; max-width: 280px; }
+    #veCategories .ve-category-body .ve-row.u-indent > label:first-child:not(:has(input, select, textarea)) { flex-basis: calc(var(--ve-label-w, 124px) - 16px); }
+    .ve-info-btn { font-size: var(--fs-xs); line-height: 1; }
+
+    /* שדה זמן: ⌖ לוקח את הזמן מהנגן */
+    .ve-time-now { padding: 2px 6px; font-size: var(--fs-xs); line-height: 1; background: transparent; border-color: transparent; color: var(--color-text-3); }
+    .ve-time-now:hover:not(:disabled) { color: var(--color-text); background: var(--color-surface-3); }
+    #veFormatChips button:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ==========================================================================
+       גל 29: ציר-הזמן והנגן כמשטח העריכה
+       ========================================================================== */
+    /* ציר-זמן גדול שמשנה גובה (ידית בראש הדוק) */
+    .ve-tl-resizer { height: 8px; margin: -6px -10px 4px; cursor: row-resize; border-radius: var(--r-md) var(--r-md) 0 0; position: relative; }
+    .ve-tl-resizer::after { content: ""; position: absolute; inset-inline: calc(50% - 18px); top: 3px; height: 3px; border-radius: 2px; background: var(--color-border-strong); }
+    .ve-tl-resizer:hover::after, .ve-tl-resizer:focus-visible::after { background: var(--color-accent); }
+    .ve-timeline-dock .ve-timeline img { height: var(--ve-tl-h, auto); object-fit: cover; }
+    .ve-timeline-dock .ve-waveform { height: calc(var(--ve-tl-h, 64px) + 16px); }
+
+    /* פסי שכבות: מיקום מהמשתנים (גרירה מעדכנת אותם), קצוות לשינוי אורך */
+    .ve-tl-layer { left: var(--from); /* ltr - הציר עצמו LTR */ width: var(--width); top: var(--lane-top, 2px); cursor: grab; touch-action: none; }
+    .ve-tl-layer.ve-tl-dragging { cursor: grabbing; filter: brightness(1.2); z-index: 4; }
+    .ve-tl-layer.ve-tl-locked { cursor: not-allowed; }
+    .ve-tl-layer.ve-tl-hidden { opacity: .4; }
+    .ve-tl-layer.ve-selected { outline: 2px solid var(--color-focus); outline-offset: 1px; z-index: 3; }
+    .ve-tl-layer[data-type="video"] { background: color-mix(in srgb, var(--hue-violet) 78%, var(--media-bg)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hue-violet) 60%, white); }
+    .ve-tl-edge { position: absolute; top: 0; bottom: 0; width: 6px; cursor: ew-resize; }
+    .ve-tl-edge[data-edge="start"] { left: 0; /* ltr */ border-radius: 4px 0 0 4px; }
+    .ve-tl-edge[data-edge="end"] { right: 0; /* ltr */ border-radius: 0 4px 4px 0; }
+    .ve-tl-layer:hover .ve-tl-edge, .ve-tl-layer.ve-selected .ve-tl-edge { background: var(--media-scrim-strong); }
+    .ve-tl-locked .ve-tl-edge { display: none; }
+    /* טווח להסרה נגרר (בלי Shift - Shift+גרירה עדיין יוצרת טווח חדש) */
+    #veTimelineOverlays .ve-tl-range { pointer-events: auto; cursor: grab; touch-action: none; }
+    .ve-tl-range:hover .ve-tl-edge { background: var(--color-cut); }
+    .ve-tl-snap-line { position: absolute; top: 0; bottom: 0; left: var(--x, 0); /* ltr */ width: 0; border-inline-start: 1px dashed var(--color-snap); z-index: 6; pointer-events: none; }
+    .ve-drop-target { outline: 2px dashed var(--color-accent); outline-offset: -2px; }
+
+    /* בנגן: האובייקט שנבחר, סרגל צף לידו וידית שינוי גודל בפינה */
+    .ve-drag-handle.ve-selected { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .ve-resize-corner {
+      position: absolute; bottom: -7px; right: -7px; /* ltr - פינה על הנגן */ width: 12px; height: 12px; border-radius: 3px;
+      background: var(--color-handle); border: 2px solid var(--color-on-handle); cursor: nwse-resize; touch-action: none;
+    }
+    .ve-object-bar {
+      position: absolute; left: var(--x); top: var(--y); /* ltr - מיקום על הנגן */ transform: translate(-50%, calc(-100% - 22px)); z-index: 9;
+      display: flex; gap: 2px; padding: 3px; border-radius: var(--r-md); background: var(--color-surface-1); border: 1px solid var(--color-border-strong); box-shadow: var(--shadow-2);
+    }
+    .ve-object-bar button { padding: 2px 7px; font-size: var(--fs-xs); background: transparent; border-color: transparent; }
+    .ve-object-bar button:hover:not(:disabled) { background: var(--color-surface-3); }
+
+    /* רשימת השכבות */
+    .ve-layers-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--sp-2); }
+    .ve-ll-row { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: var(--r-sm); border: 1px solid transparent; background: var(--color-surface-2); cursor: pointer; font-size: var(--fs-xs); }
+    .ve-ll-row:hover { border-color: var(--color-border-strong); }
+    .ve-ll-row.ve-selected { border-color: var(--color-accent-line); background: var(--color-accent-soft); }
+    .ve-ll-row.drag-over { border-color: var(--color-accent); }
+    .ve-ll-row.dragging { opacity: .5; }
+    .ve-ll-row.ve-ll-hidden .ve-ll-name, .ve-ll-row.ve-ll-hidden .ve-ll-time { opacity: .5; text-decoration: line-through; }
+    .ve-ll-grip { cursor: grab; color: var(--color-text-3); letter-spacing: -2px; }
+    .ve-ll-name { flex: 1 1 auto; min-width: 0; padding: 1px 4px; font-size: var(--fs-xs); background: transparent; border: 1px solid transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    input.ve-ll-name:hover, input.ve-ll-name:focus { border-color: var(--color-border); background: var(--color-surface-1); }
+    .ve-ll-time { color: var(--color-text-3); font-family: var(--font-mono); font-size: var(--fs-2xs); white-space: nowrap; }
+    .ve-ll-tool { padding: 1px 5px; font-size: var(--fs-xs); background: transparent; border-color: transparent; }
+    .ve-ll-tool:hover:not(:disabled) { background: var(--color-surface-3); }
+  
+    /* ==========================================================================
+       גל 30: מצב עריכת קליפ - באנר, סימון שדות שנדרסו, נעילה של מה שחל על כל הקבצים
+       ========================================================================== */
+    .ve-clip-banner {
+      display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: 6px 10px; margin: 4px 0;
+      border: 1px solid var(--color-warning); border-radius: var(--r-md); background: var(--color-warning-soft); font-size: var(--fs-sm);
+    }
+    .ve-clip-banner[hidden] { display: none; }
+    .ve-clip-banner-text strong { font-weight: 700; }
+    #videoEditorOptions.ve-clip-mode .ve-preview-stage { outline: 2px solid var(--color-warning); outline-offset: 2px; }
+    #videoEditorOptions.ve-clip-mode #veCategories { box-shadow: inset 3px 0 0 var(--color-warning); /* ltr - פס צד */ }
+    .ve-clip-locked { opacity: .45; filter: grayscale(.6); }
+    .ve-handle-locked { opacity: .5; cursor: not-allowed; border-style: dashed; }
+    .ve-row-clip-override { background: var(--color-warning-soft); border-radius: var(--r-sm); }
+    .ve-clip-mark { padding: 0 5px; font-size: var(--fs-xs); background: transparent; border: 1px solid var(--color-warning); border-radius: var(--r-pill); margin-inline-start: auto; }
+    .ve-clip-mark:hover { background: var(--color-warning-soft); }
+    .ve-subcat-title.ve-row-clip-override { display: flex; align-items: center; padding-inline: 4px; }
+    .ve-clip-mode-btn[aria-pressed="true"] { border-color: var(--color-warning); background: var(--color-warning-soft); }
+    .ve-queue-clip-btn { font-size: var(--fs-2xs); padding: 2px 6px; }
+    .ve-queue-clip-btn[aria-pressed="true"] { border-color: var(--color-warning); background: var(--color-warning-soft); }
+    .ve-queue-row.ve-queue-clip-active { box-shadow: inset 0 0 0 2px var(--color-warning); }
+    .ve-clip-badge { font-size: var(--fs-2xs); padding: 0 5px; border-radius: var(--r-sm); background: var(--color-warning-soft); white-space: nowrap; }
+    .ve-ll-clip { font-size: var(--fs-2xs); }
+
+    /* אינדיקטור שמירה אחד */
+    .ve-save-state { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: var(--fs-xs); color: var(--color-text-3); white-space: nowrap; }
+    .ve-save-state[hidden] { display: none; }
+    .ve-save-state[data-state="dirty"] { color: var(--color-warning); font-weight: var(--fw-semibold); }
+    .ve-save-state[data-state="error"] { color: var(--color-danger); }
+    .ve-save-state button { padding: 1px 7px; font-size: var(--fs-2xs); }
+
+    /* מראות מוכנים - הפריים הנוכחי בכל מראה */
+    .ve-look-block { display: flex; flex-direction: column; gap: 4px; margin-block: 4px 8px; }
+    .ve-look-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; }
+    .ve-look-card {
+      display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 3px; padding: 3px; border-radius: var(--r-md); cursor: pointer;
+      background: var(--color-surface-2); border: 1px solid var(--color-border); color: var(--color-text-2); font-size: var(--fs-2xs);
+    }
+    .ve-look-card:hover:not(:disabled) { border-color: var(--color-border-strong); color: var(--color-text); }
+    .ve-look-card[aria-pressed="true"] { border-color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent); color: var(--color-text); }
+    .ve-look-thumb {
+      position: relative; display: block; width: 100%; height: 52px; border-radius: var(--r-sm); overflow: hidden;
+      background: linear-gradient(170deg, var(--hue-sky) 0 42%, var(--hue-orange) 42% 52%, var(--hue-emerald) 52% 76%, var(--hue-slate) 76%);
+    }
+    .ve-look-thumb img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+    .ve-look-thumb img[hidden] { display: none; }
+    .ve-look-thumb::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+    .ve-look-thumb[data-vignette="light"]::after { background: radial-gradient(ellipse at center, transparent 45%, color-mix(in srgb, var(--color-shadow) 35%, transparent) 100%); }
+    .ve-look-thumb[data-vignette="medium"]::after { background: radial-gradient(ellipse at center, transparent 45%, color-mix(in srgb, var(--color-shadow) 50%, transparent) 100%); }
+    .ve-look-thumb[data-vignette="strong"]::after { background: radial-gradient(ellipse at center, transparent 45%, color-mix(in srgb, var(--color-shadow) 70%, transparent) 100%); }
+    .ve-look-name { text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* "פשוט" = ארבעה צעדים; כל השאר (אזורי ההגדרות, הקבצים וציר-הזמן) במתקדם */
+    .ve-steps { display: none; flex-direction: column; gap: var(--sp-3); }
+    #videoEditorOptions.ve-simple .ve-steps { display: flex; }
+    #videoEditorOptions.ve-simple:has(#veCategories.ve-searching) .ve-steps { display: none; }
+    #videoEditorOptions.ve-simple #veCategories:not(.ve-searching), #videoEditorOptions.ve-simple #veCatTabs { display: none; }
+    #videoEditorOptions.ve-simple .ve-side, #videoEditorOptions.ve-simple #veTimelineDock, #videoEditorOptions.ve-simple .ve-shell > .ve-resizer,
+    #videoEditorOptions.ve-simple #veClipModeBtn { display: none; }
+    #videoEditorOptions.ve-simple .ve-shell { grid-template-areas: "viewer main"; }
+    @container ve (min-width: 1100px) {
+      #videoEditorOptions.ve-simple .ve-shell { grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr); grid-template-areas: "viewer main"; }
+    }
+    @container ve (max-width: 1020px) {
+      #videoEditorOptions.ve-simple .ve-shell { grid-template-areas: "viewer" "main"; }
+    }
+    .ve-step { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--r-lg); background: var(--color-surface-1); }
+    .ve-step-head { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-md); }
+    .ve-step-num {
+      display: inline-grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; border-radius: var(--r-pill);
+      background: var(--color-surface-3); color: var(--color-text-2); font-size: var(--fs-sm); font-weight: var(--fw-bold);
+    }
+    .ve-step.ve-step-done .ve-step-num { background: var(--color-success); color: var(--color-on-solid); }
+    .ve-step-body { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+    .ve-step[data-step="targets"] .ve-step-body, .ve-step[data-step="look"] .ve-step-body { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+    .ve-step-text { flex: 1 1 160px; min-width: 0; font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #veStepRunBtn { padding: 8px 24px; font-size: var(--fs-md); }
+    .ve-steps-more { align-self: flex-start; background: transparent; border-style: dashed; color: var(--color-text-2); }
+
+    /* ==========================================================================
+       גל 31: גיליון "לפני הרצה", התוצאות בתוך הסטודיו
+       ========================================================================== */
+    .ve-run-sheet { width: min(94vw, 600px); }
+    .ve-run-sheet-tiles { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+    .ve-run-sheet-tile { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--color-surface-2); }
+    .ve-run-sheet-tile span { font-size: var(--fs-xs); color: var(--color-text-3); }
+    .ve-run-sheet-tile strong { font-size: var(--fs-md); }
+    .ve-run-sheet-what strong { font-size: var(--fs-md); font-weight: var(--fw-bold); }
+    .ve-run-sheet-folder { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--color-text-3); margin-block: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: start; }
+    #veRunSheetTargets:empty, #veRunSheetNotes:empty { display: none; }
+    .ve-run-sheet-warnings { display: flex; flex-direction: column; gap: 4px; max-height: 32vh; overflow: auto; }
+    .ve-run-sheet-warnings .ve-warning { text-align: start; cursor: pointer; font: inherit; font-size: var(--fs-sm); }
+    @media (max-width: 560px) { .ve-run-sheet-tiles { grid-template-columns: 1fr; } }
+
+    .ve-viewer.ve-showing-results > :not(#veResultsPanel) { display: none; }
+    .ve-results-panel { display: flex; flex-direction: column; gap: var(--sp-2); min-height: 0; overflow: auto; }
+    .ve-results-panel[hidden] { display: none; }
+    .ve-results-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+    .ve-results-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-2); }
+    .ve-result-card { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: var(--r-md); background: var(--color-surface-2); border: 1px solid var(--color-border); }
+    .ve-result-card[data-status="error"], .ve-result-card[data-status="invalid"] { border-color: var(--color-danger); }
+    .ve-result-media { position: relative; height: 140px; border-radius: var(--r-sm); overflow: hidden; background: var(--media-bg); }
+    .ve-result-media img, .ve-result-media video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .ve-result-media img.ve-no-thumb { visibility: hidden; }
+    .ve-result-playable { cursor: pointer; }
+    .ve-result-playable::after { content: "▶"; position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--fs-xl, var(--fs-md)); color: var(--color-on-solid); text-shadow: 0 1px 6px var(--color-shadow); }
+    .ve-result-playable:has(video)::after { content: none; }
+    .ve-result-title { font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ve-result-actions { display: flex; gap: 4px; }
+    .ve-result-actions:empty { display: none; }
+    .ve-result-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .ve-result-compare figure { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+    .ve-result-compare video { width: 100%; max-height: 200px; background: var(--media-bg); border-radius: var(--r-sm); }
+    .ve-result-compare figcaption { font-size: var(--fs-2xs); color: var(--color-text-3); text-align: center; }
+    .ve-results-cards:has(.ve-result-compare) .ve-result-card:has(.ve-result-compare) { grid-column: 1 / -1; }
+
+    /* לפני/אחרי בנגן החי: הקנבס (המקור) משמאל לקו, הווינייטה (חלק מהמראה) רק מימין */
+    .ve-live-before { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; clip-path: inset(0 calc(100% - var(--ve-split, 50%)) 0 0); }
+    .ve-live-before[hidden] { display: none; }
+    .ve-preview-stage.ve-live-compare #veLiveVignette { clip-path: inset(0 0 0 var(--ve-split, 50%)); }
+    #veLiveCompareBtn[aria-pressed="true"] { border-color: var(--color-accent-line); background: var(--color-accent-soft); color: var(--color-accent); }
+    .ve-shortcuts-list .ve-subcat-title { margin-block: var(--sp-2) 4px; }
+
+    /* מסך מחשב נייד: פאנלי הצד מתקפלים לפס אייקונים (וגם בבחירה בכל גודל) */
+    .ve-rail, .ve-rail-collapse { display: none; }
+    .ve-rail { flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; border-radius: var(--r-md); background: var(--color-surface-1); border: 1px solid var(--color-border); }
+    .ve-rail-btn { position: relative; width: 34px; height: 34px; padding: 0; display: grid; place-items: center; font-size: var(--fs-md); background: transparent; border-color: transparent; }
+    .ve-rail-btn:hover:not(:disabled) { background: var(--color-surface-3); }
+    .ve-rail-badge { position: absolute; top: -2px; inset-inline-end: -2px; min-width: 16px; padding: 0 3px; border-radius: var(--r-pill); background: var(--color-accent); color: var(--color-on-accent); font-size: var(--fs-2xs); line-height: 16px; }
+    .ve-rail-badge[hidden] { display: none; }
+    .ve-rail-collapse { padding: 0 6px; font-size: var(--fs-md); line-height: 1; background: transparent; border-color: transparent; color: var(--color-text-3); }
+    .ve-rail-collapse:hover:not(:disabled) { color: var(--color-text); background: var(--color-surface-3); }
+    @container ve (min-width: 1100px) {
+      #videoEditorOptions:not(.ve-simple) .ve-rail-collapse { display: inline-flex; }
+      #videoEditorOptions:not(.ve-simple) summary .ve-rail-collapse { margin-inline-start: auto; }
+      #videoEditorOptions:not(.ve-simple) #veInspectorCollapseBtn { align-self: flex-end; }
+      #videoEditorOptions.ve-queue-rail:not(.ve-simple) .ve-shell { grid-template-columns: 44px minmax(0, 1.2fr) var(--ve-main-w, minmax(360px, 1fr)); }
+      #videoEditorOptions.ve-inspector-rail:not(.ve-simple) .ve-shell { grid-template-columns: var(--ve-side-w, minmax(220px, 19%)) minmax(0, 1.2fr) 48px; }
+      #videoEditorOptions.ve-queue-rail.ve-inspector-rail:not(.ve-simple) .ve-shell { grid-template-columns: 44px minmax(0, 1fr) 48px; }
+      /* במסך נייד ההגדרות צרות יותר - הנגן מקבל את רוב הרוחב */
+      body.ve-laptop #videoEditorOptions:not(.ve-simple):not(.ve-inspector-rail) .ve-shell { grid-template-columns: var(--ve-side-w, 220px) minmax(0, 1fr) var(--ve-main-w, 380px); }
+      body.ve-laptop #videoEditorOptions.ve-queue-rail:not(.ve-simple):not(.ve-inspector-rail) .ve-shell { grid-template-columns: 44px minmax(0, 1fr) var(--ve-main-w, 380px); }
+      #videoEditorOptions.ve-queue-rail:not(.ve-simple) .ve-side > :not(.ve-rail),
+      #videoEditorOptions.ve-inspector-rail:not(.ve-simple) .ve-main > :not(.ve-rail) { display: none; }
+      #videoEditorOptions.ve-queue-rail:not(.ve-simple) .ve-side > .ve-rail,
+      #videoEditorOptions.ve-inspector-rail:not(.ve-simple) .ve-main > .ve-rail { display: flex; }
+      #videoEditorOptions.ve-queue-rail .ve-resizer[data-panel="side"],
+      #videoEditorOptions.ve-inspector-rail .ve-resizer[data-panel="main"] { display: none; }
+    }
+    /* במסך נייד הנגן מקבל את הגובה (העמודות הדביקות נמתחות כמעט עד התחתית) */
+    body.ve-focus.ve-laptop .ve-viewer, body.ve-focus.ve-laptop .ve-side { max-height: calc(100vh - 210px); }
+    /* גל 57: הלוג מקופל לשורה אחת (65-ui-shell.js) - הגובה שהתפנה עובר לכרטיס ולעמודות, והנגן מחשב ממנו את גודלו */
+    body.ve-focus:has(#consoleDrawer.collapsed) #videoEditorOptions.options-card { max-height: calc(100vh - 80px); }
+    @container ve (min-width: 1100px) {
+      body.ve-focus:has(#consoleDrawer.collapsed) .ve-viewer, body.ve-focus:has(#consoleDrawer.collapsed) .ve-side { max-height: calc(100vh - 260px); }
+      body.ve-focus.ve-laptop:has(#consoleDrawer.collapsed) .ve-viewer, body.ve-focus.ve-laptop:has(#consoleDrawer.collapsed) .ve-side { max-height: calc(100vh - 140px); }
+    }
+    /* בחירת הקובץ וסוג התצוגה בשורה אחת - עוד גובה לנגן */
+    body.ve-focus.ve-laptop #veViewer details[data-cat="preview"] > .ve-category-body { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: var(--sp-3); }
+    body.ve-focus.ve-laptop #veViewer details[data-cat="preview"] > .ve-category-body > * { flex: 1 1 100%; }
+    body.ve-focus.ve-laptop #veViewer details[data-cat="preview"] > .ve-category-body > .ve-row:nth-child(-n+2) { flex: 0 1 auto; }
+    body.ve-focus.ve-laptop #veViewer details[data-cat="preview"] > summary, body.ve-focus.ve-laptop #vePreviewStatus:not(.bad) { display: none; }
+
+    /* מצב ריק מועיל בכל פאנל */
+    .ve-empty { padding: var(--sp-3) var(--sp-2); }
+    .ve-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: var(--sp-2); }
+    .ve-empty .ve-empty-actions .ei { width: 14px; height: 14px; }
+    .ve-timeline-dock:has(#veTimelineBox:not([hidden])) .ve-timeline-empty { display: none; }
+    .ve-timeline-empty { padding: var(--sp-2); text-align: center; }
+
+    /* היררכיה ויזואלית: בתוך הפאנלים כפתור רגיל שקט (בלי מסגרת ורקע), ורק הפעולה הראשית בולטת
+       (btn-run / ve-primary). שבבים, מתגים מקובצים וכפתורים מפוצלים נשארים כמו שהם. */
+    #videoEditorOptions :is(.ve-category-body, .ve-results-head, .ve-result-actions, .ve-empty-actions, .ve-ranges-editor) button:not(.btn-run, .ve-primary, .ve-chips button, .ve-mode-toggle button, .ve-split button, .ve-look-card, [aria-pressed="true"]) {
+      background: transparent; border-color: transparent; color: var(--color-text-2);
+    }
+    #videoEditorOptions :is(.ve-category-body, .ve-results-head, .ve-result-actions, .ve-empty-actions, .ve-ranges-editor) button:not(.btn-run, .ve-primary, .ve-chips button, .ve-mode-toggle button, .ve-split button, .ve-look-card, [aria-pressed="true"]):hover:not(:disabled) {
+      background: var(--color-surface-3); color: var(--color-text);
+    }
+    .ve-primary { background: var(--color-accent-soft); border-color: var(--color-accent-line); color: var(--color-accent); font-weight: var(--fw-semibold); }
+    .ve-primary:hover:not(:disabled) { background: var(--color-accent-soft); border-color: var(--color-accent); }
+    /* פחות מסגרות: כרטיס שכבה הוא קטע (קו מפריד), לא עוד כרטיס בתוך כרטיס */
+    #videoEditorOptions .ve-layer-card { border: 0; border-top: 1px solid var(--color-border); border-radius: 0; padding: 8px 0 0; }
+}

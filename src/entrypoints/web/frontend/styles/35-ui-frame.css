@@ -1,0 +1,7 @@
+/* רכיבי מסגרת שנטענים לפי דרישה (35-ui-frame.js, LAZY_CSS["frame"]): שורה לפריט בחלונית "נפתחו לאחרונה", באותה חלונית
+   כמו תפריט ההעדפות (.prefs-menu, 19-access.css) */
+  @layer components {
+    .recent-item { justify-content: space-between; gap: var(--sp-2); text-align: start; background: transparent; border-color: transparent; font-weight: var(--fw-regular); }
+    .recent-item:hover:not(:disabled) { background: var(--color-surface-3); }
+    .recent-item > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  }

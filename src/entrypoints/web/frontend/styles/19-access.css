@@ -1,0 +1,73 @@
+  /* ==========================================================================
+     גל 21 - נגישות וערכות נושא: תפריט ההעדפות (ערכת נושא / צבע הדגשה / שפה),
+     טבעת פוקוס אחידה, יעדי לחיצה מינימליים (34px, 44px במסך מגע), תיקוני
+     ניגודיות גבוהה ו-content-visibility לרשימות ארוכות.
+     ========================================================================== */
+  @layer components {
+    /* --- תפריט ההעדפות --- */
+    .prefs-menu {
+      position: fixed; top: var(--prefs-top, calc(var(--topbar-h) + var(--sp-1))); inset-inline-end: var(--sp-3); z-index: var(--z-menu);
+      width: min(92vw, 300px); padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-3);
+      background: var(--color-surface-1); border: 1px solid var(--color-border-strong); border-radius: var(--r-lg);
+      box-shadow: var(--shadow-3); animation: ui-pop-in var(--dur-2) var(--ease-out); transform-origin: top;
+    }
+    .prefs-menu[hidden] { display: none; }
+    .prefs-group { display: flex; flex-direction: column; gap: var(--sp-1); }
+    .prefs-title { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-text-3); letter-spacing: .03em; margin-bottom: var(--sp-0); }
+    .prefs-options { display: flex; flex-direction: column; gap: 2px; }
+    .prefs-options [role="radio"] {
+      justify-content: flex-start; text-align: start; min-block-size: 34px; background: transparent; border-color: transparent;
+      font-weight: var(--fw-regular); color: var(--color-text);
+    }
+    .prefs-options [role="radio"]:hover { background: var(--color-surface-3); }
+    .prefs-options [role="radio"][aria-checked="true"] { background: var(--color-accent-soft); color: var(--color-accent); border-color: var(--color-accent-line); font-weight: var(--fw-semibold); }
+    .prefs-langs { flex-direction: row; }
+    .prefs-langs [role="radio"] { flex: 1; justify-content: center; }
+    .prefs-swatches { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+    .accent-swatch {
+      inline-size: 34px; block-size: 34px; padding: 0; border-radius: 50%; border: 2px solid var(--color-border-strong);
+      background: var(--swatch, var(--hue-cyan)); position: relative;
+    }
+    .accent-swatch[data-accent-opt="emerald"] { --swatch: var(--hue-emerald); }
+    .accent-swatch[data-accent-opt="violet"] { --swatch: var(--hue-violet); }
+    .accent-swatch[data-accent-opt="amber"] { --swatch: var(--hue-amber); }
+    .accent-swatch[data-accent-opt="rose"] { --swatch: var(--hue-rose); }
+    .accent-swatch:hover { border-color: var(--color-text-2); transform: scale(1.06); }
+    .accent-swatch[aria-checked="true"] { border-color: var(--color-text); box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--swatch, var(--hue-cyan)); }
+    [data-theme="contrast"] .prefs-swatches { opacity: .5; }
+
+    /* --- טבעת פוקוס אחידה לכל רכיב אינטראקטיבי (מקלדת בלבד) --- */
+    :where(a, summary, [tabindex], select, input, textarea, [role="button"], [role="radio"], [role="tab"]):focus-visible {
+      outline: 2px solid var(--color-focus); outline-offset: 2px;
+    }
+    :where(button, [role="button"], [role="radio"], summary):focus-visible { outline: none; box-shadow: var(--ring); }
+
+    /* --- יעדי לחיצה: לפחות 34px לכפתור אייקון, 44px במסך מגע --- */
+    .icon-only { min-inline-size: 34px; min-block-size: 34px; justify-content: center; }
+    @media (pointer: coarse) {
+      .topbar :where(button, a), .nav-rail .tab-btn, .modal :where(button, select), .btn-sm, .icon-only,
+      .prefs-options [role="radio"], .home-action, .ve-job-actions button, .approval-card-actions button {
+        min-block-size: 44px;
+      }
+      .icon-only, .accent-swatch { min-inline-size: 44px; }
+      .accent-swatch { block-size: 44px; }
+    }
+
+    /* --- רשימות ארוכות: דילוג על רינדור של מה שמחוץ למסך (גודל אחרון נזכר - auto) --- */
+    .feed-item, .hist-row { content-visibility: auto; contain-intrinsic-size: auto 52px; }
+    .gallery-card, .ve-job-card { content-visibility: auto; contain-intrinsic-size: auto 240px; }
+    .approval-card { content-visibility: auto; contain-intrinsic-size: auto 420px; }
+
+    /* --- ממשק באנגלית (LTR): מילים לטיניות ארוכות לא נשברות באמצע בפס הצד --- */
+    :root[lang="en"] .nav-rail .tab-btn { word-break: normal; overflow-wrap: anywhere; hyphens: auto; }
+  }
+
+  /* --- ניגודיות גבוהה: קווי מתאר בכל מקום שבו ההבדל היה רק גוון רקע --- */
+  @layer utilities {
+    [data-theme="contrast"] :where(button, select, input, textarea, .status-chip, .card, .gallery-card, .feed-item, .ve-category) {
+      border-color: var(--color-border-strong);
+    }
+    [data-theme="contrast"] :focus-visible { outline-width: 3px; }
+    [data-theme="contrast"] .hint, [data-theme="contrast"] .t-muted { color: var(--color-text-2); }
+    [data-theme="contrast"] .ei { filter: none; }
+  }

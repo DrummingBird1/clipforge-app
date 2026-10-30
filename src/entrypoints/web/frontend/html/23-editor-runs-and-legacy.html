@@ -1,0 +1,93 @@
+        <details class="ve-category ve-drawer" data-cat="runs" id="veRunsDrawer">
+          <summary><span class="ve-cat-title">🕘 ריצות</span><span class="ve-cat-summary" id="veCatSummary-runs"></span><span class="ve-cat-warn" id="veCatWarn-runs" hidden>⚠️</span></summary>
+          <div class="ve-category-body">
+            <div class="ve-subcat" data-subcat="finish-actions">
+              <div class="ve-subcat-title">▶️ בסיום הריצה</div>
+              <div class="ve-row u-wrap">
+                <label title="פותח את תיקיית הפלטים במחשב שמריץ את השרת"><input type="checkbox" id="veFinishOpenFolder" data-ve-pref> 📂 פתח תיקייה</label>
+                <label title="צליל התראה (בדפדפן ובמחשב)"><input type="checkbox" id="veFinishSound" data-ve-pref> 🔔 צליל</label>
+                <label title="שינה למחשב דקה אחרי ריצה מוצלחת - אפשר לבטל מהבאנר"><input type="checkbox" id="veFinishSleep" data-ve-pref> 💤 שינה</label>
+                <label title="הפלטים של הריצה (רק הם) נשלחים ל'פרסום Shorts'"><input type="checkbox" id="vePublishAfter" data-ve-pref> 🚀 ואז פרסם</label>
+                <label title="ריצת ניסיון של הפרסום - בלי העלאה בפועל"><input type="checkbox" id="vePublishDryRun" data-ve-pref> ↳ ניסיון בלבד</label>
+              </div>
+            </div>
+            <!-- גל 36: מרכז ריצות - התור, ההיסטוריה והתוצאות במקום אחד -->
+            <div class="ve-subcat ve-runs-hub" data-subcat="runs-hub">
+              <div class="ve-subcat-title">🎛️ מרכז ריצות <button type="button" onclick="refreshVeRunsHub()" class="u-fs-xs u-padding-1px-6px" title="רענן" aria-label="רענן את מרכז הריצות">⟳</button></div>
+              <div class="ve-hub-grid">
+                <button type="button" class="ve-hub-card" onclick="toggleVeJobs()" title="תור הרינדור והפרויקטים"><strong>⏳ בתור</strong><span id="veHubQueue" class="ve-field-msg"></span></button>
+                <button type="button" class="ve-hub-card" onclick="loadVeRuns()" title="ההיסטוריה למטה - שם, תגיות והשוואה לכל ריצה"><strong>🕘 היסטוריה</strong><span id="veHubHistory" class="ve-field-msg"></span></button>
+                <button type="button" class="ve-hub-card" onclick="openVeLatestResults()" title="התוצאות של הריצה האחרונה בתיקייה הזו"><strong>📋 תוצאות</strong><span id="veHubResults" class="ve-field-msg"></span></button>
+              </div>
+              <button type="button" id="veHubCompareBtn" onclick="openVeRunCompare()" disabled>⇆ סמן 2 ריצות להשוואה</button>
+            </div>
+            <div class="ve-subcat" data-subcat="recent-runs">
+              <div class="ve-subcat-title">🕘 ריצות אחרונות <button type="button" onclick="loadVeRuns()" class="u-fs-xs u-padding-1px-6px" title="רענן">⟳</button></div>
+              <div id="veRunsList" class="ve-runs-list"></div>
+            </div>
+            <details id="veLogTail" class="ve-log-tail">
+              <summary>📜 לוג מסונן <span id="veLogTailCount" class="ve-field-msg"></span></summary>
+              <div class="ve-row">
+                <select id="veLogTailFilter" onchange="renderVeLogTail()" aria-label="סינון הלוג">
+                  <option value="important">שורות חשובות</option>
+                  <option value="errors">שגיאות ואזהרות בלבד</option>
+                  <option value="all">הכל</option>
+                </select>
+                <button type="button" onclick="clearVeLogTail()" class="u-fs-xs u-padding-3px-8px">נקה</button>
+              </div>
+              <pre id="veLogTailBox" class="ve-log-tail-box"></pre>
+            </details>
+          </div>
+        </details>
+        <div id="veLegacyFields" class="ve-legacy-fields" hidden aria-hidden="true">
+          <input type="checkbox" id="veVertical" onchange="updateWatermarkPreview()">
+          <select id="veAspect"><option value="">-</option><option value="16:9">16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option><option value="4:5">4:5</option><option value="4:3">4:3</option><option value="custom">custom</option></select>
+          <input type="checkbox" id="veDualOutput">
+          <input type="checkbox" id="vePreserveResolution">
+          <select id="veResolution"><option value="auto">auto</option><option value="720p">720p</option><option value="1080p">1080p</option><option value="1440p">1440p</option><option value="2160p">2160p</option></select>
+          <input type="checkbox" id="veSmartCrop">
+          <input type="checkbox" id="veSmartCropFace">
+          <input type="checkbox" id="veBlurBackground">
+          <select id="veFit"><option value="auto">auto</option><option value="crop">crop</option><option value="pad">pad</option></select>
+          <input type="checkbox" id="veTrimSilence">
+          <input type="checkbox" id="veRemoveMidSilence">
+          <input type="checkbox" id="veDenoise">
+          <select id="veDenoiseLevel"><option value="light">light</option><option value="medium" selected>medium</option><option value="strong">strong</option></select>
+          <input type="checkbox" id="veSharpen">
+          <select id="veSharpenLevel"><option value="light">light</option><option value="medium" selected>medium</option><option value="strong">strong</option></select>
+          <input type="checkbox" id="veKeepAudio">
+          <input type="checkbox" id="veHwaccel" onchange="updateVeEtaDisplay()">
+          <input type="checkbox" id="veHwaccelDecode">
+          <input type="checkbox" id="veForce">
+          <input type="checkbox" id="vePreviewOnly">
+          <input type="checkbox" id="veValidateOnly">
+          <select id="veRemoveWatermarkPosition"><option value="">-</option><option value="bottom-right">bottom-right</option><option value="bottom-center">bottom-center</option><option value="bottom-left">bottom-left</option><option value="top-right">top-right</option><option value="top-center">top-center</option><option value="top-left">top-left</option><option value="center">center</option></select>
+          <input type="range" id="veRemoveWatermarkWidthFraction" value="0.2" min="0.02" max="0.6" step="0.01">
+          <input type="range" id="veRemoveWatermarkHeightFraction" value="0.12" min="0.02" max="0.6" step="0.01">
+          <input type="text" id="veText" value="">
+          <input type="text" id="veTextFont" value="Arial">
+          <input type="number" id="veTextFontSize" value="24">
+          <input type="text" id="veTextColor" value="#FFFFFF">
+          <select id="veTextPosition"><option value="bottom">bottom</option><option value="top">top</option><option value="center">center</option></select>
+          <select id="veTimestampOverlay"><option value="">-</option><option value="top-left">top-left</option><option value="top-center">top-center</option><option value="top-right">top-right</option><option value="center">center</option><option value="bottom-left">bottom-left</option><option value="bottom-center">bottom-center</option><option value="bottom-right">bottom-right</option></select>
+        </div>
+        <!-- גל 27: פס סטטוס אחד בתחתית - תקציר הפלט, קבצים, זמן משוער, שמירה ואזהרות -->
+        <footer class="ve-statusbar" id="veStatusBar" role="status" aria-live="polite">
+          <div class="ve-summary-card" id="veSummaryCard">
+            <div id="veSummaryText"></div>
+          </div>
+          <div class="ve-topbar-status">
+            <span id="veFileCount" class="ve-chip" hidden title="כמה קבצי וידאו ירונדרו (לפי התור, או כל התיקייה אם התור לא נערך)"></span>
+            <span id="veEtaDisplay" class="u-fs-sm u-muted"></span>
+            <span id="veStickyProgress" class="u-fs-sm u-semibold u-info" hidden></span>
+            <span id="veChangedSinceRun" class="ve-unsaved u-info" hidden></span>
+            <button type="button" id="veAdvancedHint" class="ve-chip" hidden onclick="setVeMode('advanced')" title="יש הגדרות מתקדמות שאינן בברירת המחדל - מוסתרות במצב פשוט"></button>
+          </div>
+          <span class="ve-statusbar-spacer"></span>
+          <div class="ve-statusbar-warn-wrap">
+            <button type="button" id="veWarningsToggle" class="ve-statusbar-warn" hidden onclick="toggleVeWarnings()" aria-expanded="false" aria-controls="veWarningsBox" title="אזהרות על שילובי הגדרות"></button>
+            <div id="veWarningsBox" class="ve-warnings" hidden></div>
+          </div>
+        </footer>
+      </div>
+

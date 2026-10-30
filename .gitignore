@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Secrets
+.env
+client_secret.json
+youtube_token.json
+tiktok_cookies.txt
+
+# Runtime data / databases
+*.db
+*.db-shm
+*.db-wal
+
+# Local app state (regenerated, machine-specific)
+config.json
+config.json.bak
+rocket_settings.json
+counter.txt
+scheduler_state.json
+scheduled_tasks.json
+rename_history.json
+seo_history_log.txt
+steam_commands.txt
+report.json
+report.xlsx
+report.html
+duplicate_scenes_report.json
+video_editor_profiles.json
+video_editor_profile_meta.json
+video_editor_profile_history.json
+
+# Media / working folders (large, machine-specific) - consolidated under
+# workspace/ instead of scattered directly in the project root next to source
+# code. Raw/pre-render material keeps its own top-level folders (imports,
+# clips, clips_rejected, Processed_Gameplay - not orientation-specific yet).
+# Every *final rendered output* (video_editor.py, rocket_shorts_publisher.py,
+# highlight_reel_maker.py, timelapse_maker.py) instead nests under exactly
+# three top-level orientation folders - workspace/vertical/, workspace/
+# horizontal/, workspace/square/ (see DEFAULT_SETTINGS in
+# rocket_shorts_publisher.py and OUTPUT_DIR in the other three scripts).
+workspace/
+# Output_*_4K subfolders are a legacy name from before the vertical/horizontal/
+# square reorg - kept here too as a safety net for an older/custom output_dir
+# pointed at the project root directly.
+Output_YouTube_4K/
+Output_TikTok_4K/
+Output_Square_4K/
+Output_Instagram_4K/
+
+# User data (30.10.2026): data/ holds the user's own settings, database, access token and TLS key, paired devices,
+# graph-editor episodes, studio projects, logs and backups - none of it belongs in git, in any subfolder
+# (utils/shared/data_paths.FOLDERS). Only the example files at the top of data/ are tracked.
+/data/*
+!/data/*.example.json
+
+# Scratch analysis output
+/temp_analysis/
+
+# PyInstaller build output (regenerate with build_exe.py)
+build/
+dist/
+*.spec
+
+# Bundled ffmpeg binaries (large, downloaded separately)
+ffmpeg/
+ffmpeg_progress.tmp
+
+# Test/lint cache (consolidated - see [tool.pytest.ini_options]/[tool.ruff] in pyproject.toml)
+.cache/
+# pytest-benchmark's default folder - storage is .cache/benchmarks (pyproject addopts), but a run without
+# those addopts still creates it in the root
+.benchmarks/
+
+# OS
+desktop.ini
+
+# 30.10.2026: dev/export_public.py - שמות הבעלים לסריקה, לא בריפו (ראו שם)
+/dev/export_public.local.json

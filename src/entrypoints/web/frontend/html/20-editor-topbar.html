@@ -1,0 +1,177 @@
+      <div class="options-card" id="videoEditorOptions" hidden>
+        <div class="ve-onboarding" id="veOnboardingBanner" hidden>
+          <span>👋 טיפ: "פשוט" מציג ארבעה צעדים, "רגיל" את ההגדרות הנפוצות ו"מומחה" את כולן. "✎ רק מה ששיניתי" מראה מה שונה מברירת המחדל, וה-🔍 מוצא כל הגדרה.</span>
+          <button type="button" onclick="dismissVideoEditorOnboarding()">הבנתי</button>
+        </div>
+        <div class="ve-sticky-bar ve-topbar" id="veStickyBar">
+          <div class="ve-topbar-row">
+            <button type="button" id="veNavBtn" class="ve-nav-btn" onclick="toggleStudioNav()" aria-expanded="false" aria-label="תפריט ראשי" title="תפריט ראשי - הצג/הסתר את סרגל הניווט (מסכים אחרים, הגדרות, סקריפטים)">☰</button>
+            <!-- גל 27: שורה אחת - פרויקט, פרופיל, חיפוש, פשוט/מתקדם, הרץ ועצור. כל השאר בתפריטים -->
+            <div class="ve-menu-wrap ve-folder-wrap">
+              <button type="button" id="veFolderChip" class="ve-folder-chip" onclick="toggleVeFolderMenu(event)" aria-haspopup="true" aria-expanded="false" title="התיקייה (הפרויקט) שעליה עובדים - החלפה, תיקיות אחרונות וכל הפרויקטים">📁 <span id="veFolderChipName">בחר תיקייה</span></button>
+              <div class="ve-menu ve-folder-menu" id="veFolderMenu" hidden role="menu">
+                <div class="ve-menu-title" id="veFolderMenuPath" dir="ltr"></div>
+                <button type="button" onclick="closeVeMenus(); openBrowser()" role="menuitem">📂 בחר תיקייה...</button>
+                <button type="button" id="veJobsBtn" onclick="closeVeMenus(); toggleVeJobs()" aria-pressed="false" role="menuitem" title="כל הפרויקטים (תיקיות שעבדת עליהן), הסטטוס שלהם ותור הרינדור">📋 כל הפרויקטים</button>
+                <hr>
+                <div class="ve-menu-title">תיקיות אחרונות</div>
+                <div id="veRecentFolders" class="ve-recent-folders"></div>
+              </div>
+            </div>
+            <select id="vePreset" onchange="applyVideoEditorPreset()" aria-label="סגנון" title="הסגנון הפעיל - בחירה טוענת את כל ההגדרות שלו">
+              <option value="">בחר סגנון...</option>
+            </select>
+            <div class="ve-split ve-menu-wrap">
+              <button type="button" id="veSaveBtn" onclick="veSaveOrUpdateProfile()" title="שמור את ההגדרות כסגנון - לסגנון הנבחר, או כסגנון חדש (Ctrl+S). הפרויקט עצמו נשמר לבד">⭐ שמור כסגנון</button>
+              <button type="button" class="ve-split-toggle" onclick="toggleVeMenu('veSaveMenu', event)" aria-haspopup="true" aria-expanded="false" aria-label="אפשרויות שמירה">▾</button>
+              <div class="ve-menu" id="veSaveMenu" hidden role="menu">
+                <button type="button" id="veStickyUpdateBtn" onclick="updateVideoEditorProfile()" hidden role="menuitem">🔄 עדכן את הסגנון הנבחר</button>
+                <button type="button" onclick="veSaveAsNewProfile()" role="menuitem">💾 שמור כסגנון חדש...</button>
+                <hr>
+                <button type="button" id="veProfileManagerBtn" onclick="closeVeMenus(); openVeProfileManager()" role="menuitem" title="כל פעולות הסגנונות: שינוי שם, היסטוריה, השוואה, שיתוף, תגיות, גיבויים וסל מחזור">🗂️ ניהול סגנונות...</button>
+              </div>
+            </div>
+            <!-- גל 30: אינדיקטור שמירה אחד - הפרויקט נשמר לבד; "הסגנון שונה" רק כשבאמת יש מה לשמור -->
+            <span id="veSaveState" class="ve-save-state" role="status" aria-live="polite" hidden>
+              <span id="veSaveStateText"></span>
+              <button type="button" id="veSaveStateUpdate" class="btn-sm" onclick="updateVideoEditorProfile()" hidden title="שומר את השינויים לסגנון הנבחר">🔄 עדכן</button>
+              <button type="button" id="veSaveStateNew" class="btn-sm" onclick="veSaveAsNewProfile()" hidden title="שומר את ההגדרות הנוכחיות כסגנון חדש - הנבחר לא משתנה">💾 שמור כחדש</button>
+            </span>
+            <div class="ve-mode-toggle" role="group" aria-label="רמת פירוט">
+              <button type="button" id="veModeSimpleBtn" onclick="setVeMode('simple')" title="רק ההגדרות העיקריות">פשוט</button>
+              <button type="button" id="veModeRegularBtn" onclick="setVeMode('regular')" title="ההגדרות הנפוצות - בלי כ-40 הגדרות טכניות נדירות (הגדרה ששינית תמיד מוצגת)">רגיל</button>
+              <button type="button" id="veModeAdvancedBtn" onclick="setVeMode('advanced')" title="כל ההגדרות, כולל הטכניות">מומחה</button>
+            </div>
+            <span class="ve-topbar-spacer"></span>
+            <div class="ve-split ve-menu-wrap">
+              <button type="button" class="btn-run" id="veStickyRunBtn" onclick="requestVeRun()" disabled title="הרץ עם ההגדרות הנוכחיות (Ctrl+Enter)">▶ הרץ</button>
+              <button type="button" class="btn-run ve-split-toggle" id="veRunModeBtn" onclick="toggleVeMenu('veRunMenu', event)" aria-haspopup="true" aria-expanded="false" aria-label="מצב ריצה">▾</button>
+              <div class="ve-menu" id="veRunMenu" hidden role="menu">
+                <div class="ve-menu-title">מצב ריצה</div>
+                <label title="מרנדר רק קבצים שעוד אין להם פלט"><input type="radio" name="veRunMode" value="normal" checked> ▶ רגיל</label>
+                <label title="מרנדר גם קבצים שכבר יש להם פלט (הגרסה הקודמת נשמרת תחת _previous)"><input type="radio" name="veRunMode" value="force"> 🔁 רנדר הכל מחדש</label>
+                <label title="בודק שההגדרות ושרשרת הפילטרים תקינות, בלי לרנדר"><input type="radio" name="veRunMode" value="validate"> 🧪 בדיקה בלבד</label>
+                <label title="במקום לרנדר - תמונה אחת עם פריים מכל סרטון, לוודא שזו התיקייה הנכונה"><input type="radio" name="veRunMode" value="contact"> 🖼️ contact-sheet בלבד</label>
+                <hr>
+                <label title="לפני כל ריצה, בודק את ההגדרות מול ffmpeg ומתריע לפני שמבזבזים שעה על רינדור שייכשל"><input type="checkbox" id="veAlwaysValidate" data-ve-pref> 🧪 תמיד לבדוק לפני ריצה</label>
+                <label title="הריצה הזו נכנסת לראש תור הרינדור (לפני משימות שכבר ממתינות)"><input type="checkbox" id="veRunPriority"> ⚡ לראש התור</label>
+                <label title="סיכום לפני כל הרצה: מה ירונדר, זמן וגודל משוערים ואזהרות"><input type="checkbox" id="veRunSheetPref" onchange="_veSavePref('veRunSheet', this.checked)"> 📋 גיליון לפני הרצה</label>
+                <hr>
+                <button type="button" onclick="closeVeMenus(); runVeValidation()" role="menuitem" title="בדיקה מלאה: קבצים/פורמטים + שרשרת הפילטרים מול ffmpeg">🧪 בדוק הגדרות עכשיו</button>
+                <button type="button" onclick="closeVeMenus(); runVeEstimate()" role="menuitem" title="משך וגודל פלט משוערים לכל קובץ">📊 הערך גודל ומשך</button>
+                <button type="button" id="veScheduleBtn" onclick="closeVeMenus(); openVeScheduleDialog()" role="menuitem" title="תזמן ריצה עם ההגדרות והתיקייה הנוכחיות">⏰ תזמן ריצה...</button>
+                <button type="button" onclick="runVeTonight()" role="menuitem" title="מכניס את הריצה לתור ומשהה את התור עד שעה שתבחר (למשל 02:00)">🌙 הרץ בלילה...</button>
+              </div>
+            </div>
+            <button type="button" class="btn-pause" id="veStickyPauseBtn" onclick="togglePause()" disabled title="השהה/המשך את הריצה" aria-label="השהה">⏸️</button>
+            <button type="button" class="btn-stop" id="veStickyStopBtn" onclick="stopScript()" disabled title="עצור את הריצה" aria-label="עצור">🛑</button>
+            <button type="button" id="veRunControlBtn" onclick="toggleVeRunControl()" hidden title="שליטה בקבצים תוך ריצה: השהיה/ביטול/קידום בתור" aria-label="שליטה בקבצים" aria-expanded="false">🎛️</button>
+            <!-- גל 60: ריצה של עורך הגרפים (או סקריפט אחר) נראית גם כאן - לחיצה עוברת אליה (65-ui-shell.js) -->
+            <button type="button" id="veOtherRunChip" class="ve-chip ve-other-run" hidden onclick="uiGoToRunOwner()" title="ריצה של כלי אחר בתור המשותף - לחיצה עוברת אליו"></button>
+            <button type="button" id="veSearchAllBtn" onclick="openCommandPalette()" aria-label="חיפוש בכל האפליקציה" title="חיפוש בכל האפליקציה - מסכים, סקריפטים, פרויקטים ופעולות (Ctrl+K)">🔍</button>
+            <!-- גל 58: העזרה בתפריט משלה; ⋯ נשאר לפרויקט ולתצוגת ההגדרות, בשני חלקים עם כותרות -->
+            <div class="ve-menu-wrap">
+              <button type="button" id="veHelpMenuBtn" onclick="toggleVeMenu('veHelpMenu', event)" aria-haspopup="true" aria-expanded="false" aria-label="עזרה" title="עזרה: מקראה, קיצורי מקלדת, סיור ומה חדש">🛟</button>
+              <div class="ve-menu" id="veHelpMenu" hidden role="menu">
+                <button type="button" onclick="openGlossaryDialog()" role="menuitem">📖 מקראה - הסבר לכל הגדרה</button>
+                <button type="button" onclick="openVeShortcutsDialog()" role="menuitem">⌨️ קיצורי מקלדת</button>
+                <button type="button" onclick="openCommandPreviewDialog()" role="menuitem">⌨️ הפקודה שתישלח בפועל</button>
+                <button type="button" onclick="startVeTour()" role="menuitem">👋 סיור בעורך</button>
+                <button type="button" onclick="openVeWhatsNew()" role="menuitem" class="ve-news-item">🆕 מה חדש</button>
+              </div>
+            </div>
+            <div class="ve-menu-wrap">
+              <button type="button" id="veViewMenuBtn" onclick="toggleVeMenu('veViewMenu', event)" aria-haspopup="true" aria-expanded="false" aria-label="עוד" title="עוד: הפרויקט ותצוגת ההגדרות">⋯</button>
+              <div class="ve-menu" id="veViewMenu" hidden role="menu">
+                <div class="ve-menu-title">הפרויקט</div>
+                <button type="button" onclick="closeVeMenus(); switchTab('dataviz')" role="menuitem" title="סרטוני נתונים - הפרויקט כבר שמור">📊 לעורך הגרפים</button>
+                <button type="button" onclick="toggleVeUndoPanel(true)" role="menuitem">🕘 היסטוריית שינויים (Ctrl+Z)</button>
+                <button type="button" onclick="exportVeProject()" role="menuitem">📤 ייצוא פרויקט (.clipforge.json)</button>
+                <button type="button" onclick="document.getElementById('veImportProjectFile').click()" role="menuitem">📥 ייבוא פרויקט לתיקייה הזו...</button>
+                <input type="file" id="veImportProjectFile" accept=".json" hidden onchange="_veImportProjectFileChosen(event)" aria-label="קובץ פרויקט">
+                <hr>
+                <details class="ve-menu-sub">
+                <summary class="ve-menu-title">תצוגת ההגדרות</summary>
+                <div>
+                <label title="אזור אחד בכל פעם, עם לשונית לכל אזור"><input type="radio" name="veLayout" value="tabs" onchange="setVeLayout(this.value)"> 🗂️ בלשוניות</label>
+                <label title="כל האזורים אחד מתחת לשני"><input type="radio" name="veLayout" value="accordion" onchange="setVeLayout(this.value)"> ☰ הכל ברשימה</label>
+                <label title="שורות נמוכות וצפופות יותר"><input type="checkbox" id="veCompactToggle" onchange="setVeCompact(this.checked)"> 📏 מצב צפוף</label>
+                <label title="שדות שתלויים בשדה אחר מוצגים (מעומעמים) גם כשהשדה-האב כבוי"><input type="checkbox" id="veShowDependentToggle" onchange="setVeShowDependent(this.checked)"> 👁️ הצג תמיד שדות תלויים</label>
+                <label title="תוויות והסברים באנגלית"><input type="checkbox" id="veEnglishToggle" onchange="setVeEnglish(this.checked)"> 🌐 English labels</label>
+                <button type="button" onclick="toggleAllVeCategories()" id="veToggleAllBtn" role="menuitem">⏬ הרחב הכל</button>
+                <button type="button" onclick="resetVeCategoryOrder()" role="menuitem">↕️ אפס סדר אזורים</button>
+                <button type="button" onclick="resetVeCategoryOpenState()" role="menuitem">📂 אפס מצב פתוח/סגור</button>
+                </div>
+                </details>
+                <hr>
+                <button type="button" onclick="resetVideoEditorToDefaults()" role="menuitem">↺ אפס את כל ההגדרות</button>
+              </div>
+            </div>
+            <!-- גל 60: "סגור" גלוי בסוף הסרגל - כמו בעורך הגרפים (היה בתוך ⋯) -->
+            <button type="button" id="veFocusBtn" class="ve-close-btn" onclick="closeVeMenus(); closeVeEditor()" title="חזרה למסך הבית - הפרויקט כבר שמור">✕ סגור</button>
+          </div>
+        </div>
+        <div id="veRunControl" class="ve-run-control" hidden>
+          <div class="ve-subcat-title">🎛️ שליטה בקבצים תוך ריצה</div>
+          <div id="veRunControlActive"></div>
+          <div id="veRunControlPending"></div>
+        </div>
+        <div id="veProjectBanner" class="ve-project-banner" hidden role="status">
+          <span id="veProjectBannerText"></span>
+          <button type="button" id="veProjectApplyRecipeBtn" onclick="applyVeProjectRecipe()" hidden>📂 החל את הגדרות הפרויקט</button>
+          <button type="button" onclick="keepVeCurrentSettings()" title="השאר את ההגדרות הנוכחיות - הפרויקט יישמר איתן" aria-label="השאר את ההגדרות הנוכחיות">✕</button>
+        </div>
+        <!-- גל 30: מצב אחד לעריכת קליפ - כל שינוי בזמן/לוגו/שכבות נשמר רק לקליפ הזה -->
+        <div id="veClipBanner" class="ve-clip-banner" hidden role="status">
+          <span class="ve-clip-banner-text">✏️ עורך את <strong id="veClipBannerName" dir="auto"></strong> בלבד<span id="veClipBannerCount"></span></span>
+          <span class="ve-field-msg">זמן, לוגו ושכבות חלים רק עליו - השאר כמו בכל הקבצים</span>
+          <span class="u-grow"></span>
+          <button type="button" id="veClipRevertBtn" onclick="revertVeClipEdits()" title="מוחק את השינויים של הקליפ הזה - הוא חוזר להיות כמו כל הקבצים">↩ כמו כל הקבצים</button>
+          <button type="button" id="veClipPromoteBtn" onclick="promoteVeClipEdits()" title="השינויים של הקליפ הזה הופכים להגדרות של כל הקבצים">📋 החל על כל הקבצים</button>
+          <button type="button" class="btn-run" onclick="exitVeClipMode()">✓ סיום</button>
+        </div>
+        <input type="hidden" id="veFavoriteFields" value="">
+        <aside id="veUndoPanel" class="undo-panel" hidden aria-label="היסטוריית שינויים">
+          <div class="undo-head">🕘 היסטוריית שינויים <span class="hint">לחיצה חוזרת לנקודה</span>
+            <button type="button" class="btn-ghost btn-sm" onclick="toggleVeUndoPanel(false)" aria-label="סגור">✕</button></div>
+          <div class="undo-list" id="veUndoList"></div>
+        </aside>
+        <section id="veJobsView" class="ve-jobs" hidden aria-label="פרויקטים">
+          <div class="ve-row u-wrap">
+            <strong>📁 פרויקטים</strong>
+            <span id="veJobsQueue" class="ve-field-msg" aria-live="polite"></span>
+            <span class="u-grow"></span>
+            <button type="button" onclick="newVeJob()">➕ פרויקט חדש (בחר תיקייה)</button>
+            <button type="button" onclick="refreshVeJobs()" aria-label="רענן">🔄</button>
+            <button type="button" onclick="closeVeJobs()">✕ חזרה לעורך</button>
+          </div>
+          <div class="ve-jobs-filters" role="toolbar" aria-label="סינון פרויקטים">
+            <input type="search" id="veJobsSearch" placeholder="חיפוש לפי שם או תיקייה..." aria-label="חיפוש פרויקטים" oninput="filterVeJobs()">
+            <div class="ve-mode-toggle" role="group" aria-label="סינון לפי סטטוס" id="veJobsStatusFilter">
+              <button type="button" data-status="all" aria-pressed="true" onclick="setVeJobsStatusFilter('all')">הכל</button>
+              <button type="button" data-status="running" aria-pressed="false" onclick="setVeJobsStatusFilter('running')">⏳ רצות</button>
+              <button type="button" data-status="ok" aria-pressed="false" onclick="setVeJobsStatusFilter('ok')">✅ הושלמו</button>
+              <button type="button" data-status="bad" aria-pressed="false" onclick="setVeJobsStatusFilter('bad')">❌ נכשלו</button>
+              <button type="button" data-status="never" aria-pressed="false" onclick="setVeJobsStatusFilter('never')">🆕 טרם הורצו</button>
+            </div>
+            <div class="ve-chips" id="veJobsTargetFilter" aria-label="סינון לפי יעד"></div>
+            <span id="veJobsCount" class="ve-field-msg" aria-live="polite"></span>
+          </div>
+          <div id="veJobsList" class="ve-jobs-list"></div>
+          <div class="ve-render-queue">
+            <div class="ve-row u-wrap">
+              <strong>🎬 תור הרינדור</strong>
+              <span id="veRenderQueueStatus" class="ve-field-msg" aria-live="polite"></span>
+              <span class="u-grow"></span>
+              <button type="button" id="veQueuePauseBtn" onclick="toggleVeQueuePause()">⏸ השהה את התור</button>
+              <button type="button" onclick="refreshVeRenderQueue()" aria-label="רענן תור">🔄</button>
+            </div>
+            <div id="veRenderQueueList"></div>
+            <div class="ve-row u-wrap">
+              <label title="לפני שכל רינדור מתחיל - אם אחת התוכנות האלה פתוחה, או שה-GPU בעומס, הוא מחכה עד שיתפנה"><input type="checkbox" id="veWaitWhenBusy" onchange="saveVeQueueSettings()"> ⏸ המתן כשהמחשב עסוק</label>
+              <label>תוכנות: <input type="text" id="veBusyProcesses" class="u-width-220px" placeholder="obs64.exe, game.exe" onchange="saveVeQueueSettings()" aria-label="תוכנות שמעכבות רינדור"></label>
+              <label>GPU מעל <input type="number" id="veBusyGpu" min="10" max="100" class="u-width-60px" onchange="saveVeQueueSettings()" aria-label="סף עומס GPU">%</label>
+              <span id="veBusyNow" class="ve-field-msg"></span>
+            </div>
+          </div>
+        </section>

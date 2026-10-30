@@ -1,0 +1,7 @@
+/* מסך "תוצרים" (33-outputs-screen.js, LAZY_CSS["outputs"]): הכרטיס הוא כפתור (מקלדת), במראה של כרטיס בגלריה. בשכבת shell
+   כמו .gallery-card (14-shell.css) */
+  @layer shell {
+    .output-card { display: block; width: 100%; padding: 0; text-align: start; font-size: inherit; font-weight: inherit; }
+    .output-card:hover:not(:disabled) { background: var(--color-surface-1); }
+    .output-card .hint { padding-top: 0; }
+  }

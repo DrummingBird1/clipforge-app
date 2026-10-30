@@ -1,0 +1,17 @@
+{
+  "files": {
+    "solar_installed_capacity.csv": "series"
+  },
+  "series_files": [
+    "solar_installed_capacity.csv"
+  ],
+  "first_file": "solar_installed_capacity.csv",
+  "time": "year",
+  "period": "year",
+  "entity": "district",
+  "value": "installed_capacity_mw",
+  "unit": "MW",
+  "kind": "level",
+  "chart": "bar_race",
+  "notes": "Installed capacity is a level that starts at 0 in every district (2008-2009)."
+}

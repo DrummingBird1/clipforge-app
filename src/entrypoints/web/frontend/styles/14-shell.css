@@ -1,0 +1,309 @@
+  /* ==========================================================================
+     גל 17 - מעטפת האפליקציה: פס עליון דק, פס ניווט אנכי (rail), סרגל
+     הסקריפטים, מסך הבית, פיד הפעילות, מגירת הלוג, ומסכי הלשוניות.
+     ========================================================================== */
+  @layer shell {
+    /* --- שלד: grid - פס עליון, באנרים, ואז rail | תוכן --- */
+    body {
+      height: 100vh; overflow: hidden;
+      display: grid;
+      grid-template-columns: var(--rail-w) minmax(0, 1fr);
+      grid-template-rows: auto auto auto minmax(0, 1fr);
+      grid-template-areas: "top top" "b1 b1" "b2 b2" "rail main";
+    }
+    body > header.topbar { grid-area: top; }
+    body > #shutdownBanner { grid-area: b1; }
+    body > #updateBanner { grid-area: b2; }
+    body > .nav-rail { grid-area: rail; }
+    body > .layout, body > .tab-content { grid-area: main; min-height: 0; min-width: 0; }
+
+    /* --- פס עליון --- */
+    .topbar {
+      display: flex; align-items: center; gap: var(--sp-3);
+      min-height: var(--topbar-h); padding: 0 var(--sp-4);
+      background: var(--color-surface-1); border-bottom: 1px solid var(--color-border);
+    }
+    .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--color-text); text-decoration: none; flex-shrink: 0; }
+    .brand:hover { text-decoration: none; }
+    .brand-mark { width: 28px; height: 28px; flex-shrink: 0; }
+    .bm-bg { fill: var(--color-accent); }
+    .bm-play, .bm-spark { fill: var(--color-on-accent); }
+    .brand-name { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-bold); letter-spacing: -.01em; white-space: nowrap; }
+    .brand-tag { font-size: var(--fs-2xs); font-weight: var(--fw-semibold); color: var(--color-text-3); border: 1px solid var(--color-border-strong); border-radius: var(--r-pill); padding: 0 6px; margin-inline-start: 4px; vertical-align: 2px; }
+    .topbar-search {
+      flex: 0 1 460px; margin-inline: auto; justify-content: flex-start; gap: var(--sp-2);
+      padding: 6px 10px; color: var(--color-text-3); font-weight: var(--fw-regular);
+      background: var(--color-sunken); border: 1px solid var(--color-border-strong); border-radius: var(--r-md);
+    }
+    .topbar-search:hover:not(:disabled) { background: var(--color-sunken); border-color: var(--n-7); color: var(--color-text-2); }
+    .topbar-search-text { flex: 1; text-align: start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .topbar-status { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 5px; max-width: 360px; padding: 2px 10px;
+      font-size: var(--fs-xs); color: var(--color-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-pill);
+    }
+    .topbar-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+    /* כפתור אייקון-בלבד: הטקסט נשאר ב-DOM (נגישות, טסטים, JS שמחליף אותו) אבל בגודל 0 */
+    .icon-only { font-size: 0; gap: 0; padding: 7px; line-height: 0; }
+    .icon-only .ei { width: 18px; height: 18px; }
+    #notifyBtn.active { color: var(--color-accent); background: var(--color-accent-soft); }
+    /* מרכז ההתראות: המונה על הכפתור (icon-only מאפס את גודל הטקסט) */
+    .notif-btn { position: relative; }
+    .notif-count { position: absolute; inset-block-start: 0; inset-inline-end: 0; padding: 0 5px; font-size: var(--fs-2xs); line-height: 16px; pointer-events: none; }
+
+    /* --- באנרים --- */
+    .app-banner { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; padding: 8px var(--sp-5); font-size: var(--fs-sm); }
+    .app-banner-danger { background: var(--color-danger-solid); color: var(--color-on-solid); }
+    .app-banner-accent { background: var(--color-accent); color: var(--color-on-accent); }
+    .app-banner button { background: var(--color-on-solid); color: var(--color-on-light); border-color: transparent; }
+    .app-banner button.btn-outline, .app-banner button.btn-ghost { background: transparent; color: inherit; border-color: currentColor; }
+    .app-banner button.btn-ghost { border-color: transparent; }
+
+    /* --- פס ניווט אנכי --- */
+    .nav-rail {
+      display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+      padding: var(--sp-2) 6px; overflow-y: auto; overflow-x: hidden;
+      background: var(--color-surface-1); border-inline-end: 1px solid var(--color-border);
+    }
+    .nav-rail .tab-btn {
+      position: relative; flex-direction: column; gap: 4px;
+      padding: 8px 2px 7px; min-height: 58px;
+      background: transparent; border: 1px solid transparent; border-radius: var(--r-md);
+      color: var(--color-text-2); font-size: var(--fs-2xs); font-weight: var(--fw-medium); line-height: 1.2;
+      text-align: center; white-space: normal; word-break: break-word;
+    }
+    .nav-rail .tab-btn .ei { width: 22px; height: 22px; }
+    .nav-rail .tab-btn:hover:not(:disabled) { background: var(--color-surface-3); color: var(--color-text); border-color: transparent; }
+    .nav-rail .tab-btn.active, .nav-rail .tab-btn.rail-active { background: var(--color-accent-soft); color: var(--color-accent); border-color: transparent; }
+    .nav-rail .tab-btn.active::before, .nav-rail .tab-btn.rail-active::before {
+      content: ""; position: absolute; inset-inline-start: -6px; top: 12px; bottom: 12px; width: 3px;
+      border-start-end-radius: var(--r-pill); border-end-end-radius: var(--r-pill); background: var(--color-accent);
+    }
+    .rail-sep { height: 1px; margin: 6px 10px; background: var(--color-border); flex-shrink: 0; }
+    .rail-spacer { flex: 1; min-height: var(--sp-2); }
+
+    /* --- לשונית הסקריפטים: סרגל | ראשי | פיד --- */
+    .layout { display: flex; overflow: hidden; }
+    .sidebar {
+      width: 272px; flex-shrink: 0; overflow-y: auto; padding: var(--sp-3);
+      background: var(--color-surface-1); border-inline-end: 1px solid var(--color-border);
+      display: flex; flex-direction: column;
+    }
+    .sidebar #search { width: 100%; margin-bottom: var(--sp-2); }
+    #scriptList { flex: 1; }
+    .category { font-size: var(--fs-2xs); font-weight: var(--fw-semibold); color: var(--color-text-3); letter-spacing: .03em; margin: var(--sp-3) 6px var(--sp-1); }
+    .script-row { display: flex; gap: 2px; margin-bottom: 2px; align-items: stretch; }
+    .script-btn {
+      flex: 1; min-width: 0; justify-content: flex-start; text-align: start;
+      padding: 7px 10px; background: transparent; border: 1px solid transparent; border-radius: var(--r-sm);
+      color: var(--color-text); font-size: var(--fs-sm); font-weight: var(--fw-regular); line-height: 1.35;
+    }
+    .script-btn:hover:not(:disabled) { background: var(--color-surface-3); border-color: transparent; }
+    .script-btn.selected { background: var(--color-accent-soft); color: var(--color-accent); font-weight: var(--fw-semibold); border-color: transparent; }
+    .star-btn { flex: 0 0 auto; width: 28px; padding: 0; background: transparent; border-color: transparent; color: var(--color-text-3); }
+    .star-btn:hover:not(:disabled) { background: var(--color-surface-3); border-color: transparent; color: var(--hue-amber); }
+    .category-toggle { display: flex; width: 100%; text-align: start; background: transparent; border-color: transparent; padding: 2px 6px; cursor: pointer; }
+.category-toggle:hover:not(:disabled) { background: var(--color-surface-3); color: var(--color-text-2); }
+.archive-btn { opacity: .55; }
+.script-row:hover .archive-btn, .archive-btn:focus-visible { opacity: 1; }
+.collapse-toggle-btn { display: flex; width: 100%; margin: var(--sp-2) 0 2px; font-size: var(--fs-xs); background: transparent; border-style: dashed; color: var(--color-text-2); }
+
+    /* מדדי חומרה */
+    .hw-panel { margin-top: var(--sp-3); padding: var(--sp-3); background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-md); }
+    .hw-row { display: flex; justify-content: space-between; font-size: var(--fs-2xs); color: var(--color-text-2); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+    .hw-bar { height: 4px; border-radius: var(--r-pill); background: var(--color-sunken); overflow: hidden; margin-bottom: var(--sp-2); }
+    .hw-bar-fill { height: 100%; width: 0%; background: var(--color-accent); border-radius: var(--r-pill); transition: width .4s var(--ease-out); }
+    .hw-bar-fill.hw-bar-ram { background: var(--color-success); }
+
+    /* אזור ראשי */
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: var(--sp-4) var(--sp-5); overflow: hidden; gap: 0; }
+    .info-card { background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-3); }
+    #selName { font-size: var(--fs-md); font-weight: var(--fw-semibold); }
+    .info-card .desc { color: var(--color-text-2); font-size: var(--fs-xs); margin-top: 4px; }
+    .options-card {
+      background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-md);
+      padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-3);
+      display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center;
+    }
+    .options-card label { font-size: var(--fs-sm); color: var(--color-text); display: flex; align-items: center; gap: 6px; }
+    .options-card select, .options-card input[type=text], .options-card input[type=number] { padding: 4px 8px; }
+    .row { display: flex; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-3); }
+    .row input[type=text] { flex: 1; }
+    .run-row .btn-run { padding-inline: 18px; }
+
+    /* מסך הבית - כשלא נבחר סקריפט */
+    .home { display: none; flex-direction: column; gap: var(--sp-5); overflow-y: auto; padding-bottom: var(--sp-4); }
+    .layout:not(.has-selection) .home { display: flex; flex: 1; min-height: 0; }
+    .layout:not(.has-selection) .main > :is(.info-card, .row, .options-card, .progress-wrap, .pct) { display: none !important; }
+    .layout:not(.has-selection) .console-drawer { flex: 0 0 auto; }
+    .home-title { margin: 0 0 4px; font-size: var(--fs-2xl); font-weight: var(--fw-bold); letter-spacing: -.01em; }
+    .home-sub { margin: 0; color: var(--color-text-2); font-size: var(--fs-md); }
+    .home-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--sp-3); }
+    .home-action {
+      display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: var(--sp-3); row-gap: 2px;
+      align-items: center; justify-items: start; text-align: start;
+      padding: var(--sp-3) var(--sp-4); border-radius: var(--r-md);
+      background: var(--color-surface-2); border: 1px solid var(--color-border);
+    }
+    .home-action:hover:not(:disabled) { background: var(--color-surface-3); border-color: var(--color-accent-line); }
+    .home-action .ha-ico { grid-row: 1 / span 2; display: inline-flex; padding: 9px; border-radius: var(--r-md); background: var(--color-accent-soft); color: var(--color-accent); }
+    .home-action .ha-ico .ei { width: 20px; height: 20px; }
+    .home-action .ha-title { font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--color-text); }
+    .home-action .ha-desc { font-size: var(--fs-xs); font-weight: var(--fw-regular); color: var(--color-text-2); }
+    .home-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--sp-4); align-items: start; }
+    .home-card { background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+    .home-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+    .home-project { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-top: 1px solid var(--color-border); }
+    .home-project:first-child { border-top: none; }
+    .home-project-main { flex: 1; min-width: 0; }
+    .home-project-name { font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .home-project-meta { font-size: var(--fs-xs); color: var(--color-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: ltr; text-align: end; }
+
+    /* מגירת הלוג */
+    .console-drawer { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .console-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: 6px; }
+    .console-head .console-toggle { font-size: var(--fs-xs); padding: 3px 8px; background: transparent; border-color: transparent; color: var(--color-text-2); }
+    .console-head .console-toggle:hover:not(:disabled) { background: var(--color-surface-3); }
+    .console-head .console-toggle .chev { transition: transform var(--dur-2) var(--ease-out); display: inline-block; }
+    .console-drawer.collapsed .console-toggle .chev { transform: rotate(90deg); }
+    .console-drawer.collapsed .console { display: none; }
+    .console-drawer.collapsed { flex: 0 0 auto; }
+    .console-meta { font-size: var(--fs-2xs); color: var(--color-text-3); }
+
+    /* פיד הפעילות (ריצות אחרונות) */
+    .history {
+      width: 300px; flex-shrink: 0; overflow-y: auto; padding: var(--sp-3);
+      background: var(--color-surface-1); border-inline-start: 1px solid var(--color-border);
+    }
+    .history h3 { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-text-3); margin: 2px 4px var(--sp-2); letter-spacing: .03em; }
+    .history .search-input { margin-bottom: var(--sp-2); }
+    .hist-row { font-size: var(--fs-xs); }
+    .feed-item {
+      display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px var(--sp-2); align-items: start;
+      padding: var(--sp-2); border-radius: var(--r-sm); cursor: pointer;
+    }
+    .feed-item:hover { background: var(--color-surface-3); }
+    .feed-item + .feed-item { border-top: 1px solid var(--color-border); }
+    .feed-item:hover + .feed-item, .feed-item + .feed-item:hover { border-top-color: transparent; }
+    .feed-status { padding-top: 1px; }
+    .feed-status .ei { width: 16px; height: 16px; }
+    .feed-title { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feed-sub { font-size: var(--fs-xs); color: var(--color-text-2); }
+    .feed-sub .bad { color: var(--color-danger); }
+    .feed-time { font-size: var(--fs-2xs); color: var(--color-text-3); white-space: nowrap; padding-top: 2px; font-variant-numeric: tabular-nums; }
+    .feed-details { grid-column: 2 / -1; font-size: var(--fs-2xs); color: var(--color-text-3); font-family: var(--font-mono); direction: ltr; text-align: start; white-space: pre-wrap; word-break: break-word; }
+    .feed-item:not(.open) .feed-details { display: none; }
+    .feed-empty { padding: var(--sp-4) var(--sp-2); text-align: center; color: var(--color-text-3); font-size: var(--fs-xs); }
+    #undoLastMoveBtn { width: 100%; margin-bottom: var(--sp-2); }
+
+    /* --- מסכי לשוניות (בוט, הגדרות, תזמון, Rocket, סאונדבורד, גלריה, אישור, ארכיון) --- */
+    .tab-content { overflow-y: auto; padding: var(--sp-5); }
+    .tc-section {
+      max-width: 760px; margin: 0 auto var(--sp-4); padding: var(--sp-4) var(--sp-5);
+      background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-md);
+    }
+    .tc-section h3 { margin: 0 0 var(--sp-3); font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--color-text); }
+    .tc-row { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-2); align-items: center; flex-wrap: wrap; }
+    .tc-row input, .tc-row select { flex: 1; }
+    .tc-list-row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 10px; border-bottom: 1px solid var(--color-border); font-size: var(--fs-sm); }
+    .tc-list-row:last-child { border-bottom: none; }
+    .tc-list-row button { font-size: var(--fs-xs); padding: 3px 10px; background: transparent; border-color: var(--color-border-strong); color: var(--color-danger); }
+    .tc-list-row button:hover:not(:disabled) { background: var(--color-danger-soft); border-color: transparent; }
+    .settings-actions { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
+    .settings-actions .hint { font-size: var(--fs-xs); color: var(--color-text-2); }
+    .stats-row { display: flex; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-2) 10px; border-bottom: 1px solid var(--color-border); font-size: var(--fs-sm); }
+    .stats-row .script { color: var(--color-text); }
+    .stats-row .meta { color: var(--color-text-2); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    /* גלריה */
+    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--sp-3); }
+    .gallery-card { cursor: pointer; border: 1px solid var(--color-border); border-radius: var(--r-md); overflow: hidden; background: var(--color-surface-1); transition: border-color var(--dur-2), transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2); }
+    .gallery-card:hover { border-color: var(--color-accent-line); transform: translateY(-1px); box-shadow: var(--shadow-2); }
+    .gallery-card.selected { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
+    .gallery-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: var(--media-bg); display: block; }
+    .gallery-card .gallery-card-name { font-size: var(--fs-xs); padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gallery-card-tags { padding: 0 8px 8px; display: flex; flex-wrap: wrap; gap: 4px; min-height: 20px; }
+    .gallery-card-friend-tags { padding: 0 8px 8px; }
+    .gallery-friend-badge { font-size: var(--fs-2xs); padding: 1px 7px; border-radius: var(--r-pill); background: var(--color-sunken); color: var(--color-text-2); border: 1px solid var(--color-border); }
+    .gallery-tag-badge { font-size: var(--fs-2xs); padding: 1px 7px; border-radius: var(--r-pill); background: var(--color-accent-soft); color: var(--color-accent); }
+    .gallery-tag-btn { font-size: var(--fs-2xs); padding: 1px 8px; border-radius: var(--r-pill); background: transparent; color: var(--color-text-2); }
+    .gallery-tag-btn:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-accent); background: transparent; }
+
+    /* אישור קליפים - כרטיס גדול ונוח למגע */
+    .approval-card { border: 1px solid var(--color-border); border-radius: var(--r-md); background: var(--color-surface-1); margin-bottom: var(--sp-4); overflow: hidden; max-width: 760px; margin-inline: auto; }
+    .approval-card img { width: 100%; max-height: 300px; object-fit: cover; background: var(--media-bg); display: block; }
+    .approval-card-info { padding: var(--sp-2) var(--sp-3); }
+    .approval-card-name { font-size: var(--fs-md); font-weight: var(--fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .approval-card-meta { font-size: var(--fs-xs); color: var(--color-text-2); margin-top: 2px; }
+    .approval-card-actions { display: flex; gap: var(--sp-2); padding: 0 var(--sp-3) var(--sp-3); }
+    .approval-card-actions button { flex: 1; padding: 14px; font-size: var(--fs-md); font-weight: var(--fw-semibold); }
+    .approval-approve-btn { background: var(--color-run); color: var(--color-on-light); border-color: transparent; }
+    .approval-reject-btn { background: var(--color-danger-solid); color: var(--color-on-solid); border-color: transparent; }
+
+    /* A/B לתמונות ממוזערות */
+    .yt-analytics-card { border-bottom: 1px solid var(--color-border); padding-bottom: var(--sp-2); margin-bottom: var(--sp-2); }
+    .yt-thumb-toggle-btn { font-size: var(--fs-xs); padding: 3px 10px; margin-top: 4px; background: transparent; color: var(--color-text-2); }
+    .yt-thumb-toggle-btn:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-accent); background: transparent; }
+    .yt-thumb-candidates { display: flex; gap: 10px; margin-top: var(--sp-2); flex-wrap: wrap; }
+    .yt-thumb-candidate { display: flex; flex-direction: column; gap: 4px; width: 160px; }
+    .yt-thumb-candidate img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: var(--r-sm); background: var(--media-bg); }
+    .yt-thumb-candidate button { font-size: var(--fs-xs); padding: 5px; }
+
+    /* --- מסך מלא (סטודיו): בלי פס עליון ובלי rail - כל החלון לעורך --- */
+    body.ve-focus { grid-template-columns: 0 minmax(0, 1fr); }
+    body.ve-focus > header.topbar, body.ve-focus > .nav-rail { display: none; }
+    /* ☰ בסרגל הסטודיו: הסרגל הראשי חוזר לצד המסך בלי לצאת מהסטודיו */
+    body.ve-focus.ve-nav-open { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+    body.ve-focus.ve-nav-open > .nav-rail { display: flex; }
+    .ve-nav-btn { flex: 0 0 auto; }
+    /* גל 56: עורך הגרפים באותה מסגרת - מסך מלא עם סרגל עליון ו-☰ (רק במסך רחב; במובייל הסרגל התחתון נשאר).
+       גל 57: הסרגל מוצג תמיד - יש בו "מה להפיק", הרץ/עצור, המצב וההתקדמות; ☰ רק במסך המלא */
+    .dvz-topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-block-end: var(--sp-3); }
+    body:not(.dvz-focus) #dvzNavBtn, .dvz-episodes-toggle { display: none; }
+    .dvz-topbar-episode { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); color: var(--color-text-2); }
+    .dvz-run-group { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+    .dvz-run-group[hidden] { display: none; }
+    .dvz-run-status { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); color: var(--color-text-2); }
+    .dvz-run-status.bad { color: var(--color-danger); }
+    .dvz-top-progress { order: 99; flex: 1 0 100%; height: 3px; margin: 0; }
+    /* גל 60: ריצה של הכלי השני - שבב קטן בסרגל העליון של שניהם */
+    .ve-other-run { font-size: var(--fs-xs); white-space: nowrap; border-color: var(--color-accent-line); }
+    .ve-other-run[hidden] { display: none; }
+    @media (min-width: 769px) {
+      body.dvz-focus { grid-template-columns: 0 minmax(0, 1fr); }
+      body.dvz-focus > header.topbar, body.dvz-focus > .nav-rail { display: none; }
+      body.dvz-focus.dvz-nav-open { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+      body.dvz-focus.dvz-nav-open > .nav-rail { display: flex; }
+      body.dvz-focus > .tab-content[data-tab-panel="dataviz"] { padding: 0 var(--sp-3) var(--sp-3); }
+      body.dvz-focus .dvz-topbar {
+        position: sticky; top: 0; z-index: var(--z-sticky);
+        margin: 0 calc(-1 * var(--sp-3)) var(--sp-3); padding: 6px 8px 0;
+        background: var(--color-surface-1); border-bottom: 1px solid var(--color-border);
+      }
+    }
+
+    /* --- מובייל: ה-rail הופך לפס תחתון, העמודות נערמות --- */
+    @media (max-width: 768px) {
+      body {
+        height: auto; min-height: 100vh; overflow: visible;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+        grid-template-areas: "top" "b1" "b2" "main" "rail";
+      }
+      .topbar { flex-wrap: wrap; padding: var(--sp-2) var(--sp-3); gap: var(--sp-2); }
+      .topbar-search { order: 5; flex-basis: 100%; }
+      .topbar-status { display: none; }
+      .nav-rail {
+        position: sticky; bottom: 0; z-index: var(--z-sticky); flex-direction: row; overflow-x: auto; overflow-y: hidden;
+        padding: 4px; border-inline-end: none; border-top: 1px solid var(--color-border);
+      }
+      .nav-rail .tab-btn { min-width: 68px; min-height: 52px; }
+      .nav-rail .tab-btn.active::before { display: none; }
+      .rail-sep, .rail-spacer { display: none; }
+      .layout { flex-direction: column; overflow: visible; }
+      .sidebar, .history { width: 100%; max-height: 220px; border: none; border-bottom: 1px solid var(--color-border); }
+      .main { padding: var(--sp-3); min-height: 300px; }
+      .modal { width: 94vw; }
+    }
+  }

@@ -1,0 +1,55 @@
+# Discord bot
+discord.py>=2.3
+aiosqlite>=0.19
+aiohttp>=3.9
+feedparser>=6.0
+
+# GUI (ClipForge Control Center)
+customtkinter>=5.2
+psutil>=5.9
+tkinterdnd2>=0.4
+pystray>=0.19
+keyboard>=0.13
+winotify>=1.1
+
+# Media / automation scripts
+Pillow>=10.0
+pydub>=0.25
+tqdm>=4.66
+pyautogui>=0.9
+requests>=2.31
+google-genai>=0.3
+opencv-python>=4.9
+
+# Auto captions (optional - only needed if enable_captions is turned on)
+faster-whisper>=1.0
+
+# YouTube upload (optional - only needed if client_secret.json is configured)
+google-api-python-client>=2.100
+google-auth-httplib2>=0.2
+google-auth-oauthlib>=1.1
+
+# Data visualization videos (src/dataviz) - matplotlib 3.11+ handles Hebrew RTL itself, needs Python 3.11+
+pandas>=3.0
+numpy>=2.3
+matplotlib>=3.11
+pyyaml>=6.0
+
+# Secrets management
+python-dotenv>=1.0
+keyring>=24.0
+
+# Local web dashboard
+fastapi>=0.110
+uvicorn>=0.29
+
+# Testing & dev tooling
+pytest>=8.0
+ruff>=0.6
+pyinstaller>=6.0
+
+# Optional integrations
+simpleobsws>=1.4
+
+# Spreadsheet export (my_scripts/tools/report_to_excel.py)
+openpyxl>=3.1

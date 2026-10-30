@@ -1,0 +1,149 @@
+name: CI
+
+# סבב ייצוב (16.10.2026) - עלות: הריפו פרטי ו-windows-latest נספר פי 2, אז כל push עלה כ-23 דקות jobs = ~46 דקות בחיוב,
+# ובאוקטובר המכסה החודשית נגמרה (57 ריצות, 2,083 דקות בחיוב). מכאן:
+#  - push של תיעוד בלבד (*.md, docs/) לא מריץ CI. חוץ משני קבצים שטסטים קוראים: README.md (test_docs_search)
+#    ו-docs/video_editor.md (test_docs_sections, גל 33 בדפדפן). כל שינוי בקוד מריץ הכל כמו קודם.
+#    (`paths` ולא `paths-ignore` - רק בו אפשר להחזיר קובץ אחרי שלילה; הסדר קובע.)
+#  - push חדש לאותו ref מבטל את הריצה הקודמת שעוד רצה (concurrency) - הבדיקה של ה-push האחרון כוללת את כל מה שלפניו.
+#  - תקרת זמן לכל job: job תקוע היה רץ 6 שעות (ברירת המחדל) = 12 שעות בחיוב.
+#  - workflow_dispatch: להריץ ידנית (למשל אחרי push של תיעוד בלבד).
+#
+# מכסה חינמית (21.10.2026) - גם אחרי זה, כ-110 push לחודש x 46 = ~5,000 דקות בחיוב מול מכסה של 2,000 (מתחלקת עם שאר הריפואים
+# הפרטיים). ובכל push ל-master רצה שוב בדיקה של קוד שכבר עבר את ה-PR שלו (rebase + fast-forward = אותו קוד). מכאן:
+#  - lint על ubuntu-latest (נספר פי 1). mypy עם --platform win32, כדי שיבדוק כמו ב-Windows (subprocess.CREATE_NO_WINDOW
+#    וכו'); ruff ו-py_compile לא תלויים במערכת.
+#  - unit, tk ו-browser (Windows, פי 2) רק ב-PR אל master וב-workflow_dispatch; ב-push ל-master - רק lint.
+#  - הם מחכים ל-lint (needs): שגיאת lint לא משלמת על שלושה runners של Windows.
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "**"
+      - "!**.md"
+      - "!docs/**"
+      - "README.md"
+      - "docs/video_editor.md"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "**"
+      - "!**.md"
+      - "!docs/**"
+      - "README.md"
+      - "docs/video_editor.md"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# windows-latest (unit, tk, browser) - הפרויקט משתמש בחבילות ייחודיות ל-Windows (winsound, pystray,
+# keyboard, winotify) שלא מותקנות/רלוונטיות בכלל בלינוקס, אז זה חייב לרוץ על
+# אותה מערכת הפעלה שהאפליקציה בפועל רצה עליה.
+#
+# גל 23: שלושה jobs במקביל במקום אחד טורי - lint (מהיר, נכשל ראשון על שגיאה פשוטה),
+# unit (כל מה שלא דפדפן, במקביל עם pytest-xdist + כיסוי), ו-browser (Playwright + Edge).
+# הסימון browser והקבוצות של xdist נקבעים אוטומטית ב-tests/conftest.py.
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies (from uv.lock)
+        run: uv sync
+
+      - name: Compile sweep
+        shell: bash
+        run: |
+          set -e
+          for f in src/entrypoints/*.py src/entrypoints/*.pyw dev/*.py src/cogs/*.py src/ui/*.py src/utils/*.py src/utils/*/*.py tests/*.py tests/*/*.py my_scripts/*/*.py; do
+            uv run python -m py_compile "$f"
+          done
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type check (src/utils, per pyproject.toml's [tool.mypy] files list)
+        run: uv run mypy --platform win32
+
+      - name: Dependency vulnerability scan (pip-audit)
+        run: uv run pip-audit
+
+  unit:
+    needs: lint
+    if: github.event_name != 'push'
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies (from uv.lock)
+        run: uv sync
+
+      - name: Unit and integration tests (parallel, with coverage)
+        run: uv run pytest tests/ -m "not browser and not tk" -n auto --dist loadgroup --cov --cov-report=term-missing --durations=10
+
+  # Tk/GUI tests (marker `tk`, set automatically by tests/conftest.py) are the slowest in the suite, so they run
+  # as their own job in parallel with `unit` and `browser`. Locally `-m "not browser"` still runs them too.
+  tk:
+    needs: lint
+    if: github.event_name != 'push'
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies (from uv.lock)
+        run: uv sync
+
+      - name: Tk / GUI tests (parallel)
+        run: uv run pytest tests/ -m tk -n auto --dist loadgroup --durations=10
+
+  browser:
+    needs: lint
+    if: github.event_name != 'push'
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies (from uv.lock)
+        run: uv sync
+
+      # כל worker מקבל שרת web_app ו-Edge משלו; קבוצת "workspace" (טסטים שמרנדרים לתיקייה
+      # המשותפת) רצה כולה באותו worker.
+      - name: Browser tests (Playwright + Edge)
+        run: uv run pytest tests/ -m browser -n 2 --dist loadgroup -v
+
+      # רגרסיה ויזואלית שנכשלה: הצילום המלא והמוקטן (tests/web/test_web_app_visual_screens_browser.py)
+      - name: Upload visual regression screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-failures
+          path: .cache/visual_failures/
+          if-no-files-found: ignore

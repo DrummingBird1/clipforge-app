@@ -1,0 +1,18 @@
+{
+  "files": {
+    "output_index_by_sector.csv": "series",
+    "milestones.csv": "events"
+  },
+  "series_files": [
+    "output_index_by_sector.csv"
+  ],
+  "first_file": "output_index_by_sector.csv",
+  "time": "quarter",
+  "period": "quarter",
+  "entity": "sector",
+  "value": "output_index",
+  "unit": "נקודות מדד",
+  "kind": "level",
+  "chart": "line_race",
+  "notes": "'2020-Q3' quarters - the engine has no quarter period today (day/month/year), so 'quarter' is a target for both the detector and the engine. milestones.csv has no header row (date,text) and is an events file."
+}

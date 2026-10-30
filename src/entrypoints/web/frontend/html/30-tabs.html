@@ -1,0 +1,322 @@
+      <div class="options-card" id="rocketShortsOptions" hidden>
+        <label><input type="checkbox" id="rsDryRun"> 🧪 DRY-RUN (מדמה בלי ffmpeg/העלאות בפועל)</label>
+        <label><input type="checkbox" id="rsNoSquare"> דלג על פורמט מרובע (גם אם מופעל בהגדרות)</label>
+        <label><input type="checkbox" id="rsNoLoudnorm"> דלג על נרמול שמע (גם אם מופעל בהגדרות)</label>
+      </div>
+
+      <div class="row run-row">
+        <button class="btn-run" id="runBtn" disabled onclick="runScript()">▶ הרץ</button>
+        <button class="btn-stop" id="stopBtn" disabled onclick="stopScript()">🛑 עצור</button>
+        <button class="btn-pause" id="pauseBtn" disabled onclick="togglePause()">⏸️ השהה</button>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="pct" id="pctLabel"></div>
+      <div class="console-drawer" id="consoleDrawer">
+        <div class="console-head">
+          <button type="button" class="console-toggle" id="consoleToggle" onclick="toggleConsoleDrawer()" aria-expanded="true" aria-controls="console"><span class="chev" aria-hidden="true">▾</span> 📜 לוג</button>
+          <span class="console-meta" id="consoleMeta"></span>
+        </div>
+        <div class="console" id="console" role="log" aria-live="polite" aria-label="לוג הריצה"></div>
+      </div>
+    </div>
+    <aside class="history" aria-label="ריצות אחרונות">
+      <h3>🕘 ריצות אחרונות</h3>
+      <button id="undoLastMoveBtn" class="btn-danger btn-sm" hidden onclick="undoLastMoveBatch()">↩️ בטל פעולה אחרונה</button>
+      <input type="search" id="historySearch" class="search-input" placeholder="חיפוש בהיסטוריה: סקריפט, קובץ, סטטוס, תאריך..." aria-label="חיפוש בהיסטוריה" oninput="onHistorySearchInput()">
+      <div id="historyList"></div>
+    </aside>
+  </div>
+
+  <div class="tab-content" data-tab-panel="bot" hidden>
+    <div class="tc-section">
+      <h3>🤖 סטטוס בוט</h3>
+      <div class="tc-row">
+        <span id="botStatusText">בודק...</span>
+        <button id="botToggleBtn" onclick="toggleBot()">-</button>
+      </div>
+    </div>
+    <div class="tc-section">
+      <h3>📝 לוג הבוט</h3>
+      <div class="console u-height-200px" id="botConsole"></div>
+    </div>
+    <div class="tc-section">
+      <h3>📰 מקורות RSS</h3>
+      <div class="tc-row">
+        <input id="rssName" placeholder="שם המקור">
+        <input id="rssUrl" placeholder="כתובת RSS">
+        <input id="rssChannel" placeholder="ערוץ דיסקורד ID">
+        <button onclick="addRssFeed()">➕ הוסף</button>
+      </div>
+      <div id="rssList"></div>
+    </div>
+    <div class="tc-section">
+      <h3>🎮 מעקב Steam</h3>
+      <div class="tc-row">
+        <input id="steamName" placeholder="שם משחק">
+        <input id="steamAppId" placeholder="App ID">
+        <input id="steamChannel" placeholder="ערוץ דיסקורד ID">
+        <button onclick="addSteamGame()">➕ עקוב</button>
+      </div>
+      <div id="steamList"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab-panel="globalsettings" hidden>
+    <div class="tc-section">
+      <h3>🌐 כללי</h3>
+      <div class="tc-row"><input id="gsWebhook" placeholder="Discord Webhook URL"></div>
+      <div class="tc-row">
+        <input id="gsNasFolder" placeholder="נתיב תיקיית גיבוי" readonly class="u-pointer" onclick="openBackupFolderBrowser()">
+        <button onclick="openBackupFolderBrowser()">📂 בחר תיקייה</button>
+      </div>
+      <label><input type="checkbox" id="gsAutoBackup"> גיבוי תוצרים אוטומטי לתיקייה שנבחרה בסיום ריצה</label><br>
+      <label><input type="checkbox" id="gsTurbo"> 🔥 מצב טורבו (סגירת תוכנות רקע במשחק)</label><br>
+      <label><input type="checkbox" id="gsNightMode"> 💤 מצב לילה (כיבוי אוטומטי בסיום, על מחשב זה)</label>
+      <div class="tc-row u-margin-top-12px">
+        <button onclick="saveGlobalSettings()" class="u-grow">💾 שמור הגדרות כלליות</button>
+      </div>
+      <div class="tc-row">
+        <button onclick="resetAllSettings()" class="u-grow u-bg-danger u-on-solid">🔄 איפוס הגדרות לברירת מחדל</button>
+      </div>
+    </div>
+
+    <div class="tc-section">
+      <h3>📂 תיקיית ייצוא</h3>
+      <div class="hint u-block u-margin-bottom-8px">לשם נשמרים הסרטונים שהכלים מייצרים - ישירות, לא עותק. ריק = workspace/ של הפרויקט. תיקייה שלא זמינה בזמן הריצה: התוצרים נשמרים ב-workspace, עם הודעה בלוג.</div>
+      <div class="tc-row">
+        <input id="gsExportDir" placeholder="workspace/ (ברירת מחדל)" dir="ltr">
+        <button type="button" onclick="chooseExportFolder()">📂 בחר תיקייה</button>
+      </div>
+      <div class="tc-row">
+        <button type="button" id="gsExportSave" onclick="saveExportDir()" class="u-grow">💾 שמור תיקיית ייצוא</button>
+        <button type="button" id="gsExportReset" onclick="saveExportDir(false, '', '')">ברירת מחדל</button>
+        <button type="button" onclick="openExportDir()">📂 פתח</button>
+      </div>
+      <div id="gsExportInfo" class="empty-msg"></div>
+      <details class="u-margin-top-8px">
+        <summary>תיקייה לכלי מסוים</summary>
+        <div class="tc-row" data-export-tool="studio"><span class="u-flex-0">🎬 הסטודיו</span><input placeholder="כמו התיקייה הכללית" dir="ltr"><button type="button" onclick="chooseExportFolder('studio')">📂 בחר</button><button type="button" onclick="saveExportDir(false, 'studio')">💾 שמור</button></div>
+        <div class="tc-row" data-export-tool="timelapses"><span class="u-flex-0">⏩ טיימלאפס</span><input placeholder="כמו התיקייה הכללית" dir="ltr"><button type="button" onclick="chooseExportFolder('timelapses')">📂 בחר</button><button type="button" onclick="saveExportDir(false, 'timelapses')">💾 שמור</button></div>
+        <div class="tc-row" data-export-tool="highlight_reels"><span class="u-flex-0">🏆 היילייטים</span><input placeholder="כמו התיקייה הכללית" dir="ltr"><button type="button" onclick="chooseExportFolder('highlight_reels')">📂 בחר</button><button type="button" onclick="saveExportDir(false, 'highlight_reels')">💾 שמור</button></div>
+        <div class="tc-row" data-export-tool="dataviz"><span class="u-flex-0">📊 עורך הגרפים</span><input placeholder="כמו התיקייה הכללית" dir="ltr"><button type="button" onclick="chooseExportFolder('dataviz')">📂 בחר</button><button type="button" onclick="saveExportDir(false, 'dataviz')">💾 שמור</button></div>
+        <div id="gsExportTools" class="empty-msg"></div>
+      </details>
+    </div>
+
+    <div class="tc-section">
+      <h3>📱 גישה מהטלפון (Tailscale)</h3>
+      <label><input type="checkbox" id="gsTailscale" onchange="saveRemoteAccess()"> להאזין גם על כתובת ה-Tailscale של המחשב - רק מכשירים ב-tailnet שלך, והטוקן עדיין נדרש</label>
+      <div id="gsTailscaleInfo" class="empty-msg"></div>
+      <div id="gsDevices"></div>
+    </div>
+
+    <div class="tc-section">
+      <h3>📊 עורך הגרפים</h3>
+      <div class="hint u-block u-margin-bottom-8px">התראות Discord על רינדור, תיקייה במעקב והעדפות שנלמדו - נקבעים פעם אחת.</div>
+      <button type="button" id="gsDatavizSettingsBtn" onclick="openDatavizSettings()">📊 הגדרות עורך הגרפים</button>
+    </div>
+
+    <div class="tc-section">
+      <h3>🎨 עיצוב</h3>
+      <div class="hint u-block u-margin-bottom-8px">ערכת הנושא/שפה נשמרות ב-config.json המשותף - משפיעות על ה-GUI השולחני בהפעלה הבאה שלו. ערכת הנושא, צבע ההדגשה והשפה של עמוד הדפדפן הזה נבחרים בנפרד, מכפתור ערכת הנושא בסרגל העליון.</div>
+      <div id="themeSwatches" class="u-flex u-gap-8px u-margin-bottom-10px"></div>
+      <div class="tc-row">
+        <label class="u-flex-0">🎨 מותאם אישית:</label>
+        <input type="color" id="gsCustomColor" class="u-flex-0 u-width-50px u-padding-2px">
+      </div>
+      <div class="tc-row">
+        <label class="u-flex-0">🌐 שפת ה-GUI השולחני:</label>
+        <select id="gsLanguage"><option value="he">עברית</option><option value="en">English</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab-panel="scheduler" hidden>
+    <div class="tc-section">
+      <h3>⏰ הוסף משימה מתוזמנת חדשה</h3>
+      <div class="tc-row">
+        <select id="schScript"></select>
+      </div>
+      <div class="tc-row">
+        <select id="schType" onchange="updateSchedulerFieldVisibility()">
+          <option value="daily">יומי</option>
+          <option value="weekly">שבועי</option>
+          <option value="interval_hours">כל X שעות</option>
+        </select>
+        <input id="schTime" type="text" placeholder="שעה (HH:MM)" value="03:00">
+      </div>
+      <div class="tc-row" id="schWeekdayRow" hidden>
+        <select id="schWeekday">
+          <option value="sun">ראשון</option><option value="mon">שני</option><option value="tue">שלישי</option>
+          <option value="wed">רביעי</option><option value="thu">חמישי</option><option value="fri">שישי</option><option value="sat">שבת</option>
+        </select>
+      </div>
+      <div class="tc-row" id="schIntervalRow" hidden>
+        <input id="schInterval" type="number" placeholder="מספר שעות" value="24" min="1">
+      </div>
+      <div class="tc-row">
+        <button onclick="addScheduledTask()" class="u-grow">➕ הוסף משימה מתוזמנת</button>
+      </div>
+    </div>
+    <div class="tc-section">
+      <h3>📋 משימות מתוזמנות</h3>
+      <div id="schedulerList"></div>
+    </div>
+    <div class="tc-section">
+      <h3>💤 הערת המחשב למשימה הבאה</h3>
+      <label><input type="checkbox" id="schWakeTimer" onchange="saveWakeTimer()"> להעיר את המחשב משינה כשתי דקות לפני המשימה הבאה (טיימר של Windows Task Scheduler)</label>
+      <div id="schWakeInfo" class="empty-msg"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab-panel="rocket" hidden>
+    <div class="tc-section">
+      <h3>🎬 תיקיות ותמונת Overlay</h3>
+      <div class="tc-row">
+        <input id="rsInputDir" placeholder="תיקיית קליפים (Import)" readonly class="u-pointer" onclick="openRocketFolderBrowser('rocket_input')">
+        <button onclick="openRocketFolderBrowser('rocket_input')">📂 עיון...</button>
+      </div>
+      <div class="tc-row">
+        <input id="rsOutputDir" placeholder="תיקיית ייצוא (Export)" readonly class="u-pointer" onclick="openRocketFolderBrowser('rocket_output')">
+        <button onclick="openRocketFolderBrowser('rocket_output')">📂 עיון...</button>
+      </div>
+      <div class="tc-row">
+        <input id="rsOverlayPath" placeholder="תמונת Overlay" readonly class="u-pointer" onclick="openRocketOverlayBrowser()">
+        <button onclick="openRocketOverlayBrowser()">📂 עיון...</button>
+      </div>
+    </div>
+    <div class="tc-section">
+      <h3>🔢 מונה קליפ נוכחי</h3>
+      <div class="tc-row">
+        <button onclick="adjustRocketCounter(-1)" class="u-flex-0">-1</button>
+        <input id="rsCounter" type="number" class="u-center" value="1" min="1">
+        <button onclick="adjustRocketCounter(1)" class="u-flex-0">+1</button>
+      </div>
+      <div class="tc-row">
+        <label class="u-flex-0">קידומת לשם הקובץ (לפני ה-#):</label>
+        <input type="text" id="rsTitlePrefix" placeholder="Shorts">
+      </div>
+      <div class="tc-row">
+        <label class="u-flex-0">משחק לכותרות ה-AI (ריק=לפי שם הקליפ):</label>
+        <input type="text" id="rsGameName">
+      </div>
+      <div class="tc-row">
+        <label class="u-flex-0" for="rsOutputResolution">רזולוציה:</label>
+        <select id="rsOutputResolution">
+          <option value="source">כמו המקור</option>
+          <option value="1080">1080p</option>
+          <option value="2160">4K</option>
+        </select>
+      </div>
+    </div>
+    <div class="tc-section">
+      <h3>⚙️ פרופיל איכות</h3>
+      <div class="tc-row"><select id="rsPreset"></select></div>
+      <div class="tc-row">
+        <label class="u-flex-0">רינדורים מקבילים (NVENC):</label>
+        <input type="number" id="rsMaxConcurrentRenders" min="1" class="u-width-70px">
+        <button type="button" onclick="probeNvencLimit()" class="u-flex-0">🎮 גלה מגבלה בפועל</button>
+      </div>
+      <div id="nvencProbeStatus" class="hint u-block"></div>
+    </div>
+    <div class="tc-section">
+      <h3>📅 ריקאפ אוטומטי (שבועי/חודשי/שנתי)</h3>
+      <div class="tc-row">
+        <label class="u-flex-0">ריקאפ אוטומטי (דרך הבוט):</label>
+        <input type="checkbox" id="rsRecapEnabled" class="u-flex-0">
+        <select id="rsRecapPeriod">
+          <option value="week">שבועי</option>
+          <option value="month">חודשי</option>
+          <option value="year">שנתי</option>
+        </select>
+        <select id="rsRecapDay"></select>
+      </div>
+      <div class="hint u-block">יום-בשבוע רלוונטי רק ל"שבועי" - חודשי/שנתי רצים בתאריך קבוע (1 לחודש / 1 בינואר).</div>
+      <label><input type="checkbox" id="rsCaptionsEnabled"> כתוביות אוטומטיות (תמלול Whisper)</label>
+      <label><input type="checkbox" id="rsCaptionsTranslateEnabled"> תרגם כתוביות לאנגלית</label>
+      <div class="tc-row">
+        <label class="u-flex-0">קיצור מקלדת ל-Clip That! (OBS, ריק=כבוי):</label>
+        <input type="text" id="rsClipHotkey" placeholder="ctrl+alt+c">
+      </div>
+      <div class="tc-row">
+        <label class="u-flex-0">ערוץ קול לזיהוי חברים (ריק=כבוי):</label>
+        <input type="text" id="rsCaptureVoiceChannelId" placeholder="מזהה ערוץ קול">
+      </div>
+      <div class="tc-row">
+        <label class="u-flex-0">תיקיית מעקב (Streamlabs/ShadowPlay, ריק=כבוי):</label>
+        <input type="text" id="rsCaptureWatchDir" placeholder="תיקיית הפלט של תוכנת הלכידה">
+      </div>
+    </div>
+    <div class="tc-section" id="rsAutoChainSection">
+      <h3>🔗 אחרי שקליפ נכנס (OBS / תיקיית לכידה)</h3>
+      <div class="hint u-block">מאזין "משדר-העל" (מצב obs או folder) מעתיק כל קליפ ל-Import - ומשם השרת ממשיך לבד, בתור הרינדור הרגיל.</div>
+      <div class="tc-row">
+        <select id="rsAutoChain" onchange="_syncRocketAutoChain()">
+          <option value="off">רק להעתיק ל-Import</option>
+          <option value="edit">לערוך בסגנון שמור</option>
+          <option value="edit_publish">לערוך בסגנון ואז לפרסם</option>
+          <option value="publish">לפרסם ישר (Shorts)</option>
+        </select>
+        <select id="rsAutoChainProfile" aria-label="סגנון לעריכה האוטומטית"></select>
+      </div>
+      <label><input type="checkbox" id="rsAutoChainDryRun"> 🧪 סימולציה - לעבד בלי להעלות</label>
+      <label><input type="checkbox" id="rsSeoAi"> 🤖 כותרת, תיאור ותגיות SEO מ-Gemini (בלי מפתח - התבנית הקבועה)</label>
+      <div id="rsAutoChainRecent" class="hint u-block"></div>
+    </div>
+    <div class="tc-section">
+      <div class="tc-row">
+        <button onclick="saveRocketSettings()" class="u-grow">💾 שמור הגדרות Shorts</button>
+        <button onclick="openWaveformFileBrowser()" class="u-grow">🌊 תצוגת גל קול</button>
+      </div>
+    </div>
+    <div class="tc-section" id="waveformSection" hidden>
+      <h3 id="waveformFileName">🌊 תצוגת גל קול</h3>
+      <div class="hint u-block u-margin-bottom-8px">עוזר לכוון את סף הרעש (--noise_threshold) של story_cutter.py לפני ריצה.</div>
+      <div id="waveformStatus" class="hint u-block"></div>
+      <canvas id="waveformCanvas" width="720" height="180" class="u-w-full u-max-width-720px u-bg u-rounded" hidden></canvas>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab-panel="soundboard" hidden>
+    <div class="tc-section">
+      <h3>🔊 פאנל אפקטים קוליים לסטרימינג</h3>
+      <div class="hint u-block u-margin-bottom-8px">מנגן דרך הרמקולים של המחשב שמריץ את השרת (לא דרך הדפדפן) - נכון גם כשגולשים מטלפון במצב --lan.</div>
+      <div class="tc-row">
+        <button onclick="playSoundboardSound('airhorn')" class="u-grow">🚨 Airhorn</button>
+        <button onclick="playSoundboardSound('boom')" class="u-grow">💥 Boom</button>
+        <button onclick="playSoundboardSound('game_over')" class="u-grow">🎮 Game Over</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab-panel="gallery" hidden>
+    <div class="tc-section">
+      <h3>🎬 גלריית קליפים מסווגים</h3>
+      <div class="tc-row">
+        <input type="text" id="galleryFilterName" placeholder="🔍 חפש לפי שם קליפ..." oninput="filterGallery()">
+        <select id="galleryFilterTag" onchange="filterGallery()">
+          <option value="">🏷️ כל התגיות</option>
+        </select>
+      </div>
+      <div class="hint u-margin-bottom-8px" id="galleryFilterHint" style="display:none"></div>
+      <div id="galleryList"></div>
+    </div>
+    <div class="tc-section">
+      <div id="galleryStatus" class="hint u-block u-margin-bottom-8px">בחר סרטון מהגלריה ליצוא</div>
+      <video id="galleryPreview" controls class="u-w-full u-max-height-360px u-bg-media u-rounded u-margin-bottom-10px" hidden></video>
+      <div class="tc-row">
+        <button id="galleryTiktokBtn" disabled onclick="exportToTiktok()" class="u-grow">🎵 TikTok Export Pro</button>
+        <button id="galleryYoutubeBtn" disabled onclick="exportToYoutube()" class="u-grow">📺 YouTube Export Pro</button>
+      </div>
+      <div class="hint u-block u-margin-top-6px" id="galleryYoutubeHint"></div>
+    </div>
+    <div class="tc-section">
+      <div class="u-flex u-justify-between u-items-center u-margin-bottom-8px">
+        <h3 class="u-m-0">📈 אנליטיקס YouTube</h3>
+        <button id="youtubeAnalyticsRefreshBtn" onclick="refreshYoutubeAnalytics()">🔄 רענן</button>
+      </div>
+      <div class="hint u-block u-margin-bottom-8px">סרטונים שהועלו דרך "📺 YouTube Export Pro" למעלה (מהרגע שהתכונה הזו נוספה) - "רענן" שולף צפיות/לייקים/תגובות עדכניים מ-YouTube (ופעם ראשונה עשוי לפתוח דפדפן לאישור הרשאה נוספת, אם עדיין לא ניתנה).</div>
+      <div id="youtubeAnalyticsList"></div>
+    </div>
+  </div>
+

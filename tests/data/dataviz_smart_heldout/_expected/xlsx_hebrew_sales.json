@@ -1,0 +1,17 @@
+{
+  "files": {
+    "מכירות_לפי_מוצר.xlsx": "series"
+  },
+  "series_files": [
+    "מכירות_לפי_מוצר.xlsx"
+  ],
+  "first_file": "מכירות_לפי_מוצר.xlsx",
+  "time": "תאריך",
+  "period": "month",
+  "entity": "מוצר",
+  "value": "מכירות_ש\"ח",
+  "unit": "₪",
+  "kind": "amount",
+  "chart": "bar_race",
+  "notes": "An .xlsx file (not CSV), Hebrew headers, first-of-month dates."
+}

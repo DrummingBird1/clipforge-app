@@ -1,0 +1,20 @@
+{
+  "files": {
+    "exports_by_country.csv": "series"
+  },
+  "series_files": [
+    "exports_by_country.csv"
+  ],
+  "first_file": "exports_by_country.csv",
+  "time": "year",
+  "period": "year",
+  "entity": "country",
+  "value": "exports_usd_million",
+  "unit": "$ (מיליון)",
+  "kind": "amount",
+  "chart": "bar_race",
+  "entity_excludes": [
+    "Total"
+  ],
+  "notes": "country_code is a numeric ISO id - never the value; the last row ('Total', empty year) is a grand total."
+}

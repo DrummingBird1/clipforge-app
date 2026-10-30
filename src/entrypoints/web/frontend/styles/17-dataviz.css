@@ -1,0 +1,197 @@
+/* גל 38: עורך הגרפים (מסך "סרטוני נתונים") בקובץ משלו - הכללים שהיו ב-16-screens.css, ופריסה בשלושה אזורים */
+  @layer shell {
+    .dvz-episodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); }
+    .dvz-card-wrap { display: flex; flex-direction: column; gap: var(--sp-1); }
+    .dvz-card-wrap.is-hidden { opacity: 0.6; }
+    .dvz-hide-btn { align-self: flex-start; }
+    .dvz-card { text-align: start; display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-3); background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-md); color: var(--color-text); }
+    .dvz-card.selected { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
+    .dvz-card:disabled { opacity: 0.6; cursor: not-allowed; }
+    .dvz-card-title { font-weight: var(--fw-semibold); }
+    .dvz-card-meta { font-size: var(--fs-xs); color: var(--color-text-2); }
+    .dvz-output { padding: var(--sp-3); margin-top: var(--sp-3); background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-md); }
+    .dvz-output-head { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-2); }
+    .dvz-output-name { font-weight: var(--fw-semibold); direction: ltr; }
+    .dvz-video { width: 100%; max-height: 360px; background: var(--color-surface-3); border-radius: var(--r-sm); }
+    .dvz-stills { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--sp-2); }
+    .dvz-stills img { width: 100%; border-radius: var(--r-xs); }
+    .dvz-link { text-decoration: none; }
+
+    /* שלושה אזורים כמו בסטודיו: פרקים | תצוגה חיה | הגדרות; במסך צר - אחד מתחת לשני */
+    .dvz-studio { display: grid; grid-template-columns: var(--dvz-episodes-w, minmax(220px, 300px)) minmax(0, 1fr) var(--dvz-settings-w, minmax(280px, 360px)); gap: var(--sp-3); align-items: start; position: relative; }
+    /* 23.10.2026 (המלצה 7): גבולות נגררים (_dvzSetupSplitters, 42-dataviz-screen.js) - בפריסה הרגילה; "editor" כשהעורך פתוח */
+    .dvz-splitter { position: absolute; top: 0; bottom: 0; width: 12px; z-index: 2; cursor: col-resize; touch-action: none; }
+    .dvz-splitter::after { content: ""; position: absolute; top: 12px; bottom: 12px; inset-inline-start: 5px; width: 2px; border-radius: 2px; transition: background-color var(--dur-2); }
+    .dvz-splitter:hover::after, .dvz-splitter:focus-visible::after, .dvz-splitter.dragging::after { background: var(--color-accent); }
+    .dvz-studio[data-layout] > .dvz-splitter, .dvz-splitter[data-when="editor"], .dvz-studio:has(#dvzEditor[open], #dvzData[open]) > .dvz-splitter[data-when="normal"] { display: none; }
+    .dvz-studio:not([data-layout]):has(#dvzEditor[open], #dvzData[open]) > .dvz-splitter[data-when="editor"] { display: block; }
+    .dvz-pane { margin: 0; min-width: 0; }
+    /* גל 57: בלי התקרה של .tc-section (760) - התצוגה החיה ממלאת את העמודה שלה, והתוצרים ו"פרק חדש" ברוחב של שלושת האזורים */
+    .dvz-pane, [data-tab-panel="dataviz"] > .tc-section { max-width: none; }
+    #dvzOutputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: var(--sp-3); }
+    #dvzOutputs > .dvz-output { margin-top: 0; }
+    .dvz-episodes-pane .dvz-episodes { grid-template-columns: 1fr; max-height: 70vh; overflow: auto; }
+    @media (max-width: 1100px) { .dvz-studio { grid-template-columns: 1fr; } .dvz-episodes-pane .dvz-episodes { max-height: none; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); } }
+    /* 23.10.2026 (המלצה 8): "✏️ עריכה" - התצוגה 40%, ההגדרות והעורך 60%, רשימת הפרקים רק כש"📋 פרקים" לחוץ; "👁 צפייה" - רק
+       התצוגה החיה, ברוחב מלא וגבוהה יותר (dvzSetLayout, 42-dataviz-screen.js). כללי העריכה האוטומטיים ב-27-dataviz-pro.css - רק בלי פריסה */
+    @media (min-width: 1101px) {
+      .dvz-studio[data-layout="edit"] { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+      .dvz-studio[data-layout="edit"]:not(.dvz-show-episodes) > .dvz-episodes-pane { display: none; }
+      .dvz-studio[data-layout="edit"].dvz-show-episodes { grid-template-columns: minmax(200px, 240px) minmax(0, 2fr) minmax(0, 3fr); }
+      [data-tab-panel="dataviz"]:has(.dvz-studio[data-layout="edit"]) .dvz-episodes-toggle { display: inline-flex; }
+    }
+    .dvz-studio[data-layout="view"] { grid-template-columns: minmax(0, 1fr); }
+    .dvz-studio[data-layout="view"] > .dvz-episodes-pane, .dvz-studio[data-layout="view"] > .dvz-settings-pane { display: none; }
+    .dvz-studio[data-layout="view"] .dvz-preview-stage img { max-block-size: 78vh; }
+    .dvz-episode-tools { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-block-end: var(--sp-2); }
+    .dvz-episode-tools input[type="search"] { flex: 1 1 140px; min-width: 0; }
+    .dvz-hidden-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--color-surface-2); border: 1px solid var(--color-border); font-size: var(--fs-xs); cursor: pointer; }
+    .dvz-hidden-chip:has(input:checked) { background: var(--color-accent-soft); border-color: var(--color-accent-line); }
+
+    /* כרטיס פרק: תמונה, סוג תרשים, ריצה אחרונה וסטטוס פרסום */
+    .dvz-card-thumb { inline-size: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-sm); background: var(--color-surface-3); }
+    .dvz-card-badges { display: flex; flex-wrap: wrap; gap: 4px; font-size: var(--fs-2xs); }
+    .dvz-badge { padding: 0 6px; border-radius: var(--r-pill); background: var(--color-surface-3); color: var(--color-text-2); }
+    .dvz-badge.is-hidden-badge { background: var(--color-warning-soft); color: var(--color-text); }
+
+    /* תצוגה חיה */
+    .dvz-preview-stage { position: relative; display: flex; justify-content: center; background: var(--media-bg-2); border-radius: var(--r-md); overflow: hidden; min-height: 180px; }
+    .dvz-preview-stage img { max-inline-size: 100%; max-block-size: 52vh; display: block; }
+    .dvz-preview-busy { position: absolute; inset-block-start: 8px; inset-inline-end: 8px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--media-scrim); color: var(--media-text); font-size: var(--fs-sm); }
+    .dvz-preview-bar input[type="range"] { flex: 1; }
+    .dvz-strip { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; margin-block: var(--sp-2); }
+    .dvz-strip button { padding: 0; border: 2px solid transparent; border-radius: var(--r-xs); background: var(--media-bg-2); line-height: 0; }
+    .dvz-strip button[aria-current="true"] { border-color: var(--color-accent); }
+    .dvz-strip img { inline-size: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 2px; }
+    .dvz-compare { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-2); margin-block-start: var(--sp-2); }
+    .dvz-compare.dvz-compare-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dvz-compare figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+    .dvz-compare figure button { padding: 0; border: 2px solid transparent; border-radius: var(--r-sm); line-height: 0; background: none; }
+    .dvz-compare figure button.is-current { border-color: var(--color-accent); }
+    .dvz-compare img { inline-size: 100%; border-radius: var(--r-xs); }
+    .dvz-compare figcaption { font-size: var(--fs-xs); color: var(--color-text-2); text-align: center; }
+  
+
+    /* --- גל 39: העורך המלא --- */
+    .dvz-editor { margin-block-start: var(--sp-2); }
+    .dvz-editor-bar { gap: var(--sp-2); align-items: center; }
+    .dvz-editor-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-block: var(--sp-2); }
+    .dvz-editor-tabs button.active { background: var(--color-accent-soft); border-color: var(--color-accent-line); }
+    .dvz-group { margin-block-end: var(--sp-2); border: 1px solid var(--color-border); border-radius: var(--r-sm); padding: var(--sp-1) var(--sp-2); }
+    .dvz-group > summary { cursor: pointer; font-weight: var(--fw-semibold); display: flex; gap: var(--sp-2); align-items: center; }
+    .dvz-field { display: grid; grid-template-columns: minmax(120px, 40%) minmax(0, 1fr); gap: 4px var(--sp-2); align-items: center; padding-block: 4px; border-block-start: 1px solid var(--color-border); }
+    .dvz-field.is-changed { background: var(--color-accent-soft); border-radius: var(--r-xs); }
+    .dvz-field textarea, .dvz-field input[type="text"], .dvz-field input[type="number"], .dvz-field select { inline-size: 100%; min-width: 0; }
+    .dvz-field-label { font-size: var(--fs-sm); }
+    .dvz-field-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: var(--fs-2xs); color: var(--color-text-3); }
+    .dvz-field-help { flex-basis: 100%; }
+    .dvz-chip { padding: 0 6px; border-radius: var(--r-pill); background: var(--color-surface-2); }
+    .dvz-chip.is-changed { background: var(--color-warning-soft); color: var(--color-text); }
+    .dvz-ev-track { position: relative; direction: ltr; block-size: 34px; margin-block: var(--sp-2) 18px; border-radius: var(--r-sm); background: var(--color-surface-2); border: 1px solid var(--color-border); touch-action: none; }
+    .dvz-ev-mark { position: absolute; top: 4px; transform: translateX(-50%); cursor: grab; font-size: var(--fs-md); line-height: 1; user-select: none; }
+    .dvz-ev-edge { position: absolute; top: 100%; font-size: var(--fs-2xs); color: var(--color-text-3); }
+    .dvz-ev-start { left: 0; } /* ltr: הציר עצמו LTR */
+    .dvz-ev-end { right: 0; } /* ltr: הציר עצמו LTR */
+    .dvz-ev-table, .dvz-entity-table, .dvz-changes-table { inline-size: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+    .dvz-ev-table td, .dvz-entity-table td, .dvz-entity-table th, .dvz-changes-table td, .dvz-changes-table th { padding: 3px 4px; border-block-end: 1px solid var(--color-border); text-align: start; }
+    .dvz-ev-table input[type="text"], .dvz-entity-table input[type="text"] { inline-size: 100%; min-width: 0; }
+    .dvz-entity-table tr.is-excluded td:first-child { text-decoration: line-through; color: var(--color-text-3); }
+    .dvz-changes-table tr.is-reset { opacity: .5; text-decoration: line-through; }
+    .dvz-changes-table tr.is-draft { background: var(--color-warning-soft); }
+    .dvz-color-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-block-end: var(--sp-2); }
+    .dvz-color-row input[type="color"], .dvz-entity-table input[type="color"] { inline-size: 32px; block-size: 24px; padding: 0; border: 1px solid var(--color-border); border-radius: var(--r-xs); }
+    .dvz-color-pick { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); }
+  
+
+    /* --- גל 40: נתונים, בדיקות, קצב ומוזיקה --- */
+    .dvz-source { border: 1px solid var(--color-border); border-radius: var(--r-sm); padding: var(--sp-2); margin-block-end: var(--sp-2); }
+    .dvz-source-head { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .dvz-table-scroll { overflow: auto; max-block-size: 320px; margin-block-start: 4px; }
+    .dvz-data-table { border-collapse: collapse; font-size: var(--fs-xs); inline-size: 100%; }
+    .dvz-data-table th, .dvz-data-table td { padding: 2px 6px; border-block-end: 1px solid var(--color-border); text-align: start; white-space: nowrap; }
+    .dvz-data-table th { position: sticky; inset-block-start: 0; background: var(--color-surface-2); }
+    .dvz-finding { margin: 4px 0; padding: 4px 8px; border-radius: var(--r-xs); background: var(--color-surface-2); }
+    .dvz-finding.is-warn { background: var(--color-warning-soft); }
+    .dvz-check-ok { color: var(--color-text-2); }
+    .dvz-data-badge { margin-block: var(--sp-1); }
+    .dvz-data-badge.is-warn { background: var(--color-warning-soft); }
+    .dvz-chart { inline-size: 100%; block-size: auto; direction: ltr; background: var(--color-surface-2); border-radius: var(--r-sm); }
+    .dvz-chart-line { fill: none; stroke: var(--color-accent); stroke-width: 1.6; }
+    .dvz-chart-base { stroke: var(--color-text-3); stroke-dasharray: 4 3; }
+    .dvz-chart-window { fill: var(--color-warning-soft); }
+    .dvz-chart-mark line { stroke-width: 1.2; }
+    .dvz-chart-mark.is-event line { stroke: var(--color-info); }
+    .dvz-chart-mark.is-peak line { stroke: var(--color-danger); stroke-dasharray: 2 2; }
+    .dvz-chart-axis, .dvz-chart-note { fill: var(--color-text-3); font-size: var(--fs-2xs); }
+    .dvz-chart-legend { display: flex; flex-wrap: wrap; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--color-text-2); margin-block: 4px var(--sp-2); }
+    .dvz-compare-table td:last-child { direction: ltr; text-align: end; }
+    .dvz-wave { margin-block: var(--sp-2) 4px; cursor: crosshair; }
+    .dvz-wave-bar { fill: var(--color-text-3); }
+    .dvz-wave-window { fill: var(--color-accent-soft); stroke: var(--color-accent); stroke-width: 1; }
+    [data-tab-panel="dataviz"].dvz-drop-active { outline: 2px dashed var(--color-accent); outline-offset: -6px; }
+
+
+    /* --- גל 41: תור, ערכות ערוץ, השוואת תוצרים ואשף פרסום --- */
+    .dvz-queue-pick, .dvz-compare-pick { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--color-text-2); cursor: pointer; }
+    .dvz-queue-bar { position: sticky; inset-block-end: 0; padding: var(--sp-2); background: var(--color-surface-2); border-radius: var(--r-sm); }
+    .dvz-kits { border: 1px solid var(--color-border); border-radius: var(--r-sm); padding: var(--sp-2); margin-block-end: var(--sp-2); }
+    .dvz-kit { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-block: 4px; border-block-end: 1px solid var(--color-border); }
+    .dvz-kit-swatch { display: inline-flex; gap: 2px; }
+    .dvz-kit-dot { inline-size: 14px; block-size: 14px; border-radius: 50%; border: 1px solid var(--color-border); }
+    .dvz-badge.is-series { background: var(--color-accent-soft); }
+    .dvz-saved-to { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); margin-block-end: var(--sp-2); color: var(--text-muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+    .dvz-saved-to .dvz-saved-problem { color: var(--color-warning); }
+    .dvz-output-compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-2); margin-block-end: var(--sp-2); }
+    .dvz-output-compare figure { margin: 0; }
+    .dvz-wizard-steps { display: flex; gap: var(--sp-2); padding: 0; margin: 0 0 var(--sp-2); list-style: none; counter-reset: dvzstep; }
+    .dvz-wizard-steps li { counter-increment: dvzstep; font-size: var(--fs-xs); color: var(--color-text-3); }
+    .dvz-wizard-steps li::before { content: counter(dvzstep) ". "; }
+    .dvz-wizard-steps li.is-current { color: var(--color-text); font-weight: 600; }
+    .dvz-wizard-steps li.is-done { color: var(--color-text-2); }
+    .dvz-wizard-body { display: grid; gap: var(--sp-2); min-block-size: 120px; }
+    .dvz-wizard-body textarea, .dvz-wizard-body input[type="text"] { inline-size: 100%; }
+    .dvz-wizard-thumb { max-inline-size: 100%; border-radius: var(--r-sm); }
+    .dvz-wizard-target { display: block; }
+
+    /* --- גל 42: מדריך המנוע --- */
+    /* רק גוף המדריך נגלל - כך פס הכפתורים (sticky בכל דיאלוג) לא מכסה את התוכן */
+    .dvz-help-modal { max-block-size: 82vh; display: flex; flex-direction: column; overflow: hidden; }
+    .dvz-help-modal .actions { position: static; }
+    .dvz-help-toc { display: flex; flex-wrap: wrap; gap: 4px; margin-block: var(--sp-2); }
+    .dvz-help-body { overflow: auto; min-block-size: 0; flex: 1; }
+    .dvz-help-section h4 { margin-block: var(--sp-2) 4px; }
+    .dvz-help-list { margin: 0; }
+    .dvz-help-list dt { font-weight: 600; margin-block-start: var(--sp-2); }
+    .dvz-help-list dt code { font-size: var(--fs-xs); color: var(--color-text-3); font-weight: 400; }
+    .dvz-help-list dd { margin: 2px 0 0; color: var(--color-text-2); font-size: var(--fs-sm); }
+
+    /* --- גל 43: גופן ובדיקת ניגודיות --- */
+    .dvz-font-row select { min-inline-size: 12em; }
+    .dvz-contrast-list { margin: 4px 0; padding-inline-start: var(--sp-4); }
+    .dvz-contrast-list li { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); }
+
+    /* --- גל 44: תמונות מועמדות, צפיות ותור הפרקים --- */
+    .dvz-thumb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); margin-block-start: var(--sp-2); }
+    .dvz-thumb-pick { padding: 0; border: 2px solid transparent; border-radius: var(--r-sm); background: none; cursor: pointer; }
+    .dvz-thumb-pick:hover, .dvz-thumb-pick:focus-visible { border-color: var(--color-accent); }
+    .dvz-thumb-pick img { inline-size: 100%; display: block; border-radius: var(--r-xs); }
+    .dvz-stats { color: var(--color-text-2); }
+    .dvz-queue-progress { display: grid; gap: 4px; padding: var(--sp-2); margin-block: var(--sp-2); border: 1px solid var(--color-border); border-radius: var(--r-sm); }
+    .dvz-queue-row { display: grid; grid-template-columns: minmax(6em, 1fr) auto minmax(4em, 2fr) auto; gap: 6px; align-items: center; font-size: var(--fs-sm); }
+    .dvz-queue-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dvz-queue-track { block-size: 6px; background: var(--color-surface-2); border-radius: 3px; overflow: hidden; }
+    .dvz-queue-bar-fill { display: block; block-size: 100%; background: var(--color-accent); }
+    .dvz-queue-row[data-state="skipped"], .dvz-queue-row[data-state="failed"] { opacity: .6; }
+
+    /* --- גל 45: לפני / אחרי, ספריית מפות והקלטות --- */
+    .dvz-before-after { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); margin-block: var(--sp-2); }
+    .dvz-before-after figure { margin: 0; }
+    .dvz-before-after img { inline-size: 100%; display: block; border-radius: var(--r-xs); background: var(--color-surface-2); }
+    .dvz-map-tab .tc-row, .dvz-voice-tab .tc-row { flex-wrap: wrap; gap: 6px; }
+    .dvz-map-report { margin-block: var(--sp-2); }
+    .dvz-voice-table td:last-child { white-space: nowrap; }
+
+    /* --- גל 46: מפות מוכנות --- */
+    .dvz-ready-maps { margin-block-start: var(--sp-2); }
+    .dvz-ready-map { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-block: 4px; border-block-end: 1px solid var(--color-border); }
+  }

@@ -1,0 +1,98 @@
+  /* ==========================================================================
+     גל 20 - תנועה, משוב וליטוש: skeleton במקום "טוען...", פס התקדמות גלובלי,
+     אנימציות כניסה עדינות, סטטוס אחיד, פאנל היסטוריית שינויים וסיור מודרך.
+     הכל מכבד prefers-reduced-motion (05-reset.css).
+     ========================================================================== */
+  @layer components {
+    /* --- skeleton loaders --- */
+    .skeleton { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) 0; }
+    .skeleton.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); }
+    .sk { border-radius: var(--r-sm); background: linear-gradient(90deg, var(--color-surface-3) 25%, var(--color-selected) 45%, var(--color-surface-3) 65%); background-size: 400% 100%; animation: ui-shimmer 1.4s ease-in-out infinite; }
+    .sk-line { height: 12px; }
+    .sk-line:nth-child(2n) { width: 72%; }
+    .sk-row { height: 38px; }
+    .sk-card { height: 170px; border-radius: var(--r-md); }
+    @keyframes ui-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+    /* --- פס התקדמות גלובלי (ראש החלון, גם במסך מלא) --- */
+    .global-progress { position: fixed; inset-inline: 0; top: 0; height: 3px; z-index: var(--z-toast); pointer-events: none; background: transparent; }
+    .global-progress[hidden] { display: none; }
+    .global-progress > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong)); box-shadow: 0 0 8px var(--color-accent-line); transition: width .3s var(--ease-out); }
+    .global-progress.indeterminate > i { width: 30% !important; animation: ui-indeterminate 1.1s var(--ease-in-out) infinite; }
+    @keyframes ui-indeterminate { from { margin-inline-start: -30%; } to { margin-inline-start: 100%; } }
+    .progress-wrap.running .progress-bar {
+      background-image: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong), var(--color-accent));
+      background-size: 200% 100%; animation: ui-shimmer 1.6s linear infinite;
+    }
+
+    /* --- אנימציות כניסה --- */
+    body > .layout:not([hidden]), body > .tab-content:not([hidden]) { animation: ui-fade-in var(--dur-3) var(--ease-out); }
+    .home:not([hidden]) .home-action { animation: ui-rise var(--dur-3) var(--ease-out) both; }
+    .home .home-action:nth-child(2) { animation-delay: 30ms; } .home .home-action:nth-child(3) { animation-delay: 60ms; }
+    .home .home-action:nth-child(4) { animation-delay: 90ms; } .home .home-action:nth-child(5) { animation-delay: 120ms; }
+    .home .home-action:nth-child(6) { animation-delay: 150ms; }
+    #videoEditorOptions details.ve-category[open] > .ve-category-body { animation: ui-rise var(--dur-2) var(--ease-out); }
+    .ve-menu:not([hidden]) { animation: ui-pop-in var(--dur-2) var(--ease-out); transform-origin: top; }
+    @keyframes ui-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    /* --- סטטוס אחיד: פס צבע לפי סטטוס בשורות ריצה --- */
+    .ve-run-row[data-status] { border-inline-start: 3px solid var(--color-border-strong); }
+    .ve-run-row[data-status="ok"] { border-inline-start-color: var(--color-success); }
+    .ve-run-row[data-status="bad"] { border-inline-start-color: var(--color-danger); }
+    .ve-run-row[data-status="running"] { border-inline-start-color: var(--color-accent); }
+    .ve-run-row[data-status="cancelled"] { border-inline-start-color: var(--color-text-3); }
+    .feed-item[data-status="bad"] .feed-title { color: var(--color-text); }
+    .ve-badge-status { font-size: var(--fs-sm); }
+
+    /* --- פאנל היסטוריית שינויים --- */
+    .undo-panel {
+      position: fixed; top: 64px; inset-inline-end: 16px; z-index: var(--z-menu); width: min(92vw, 360px); max-height: min(70vh, 560px);
+      display: flex; flex-direction: column; background: var(--color-surface-1); border: 1px solid var(--color-border-strong);
+      border-radius: var(--r-lg); box-shadow: var(--shadow-3); animation: ui-pop-in var(--dur-3) var(--ease-out);
+    }
+    .undo-panel[hidden] { display: none; }
+    .undo-head { display: flex; align-items: center; gap: var(--sp-2); padding: 10px 12px; border-bottom: 1px solid var(--color-border); font-weight: var(--fw-semibold); }
+    .undo-head .hint { font-weight: var(--fw-regular); margin-inline-start: auto; }
+    .undo-list { overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+    .undo-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; justify-items: start; text-align: start; padding: 7px 9px; border-radius: var(--r-sm); background: transparent; border-color: transparent; font-weight: var(--fw-regular); }
+    .undo-item:hover:not(:disabled) { background: var(--color-surface-3); border-color: transparent; }
+    .undo-item.current { background: var(--color-accent-soft); color: var(--color-accent); }
+    .undo-item.future { opacity: .55; }
+    .undo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border-strong); }
+    .undo-item.current .undo-dot { background: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
+    .undo-what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+    .undo-time { font-size: var(--fs-2xs); color: var(--color-text-3); font-variant-numeric: tabular-nums; }
+
+    /* --- סיור מודרך --- */
+    .tour-spot {
+      position: fixed; z-index: calc(var(--z-toast) - 1); border-radius: var(--r-md); pointer-events: none;
+      box-shadow: 0 0 0 3px var(--color-accent), 0 0 0 9999px var(--color-overlay);
+      transition: top var(--dur-3) var(--ease-out), left var(--dur-3) var(--ease-out), width var(--dur-3) var(--ease-out), height var(--dur-3) var(--ease-out); /* ltr: מיקום פיקסלים מ-getBoundingClientRect */
+    }
+    .tour-card {
+      position: fixed; z-index: var(--z-toast); width: min(92vw, 340px); padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2);
+      background: var(--color-surface-1); border: 1px solid var(--color-border-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-3);
+      animation: ui-pop-in var(--dur-3) var(--ease-out);
+    }
+    .tour-step { font-size: var(--fs-2xs); color: var(--color-accent); font-weight: var(--fw-semibold); letter-spacing: .03em; }
+    .tour-title { font-size: var(--fs-lg); font-weight: var(--fw-semibold); margin: 0; }
+    .tour-text { margin: 0; color: var(--color-text-2); line-height: 1.6; }
+    .tour-actions { display: flex; gap: var(--sp-2); justify-content: flex-end; margin-top: var(--sp-1); }
+  }
+
+  /* --- צפיפות: "צפוף" לכל האפליקציה (שכבת utilities כדי לגבור על כל רכיב) --- */
+  @layer utilities {
+    [data-density="compact"] body { font-size: var(--fs-xs); }
+    [data-density="compact"] :where(button) { padding: 4px 9px; }
+    [data-density="compact"] :where(input:not([type=checkbox]):not([type=radio]):not([type=range]), select) { padding-block: 3px; }
+    [data-density="compact"] .nav-rail .tab-btn { min-height: 48px; padding-block: 5px; }
+    [data-density="compact"] .script-btn { padding-block: 4px; }
+    [data-density="compact"] .feed-item { padding-block: 5px; }
+    [data-density="compact"] .main { padding: var(--sp-3) var(--sp-4); }
+    [data-density="compact"] .tc-section { padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-3); }
+    [data-density="compact"] .home { gap: var(--sp-3); }
+    [data-density="compact"] .home-action { padding: var(--sp-2) var(--sp-3); }
+    [data-density="compact"] #videoEditorOptions .ve-category-body { padding: 6px 10px 8px; gap: 6px; }
+    [data-density="compact"] #veCategories .ve-row { min-height: 26px; }
+    [data-density="compact"] .topbar { min-height: 44px; }
+  }

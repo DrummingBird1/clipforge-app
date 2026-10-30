@@ -1,0 +1,17 @@
+{
+  "files": {
+    "electricity_consumption.csv": "series"
+  },
+  "series_files": [
+    "electricity_consumption.csv"
+  ],
+  "first_file": "electricity_consumption.csv",
+  "time": "year",
+  "period": "year",
+  "entity": "sector",
+  "value": "consumption",
+  "unit": "GWh",
+  "kind": "amount",
+  "chart": "bar_race",
+  "notes": "A units row ('', '', 'GWh') right under the header - it is the unit, not data."
+}

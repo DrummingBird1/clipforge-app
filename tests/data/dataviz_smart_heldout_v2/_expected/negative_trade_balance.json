@@ -1,0 +1,17 @@
+{
+  "files": {
+    "trade_balance.csv": "series"
+  },
+  "series_files": [
+    "trade_balance.csv"
+  ],
+  "first_file": "trade_balance.csv",
+  "time": "year",
+  "period": "year",
+  "entity": "partner",
+  "value": "trade_balance_usd_million",
+  "unit": "$ (מיליון)",
+  "kind": "level",
+  "chart": "bar_race",
+  "notes": "Negative values (deficits) next to positive ones. A yearly balance is shown per year, not accumulated -> level."
+}

@@ -1,0 +1,246 @@
+        <div class="ve-shell">
+          <aside class="ve-side" id="veSide" aria-label="קבצים ותצוגה מקדימה">
+            <!-- גל 31: במסך נייד (או בבחירה) רשימת הקבצים מתקפלת לפס -->
+            <nav class="ve-rail ve-queue-railbar" aria-label="קבצים">
+              <button type="button" class="ve-rail-btn" onclick="setVePanelRail('queue', false)" title="קבצים - פתח את הרשימה" aria-label="פתח את רשימת הקבצים">📁<span id="veRailQueueCount" class="ve-rail-badge" hidden></span></button>
+            </nav>
+            <details class="ve-category ve-side-panel" open data-cat="queue">
+              <summary><span class="ve-cat-title">📁 קבצים</span><span class="ve-cat-summary" id="veCatSummary-queue"></span><span class="ve-cat-warn" id="veCatWarn-queue" hidden>⚠️</span><button type="button" class="ve-rail-collapse" onclick="event.preventDefault(); setVePanelRail('queue', true)" title="כווץ לפס צר - יותר מקום לנגן" aria-label="כווץ את רשימת הקבצים">»</button></summary>
+              <div class="ve-category-body">
+                <div class="ve-row u-wrap">
+                  <button type="button" onclick="refreshVeQueue()" title="טוען את קבצי הווידאו בתיקייה הנבחרת (אפשר גם לגרור קבצים מהמחשב לכאן)">🔄 רענן מהתיקייה</button>
+                  <label title="כבוי: רק קבצי הווידאו שישירות בתיקייה הנבחרת. דלוק (ברירת מחדל): גם תתי-תיקיות, לתיקיית-פלט מקבילה."><input type="checkbox" id="veIncludeSubfolders" checked> 📁 כולל תתי-תיקיות</label>
+                  <span id="veQueueDropStatus" class="ve-field-msg"></span>
+                </div>
+                <div class="ve-row" data-adv><label title="במקום לערוך כל קובץ בנפרד, מאחד את הקבצים המסומנים בתור (לפי הסדר) לסרטון אחד."><input type="checkbox" id="veConcatMode" onchange="onVeConcatModeToggled()"> 🔗 איחוד קטעים (סדר התור = סדר האיחוד)</label></div>
+                <div id="veConcatOptions" hidden>
+                  <div class="ve-row u-indent">
+                    <label title="fade - קרוספייד חלק עם חפיפה; none - חיתוך קשה.">↳ סוג מעבר:</label>
+                    <select id="veConcatTransition">
+                      <option value="fade">קרוספייד (fade)</option>
+                      <option value="none">חיתוך קשה (בלי מעבר)</option>
+                    </select>
+                  </div>
+                  <div class="ve-row u-indent">
+                    <label title="כמה שניות נמשך הקרוספייד - חייב להיות קצר מהקטע הקצר ביותר.">↳ משך מעבר (שניות):</label>
+                    <input type="number" id="veConcatTransitionDuration" value="1" min="0.1" step="0.1" class="u-width-70px">
+                  </div>
+                  <div class="ve-row u-indent">
+                    <label title="שם קובץ הפלט (בלי סיומת) לסרטון המאוחד.">↳ שם קובץ האיחוד:</label>
+                    <input type="text" id="veConcatOutputName" value="concat_result" class="u-width-160px">
+                  </div>
+                  <div class="ve-row u-indent"><span class="hint u-block">💡 במצב איחוד רק פורמט, קידוד, מיכל, FPS ושמירת אודיו חלים.</span></div>
+                </div>
+                <div id="veQueueToolbar" class="ve-queue-toolbar" hidden>
+                  <div class="ve-row u-gap-4px">
+                    <input type="search" id="veQueueSearch" class="u-grow" placeholder="🔍 חיפוש קובץ..." aria-label="חיפוש קובץ בתור" oninput="applyVeQueueSearch()" title="לחיצה על שורה בוחרת אותה (Ctrl מוסיף, Shift טווח) - ואז מופיעות הפעולות">
+                    <button type="button" id="veQueueFilterBtn" onclick="toggleVeQueueFilters()" aria-expanded="false" aria-controls="veQueueFilters" title="סינון לפי תאריך, אורך ומה שעוד לא עובד">🎚️ סינון</button>
+                    <button type="button" onclick="veQueueBulk('pickAll')" title="בחר את כל השורות" aria-label="בחר הכל">☑</button>
+                    <button type="button" id="veQueueGridBtn" onclick="toggleVeQueueGrid()" aria-pressed="false" aria-label="תצוגת רשת" title="תצוגת רשת עם תמונות גדולות">🖼️</button>
+                  </div>
+                  <!-- גל 35: מיון (פעולה חד-פעמית) וקיבוץ (נשמר) -->
+                  <div class="ve-row u-wrap u-gap-6px">
+                    <select id="veQueueSort" onchange="sortVeQueue(this.value)" aria-label="מיון התור">
+                      <option value="">↕ מיין לפי...</option>
+                      <option value="name">שם</option>
+                      <option value="date">תאריך (חדש קודם)</option>
+                      <option value="duration">אורך (ארוך קודם)</option>
+                      <option value="size">גודל (גדול קודם)</option>
+                      <option value="tag">תגית צבע</option>
+                      <option value="status">סטטוס בריצה האחרונה</option>
+                    </select>
+                    <select id="veQueueGroup" onchange="setVeQueueGroup(this.value)" aria-label="קיבוץ התור">
+                      <option value="">בלי קיבוץ</option>
+                      <option value="day">קיבוץ לפי יום</option>
+                      <option value="tag">קיבוץ לפי תגית</option>
+                      <option value="status">קיבוץ לפי סטטוס</option>
+                      <option value="folder">קיבוץ לפי תיקייה</option>
+                    </select>
+                  </div>
+                  <div id="veQueueFilters" class="ve-row u-wrap u-gap-6px" hidden>
+                    <label title="רק קבצים ששונו/נוצרו מהתאריך הזה והלאה">📅 חדשים מ-<input type="date" id="veQueueFilterSince"></label>
+                    <label title="רק קבצים ארוכים יותר מזה (שניות או mm:ss)">⏱ ארוכים מ-<input type="text" id="veQueueFilterMinSeconds" class="u-width-60px" placeholder="0:30"></label>
+                    <label title="רק קבצים שלא נוצר להם פלט בריצה האחרונה על התיקייה הזו"><input type="checkbox" id="veQueueFilterNotCreated"> 🆕 רק שלא עובדו</label>
+                    <button type="button" onclick="applyVeQueueFilter()">🔍 סנן</button>
+                    <button type="button" onclick="clearVeQueueFilter()">↺ נקה</button>
+                    <span id="veQueueFilterResult" class="ve-field-msg"></span>
+                  </div>
+                </div>
+                <div id="veQueueList" class="ve-queue-list"></div>
+                <div id="veQueueBulkBar" class="ve-queue-bulkbar" hidden role="toolbar" aria-label="פעולות על השורות שנבחרו">
+                  <span id="veQueuePickedCount" class="ve-field-msg"></span>
+                  <button type="button" onclick="veQueueBulk('include')" title="לכלול בריצה את השורות שנבחרו">✓ כלול</button>
+                  <button type="button" onclick="veQueueBulk('exclude')" title="להוציא מהריצה את השורות שנבחרו">✗ הוצא</button>
+                  <button type="button" onclick="veQueueBulk('top')" title="להעביר לראש התור">⬆ לראש</button>
+                  <button type="button" onclick="veQueueBulk('bottom')" title="להעביר לסוף התור">⬇ לסוף</button>
+                  <span class="ve-queue-tag-picker" role="group" aria-label="תגית צבע">
+                    <button type="button" onclick="setVeQueueTag('red')" aria-label="תגית אדומה">🔴</button>
+                    <button type="button" onclick="setVeQueueTag('orange')" aria-label="תגית כתומה">🟠</button>
+                    <button type="button" onclick="setVeQueueTag('yellow')" aria-label="תגית צהובה">🟡</button>
+                    <button type="button" onclick="setVeQueueTag('green')" aria-label="תגית ירוקה">🟢</button>
+                    <button type="button" onclick="setVeQueueTag('blue')" aria-label="תגית כחולה">🔵</button>
+                    <button type="button" onclick="setVeQueueTag('purple')" aria-label="תגית סגולה">🟣</button>
+                    <button type="button" onclick="setVeQueueTag('')" aria-label="הסר תגית" title="הסר תגית">⚪</button>
+                  </span>
+                  <button type="button" onclick="veQueueBulk('pickNone')" title="נקה את הבחירה" aria-label="נקה בחירה">✕</button>
+                </div>
+              </div>
+            </details>
+          </aside>
+          <section class="ve-viewer" id="veViewer" aria-label="נגן ותצוגה מקדימה">
+            <!-- גל 31: התוצאות בתוך הסטודיו - כרטיס לכל קובץ: נגן, מול המקור ותיקייה -->
+            <section id="veResultsPanel" class="ve-results-panel" hidden aria-label="תוצאות הריצה">
+              <div class="ve-results-head">
+                <strong>📋 תוצאות הריצה</strong>
+                <span id="veResultsSummary" class="ve-field-msg"></span>
+                <span class="u-grow"></span>
+                <button type="button" id="veResultsRerunFailedBtn" class="btn-sm" onclick="rerunVeFailedFiles()">🔁 הרץ שוב רק את הנכשלים</button>
+                <button type="button" class="btn-sm" onclick="openVeOutputFolder()">📂 תיקיית הפלט</button>
+                <button type="button" id="veResultsProjectBtn" class="btn-sm" onclick="openVeResultsProject()" hidden>📁 פתח את הפרויקט שיצר את זה</button>
+                <button type="button" class="btn-sm" onclick="closeVeResults()">✕ חזרה לעריכה</button>
+              </div>
+              <div id="veResultsTiles" class="stat-tiles" aria-label="סיכום הריצה"></div>
+              <div id="veResultsList" class="ve-results-cards"></div>
+            </section>
+            <details class="ve-category ve-side-panel" open data-cat="preview">
+              <summary><span class="ve-cat-title">👁 תצוגה מקדימה</span><span class="ve-cat-summary" id="veCatSummary-preview"></span><span class="ve-cat-warn" id="veCatWarn-preview" hidden>⚠️</span></summary>
+              <div class="ve-category-body">
+                <div class="ve-row u-wrap">
+                  <label title="הקובץ שעליו רצים התצוגה המקדימה, הבדיקה וציר-הזמן">קובץ:</label>
+                  <button type="button" id="vePrevFileBtn" onclick="stepVePreviewFile(-1)" aria-label="הקובץ הקודם בתור" title="הקובץ הקודם בתור">⏮</button>
+                  <select id="vePreviewFile" class="u-max-width-220px" dir="auto"></select>
+                  <button type="button" id="veNextFileBtn" onclick="stepVePreviewFile(1)" aria-label="הקובץ הבא בתור" title="הקובץ הבא בתור">⏭</button>
+                  <button type="button" id="veClipModeBtn" class="ve-clip-mode-btn" onclick="toggleVeClipMode()" aria-pressed="false" title="שינויים בזמן, בלוגו ובשכבות יחולו רק על הקליפ הזה - השאר נשאר כמו בכל הקבצים">✏️ רק הקליפ הזה</button>
+                  <label title="הנקודה בסרטון *הסופי* (אחרי חיתוך/מהירות) - שניות או mm:ss">זמן:</label>
+                  <input type="text" id="vePreviewTime" class="ve-time u-width-64px" value="0" inputmode="decimal">
+                </div>
+                <div class="ve-row u-wrap ve-preview-modes">
+                  <!-- גל 27: בורר אחד לסוג התצוגה. בדיקת הגדרות והערכת גודל עברו לתפריט ההרצה (▾) -->
+                  <div class="ve-mode-toggle" role="group" aria-label="סוג התצוגה">
+                    <button type="button" id="veLiveBtn" onclick="startVeLivePreview()" aria-pressed="false" title="נגן חי: המקור מתנגן והעריכה (קרופ/צבע/שכבות/לוגו/חיתוך) מצוירת עליו בזמן אמת - מהיר, מקורב">🎥 חי</button>
+                    <button type="button" id="veFrameBtn" onclick="refreshVePreview()" aria-pressed="false" title="פריים מהפלט עם כל ההגדרות - אותה שרשרת פילטרים בדיוק כמו ברינדור">🖼️ פריים</button>
+                    <button type="button" id="vePreviewClipBtn" onclick="refreshVePreviewClip()" aria-pressed="false" title="קטע וידאו קצר עם שמע, באותה שרשרת פילטרים בדיוק כמו הרינדור">🎬 קטע</button>
+                  </div>
+                  <select id="vePreviewClipSeconds" class="ve-compact-select" aria-label="אורך הקטע" title="אורך קטע התצוגה המקדימה"><option value="3">3s</option><option value="5" selected>5s</option><option value="8">8s</option></select>
+                  <span id="vePreviewTargetWrap" hidden><label title="התצוגה המקדימה, הבדיקה וההערכה - לפי איזה יעד">🎯 <select id="vePreviewTarget" aria-label="יעד לתצוגה המקדימה"></select></label></span>
+                </div>
+                <div id="vePreviewStatus" class="ve-field-msg" aria-live="polite"></div>
+                <div id="vePreviewFix"></div>
+                <div id="veScopes" class="ve-scopes" hidden>
+                  <div class="ve-scopes-grid">
+                    <figure><canvas id="veScopeHist" width="256" height="100"></canvas><figcaption>היסטוגרמה</figcaption></figure>
+                    <figure><canvas id="veScopeWave" width="256" height="100"></canvas><figcaption>Waveform (בהירות)</figcaption></figure>
+                    <figure><canvas id="veScopeVector" width="110" height="110"></canvas><figcaption>Vectorscope</figcaption></figure>
+                  </div>
+                  <div id="veScopesNote" class="ve-field-msg"></div>
+                  <div class="ve-row u-wrap"><button type="button" onclick="loadVeLoudness()" title="עוצמה לאורך הקובץ (ebur128) מול יעד הנרמול">🔊 מדוד עוצמה (LUFS)</button><span id="veLoudnessStatus" class="ve-field-msg" aria-live="polite"></span></div>
+                  <canvas id="veLoudnessCanvas" class="ve-loudness" width="600" height="90" hidden></canvas>
+                </div>
+                <div id="vePreviewStageWrap" class="ve-preview-stage-wrap" hidden>
+                  <!-- גל 27: כלי הנגן כאייקונים בפינה - גרירה, אזורי בטיחות, סקופים, רענון אוטומטי -->
+                  <div class="ve-stage-tools" role="toolbar" aria-label="כלי הנגן">
+                    <label class="ve-stage-tool" title="ידיות על הפריים לגרירת הלוגו, ה-PiP והשכבות למיקום מדויק"><input type="checkbox" id="vePreviewHandles" checked onchange="_veSavePref('vePreviewHandles', this.checked); _veRenderDragHandles()"> ✋</label>
+                    <select id="veSafeZones" class="ve-stage-tool" onchange="applyVeSafeZones()" aria-label="אזורי בטיחות" title="מסמן על הפריים איפה ממשק האפליקציה מסתיר את הסרטון - כדי שטקסט/לוגו לא ייפלו מתחתיו">
+                      <option value="">📱 בלי אזורי-בטיחות</option>
+                      <option value="shorts">YouTube Shorts</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="reels">Instagram Reels</option>
+                      <option value="youtube">YouTube (16:9)</option>
+                    </select>
+                    <button type="button" id="veScopesBtn" class="ve-stage-tool" onclick="toggleVeScopes()" aria-pressed="false" data-adv title="היסטוגרמה, waveform ו-vectorscope של מה שמוצג, ועוצמת השמע (LUFS)" aria-label="סקופים">📈</button>
+                    <button type="button" id="veGuidesBtn" class="ve-stage-tool" onclick="toggleVeGuides()" aria-pressed="false" title="קווי עזר על הנגן: שלישים ומרכז" aria-label="קווי עזר">📐</button>
+                    <label class="ve-stage-tool" title="רענון אוטומטי של הפריים אחרי כל שינוי הגדרה (במצב פריים)"><input type="checkbox" id="vePreviewAuto"> 🔄</label>
+                  </div>
+                  <div id="vePreviewStage" class="ve-preview-stage">
+                    <img id="vePreviewBefore" alt="לפני">
+                    <img id="vePreviewAfter" class="ve-after" alt="אחרי">
+                    <video id="vePreviewClipBefore" class="ve-clip" muted playsinline preload="auto" aria-hidden="true"></video>
+                    <video id="vePreviewClip" class="ve-clip ve-after" playsinline preload="auto" aria-label="קטע תצוגה מקדימה (אחרי)"></video>
+                    <div id="veLive" class="ve-live" aria-label="נגן חי">
+                      <video id="veLiveBg" class="ve-live-bg" muted playsinline preload="auto" aria-hidden="true" hidden></video>
+                      <div id="veLiveRot" class="ve-live-rot"><video id="veLiveVideo" class="ve-live-video" playsinline preload="auto"></video><canvas id="veLiveBefore" class="ve-live-before" hidden aria-hidden="true"></canvas></div>
+                      <div id="veLiveVignette" class="ve-live-fill"></div>
+                      <div id="veLiveOverlays" class="ve-live-fill"></div>
+                      <div id="veLiveFrame" class="ve-live-fill"></div>
+                      <div id="veLiveFade" class="ve-live-fill ve-live-fade"></div>
+                    </div>
+                    <div id="vePreviewDivider" class="ve-preview-divider" role="slider" tabindex="0" aria-label="גרור: לפני/אחרי" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><span class="ve-divider-grip">⇆</span></div>
+                    <div id="veSafeZonesOverlay" class="ve-safe-zones" hidden></div>
+                    <div id="veDragHandles" class="ve-drag-handles"></div>
+                    <span class="ve-preview-tag ve-tag-before">לפני</span><span class="ve-preview-tag ve-tag-after">אחרי</span>
+                  </div>
+                  <div id="veLiveBar" class="ve-row ve-live-bar" hidden>
+                    <button type="button" id="veLivePlayBtn" onclick="toggleVeLivePlay()" aria-label="נגן/השהה (רווח)">▶️</button>
+                    <input type="range" id="veLiveSeek" min="0" max="1000" value="0" aria-label="מיקום בפלט" class="u-grow u-min-width-80px">
+                    <span id="veLiveTime" class="ve-field-msg u-min-width-84px">0:00 / 0:00</span>
+                    <button type="button" id="veLiveMuteBtn" onclick="toggleVeLiveMute()" aria-label="השתק/בטל השתקה">🔊</button>
+                    <label title="ניגון חוזר"><input type="checkbox" id="veLiveLoop" checked> 🔁</label>
+                    <button type="button" id="veLiveCompareBtn" onclick="toggleVeLiveCompare()" aria-pressed="false" title="לפני/אחרי: משמאל לקו המקור בלי הצבע והמראה, מימין התוצאה - גרור את הקו">⇆ לפני/אחרי</button>
+                    <button type="button" onclick="exactCheckVeLive()" title="פריים מהשרת בנקודה הזו - אותה שרשרת בדיוק כמו הרינדור">🎯 בדיקה מדויקת</button>
+                    <!-- גל 34: A/B לצבע ומסך מלא -->
+                    <button type="button" id="veLookAbBtn" onclick="toggleVeLookAB()" aria-pressed="false" title="A/B לצבע: לחיצה ראשונה שומרת את המראה הנוכחי כ-A, ואחריה כל לחיצה עוברת בין A ל-B">📌 A/B</button>
+                    <button type="button" id="veLookAbClearBtn" onclick="clearVeLookAB()" hidden aria-label="סיום השוואת A/B" title="סיום ההשוואה - נשאר המראה שמוצג עכשיו">✕ A/B</button>
+                    <button type="button" id="veFullscreenBtn" onclick="toggleVeFullscreen()" aria-pressed="false" aria-label="מסך מלא" title="מסך מלא לנגן (Esc ליציאה)">⛶</button>
+                    <button type="button" onclick="stopVeLivePreview()" aria-label="סגור נגן חי">✕</button>
+                  </div>
+                  <div id="veLiveError" class="ve-row" hidden><span id="veLiveErrorText" class="ve-field-msg bad"></span><button type="button" onclick="requestVeLiveProxy()">🧰 צור עותק לנגינה</button></div>
+                  <div id="veLiveNote" class="ve-field-msg"></div>
+                  <input type="range" id="vePreviewSplit" min="0" max="100" value="50" hidden aria-hidden="true" oninput="applyVePreviewSplit()">
+                  <div class="ve-field-msg">💡 גרור את הקו כדי להשוות לפני/אחרי · גרור את הסימונים (לוגו/PiP/שכבות) כדי להזיז אותם</div>
+                  <ul id="vePreviewNotes" class="ve-preview-notes"></ul>
+                </div>
+                <div class="ve-stage-empty" id="veStageEmpty">
+                  <span class="ve-stage-empty-ico">🎬</span>
+                  <div class="ve-stage-empty-title ve-when-no-folder">בחר תיקייה עם סרטונים</div>
+                  <div class="ve-stage-empty-title ve-when-folder">הנגן מוכן</div>
+                  <div class="ve-stage-empty-text ve-when-no-folder">גרור תיקייה או קבצים לרשימת הקבצים, או בחר תיקייה - הקבצים, התצוגה המקדימה והפרויקט ייטענו אוטומטית.</div>
+                  <div class="ve-stage-empty-text ve-when-folder">▶️ נגן חי מציג את העריכה בזמן אמת על המקור · 🖼️ פריים מרנדר נקודה אחת בדיוק כמו בפלט.</div>
+                  <div class="ve-stage-empty-actions">
+                    <button type="button" class="btn-primary ve-when-no-folder" onclick="openBrowser()">📂 בחר תיקייה</button>
+                    <button type="button" class="btn-primary ve-when-folder" onclick="startVeLivePreview()">▶️ נגן חי</button>
+                    <button type="button" class="ve-when-folder" onclick="refreshVePreview()">🖼️ פריים</button>
+                  </div>
+                </div>
+                <div id="vePreviewClipWrap" class="ve-row ve-preview-clip-bar" hidden>
+                  <button type="button" id="vePreviewClipPlayBtn" onclick="toggleVePreviewClipPlay()" aria-label="נגן/השהה">▶️</button>
+                  <input type="range" id="vePreviewClipSeek" min="0" max="1000" value="0" aria-label="מיקום בקטע" class="u-grow u-min-width-80px">
+                  <span id="vePreviewClipTime" class="ve-field-msg u-min-width-74px">0:00</span>
+                  <button type="button" id="vePreviewClipMuteBtn" onclick="toggleVePreviewClipMute()" aria-label="השתק/בטל השתקה" title="השתק/בטל השתקה">🔊</button>
+                  <label title="ניגון חוזר"><input type="checkbox" id="vePreviewClipLoop" checked> 🔁</label>
+                  <button type="button" onclick="closeVePreviewClip()" title="חזרה לפריים הבודד">🖼️ פריים</button>
+                </div>
+                <div id="veSafeZonesWarn" class="ve-field-msg bad" hidden></div>
+                <div id="veValidationBox" class="ve-validation-box" hidden></div>
+                <div id="veEstimateBox" class="ve-estimate-box" hidden></div>
+              </div>
+            </details>
+            <div class="ve-subcat ve-timeline-dock" data-subcat="timeline" id="veTimelineDock">
+              <div class="ve-subcat-title">🎞️ ציר-זמן <button type="button" onclick="loadVeTimeline()" class="u-fs-xs u-padding-1px-7px" title="טוען פס תמונות ממוזערות וגרף עוצמת-קול של הקובץ הנבחר בתצוגה המקדימה">טען</button>
+                  <span class="ve-tl-tools">
+                    <button type="button" onclick="setVeTimelineZoom(_veTimelineZoom / 2)" aria-label="הקטן זום" title="הקטן זום (-)">🔍−</button>
+                    <button type="button" onclick="setVeTimelineZoom(1)" id="veTimelineZoomLabel" title="התאם לרוחב">התאם</button>
+                    <button type="button" onclick="setVeTimelineZoom(_veTimelineZoom * 2)" aria-label="הגדל זום" title="הגדל זום (+ או Ctrl+גלגלת)">🔍+</button>
+                    <label title="בגרירה: הצמדה לחילופי-סצנה, לגבולות שקט ולשיאים (Alt = בלי הצמדה)"><input type="checkbox" id="veTimelineSnap" checked> 🧲 הצמדה</label>
+                  </span></div>
+              <div id="veTimelineEmpty" class="ve-field-msg ve-timeline-empty">🎞️ ציר-הזמן נטען לבד כשבוחרים קובץ - ואז גוררים עליו שכבות, טווחים וקצוות חיתוך</div>
+              <div id="veTimelineBox" hidden>
+                <div id="veTimelineStatus" class="ve-field-msg" aria-live="polite"></div>
+                <div id="veTimeline" class="ve-timeline" title="לחץ לבחירת נקודה · גרור את הקצוות הירוקים לחיתוך · Shift+גרירה יוצרת טווח להסרה">
+                  <img id="veTimelineImg" alt="ציר זמן">
+                  <div id="veTimelineOverlays"></div>
+                  <div id="veTimelineCursor" class="ve-tl-cursor" hidden></div>
+                </div>
+                <canvas id="veWaveformCanvas" class="ve-waveform" width="720" height="70"></canvas>
+                <div class="ve-row u-wrap">
+                  <span id="veTimelineCursorText" class="ve-field-msg">לחץ על הפס כדי לבחור נקודה</span>
+                  <input type="text" id="veTimecodeInput" class="ve-time u-width-64px" inputmode="decimal" placeholder="0:00" aria-label="קפיצה לזמן במקור" title="הקלד זמן במקור (שניות או mm:ss) ו-Enter" onkeydown="onVeTimecodeKey(event)">
+                  <button type="button" onclick="addVeMarker()" title="סימן עם שם בנקודה הנוכחית (M)">📍 סימן</button>
+                  <button type="button" onclick="veTimelineAction('start')">⏮ התחלה כאן</button>
+                  <button type="button" onclick="veTimelineAction('end')">⏭ סוף כאן</button>
+                  <button type="button" onclick="veTimelineAction('range')">✂️ הסר 5 שנ' מכאן</button>
+                  <button type="button" onclick="veTimelineAction('preview')">🖼️ פריים מכאן</button>
+                </div>
+                <div id="veWaveformStatus" class="ve-field-msg">ירוק = מה שנשאר · אדום = טווחים שיוסרו · כתום = סף השקט · 🔥 = הייליטס</div>
+              </div>
+            </div>
+          </section>

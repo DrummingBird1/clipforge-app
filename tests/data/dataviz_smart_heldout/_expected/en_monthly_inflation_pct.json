@@ -1,0 +1,17 @@
+{
+  "files": {
+    "inflation_by_category.csv": "series"
+  },
+  "series_files": [
+    "inflation_by_category.csv"
+  ],
+  "first_file": "inflation_by_category.csv",
+  "time": "month",
+  "period": "month",
+  "entity": "category",
+  "value": "inflation_pct",
+  "unit": "%",
+  "kind": "level",
+  "chart": "line_race",
+  "notes": "MM/YYYY dates; a rate is a state, not something to sum -> level, line_race (5 categories)."
+}

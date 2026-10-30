@@ -1,0 +1,8 @@
+/* 89-studio-more.css - העיצוב של התוספות לסטודיו שנטענות כשהוא נפתח (24.10.2026, LAZY_CSS["studio_more"], 89-studio-more.js) */
+  @layer components {
+    /* החלטה 9: בלשונית "✂️ זמן" (ve-tl-docked) ציר הזמן צמוד לתחתית העמודה האמצעית, עם גלילה משלו כשהוא גבוה, והנגן מקבל את
+       הגובה שנשאר מעליו (_veLiveRoom) */
+    body.ve-focus #videoEditorOptions.ve-tl-docked #veTimelineDock {
+      position: sticky; bottom: 0; z-index: 3; flex-shrink: 0; max-height: 22vh; overflow: auto; box-shadow: 0 -8px 12px -10px var(--color-shadow);
+    }
+  }

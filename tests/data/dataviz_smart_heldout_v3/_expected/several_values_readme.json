@@ -1,0 +1,17 @@
+{
+  "files": {
+    "port_cargo.csv": "series"
+  },
+  "series_files": [
+    "port_cargo.csv"
+  ],
+  "first_file": "port_cargo.csv",
+  "time": "year",
+  "period": "year",
+  "entity": "port",
+  "value": "imports_tonnes_million",
+  "unit": "טון (מיליון)",
+  "kind": "amount",
+  "chart": "bar_race",
+  "notes": "Three value columns; README.md says the episode shows imports."
+}

@@ -1,0 +1,17 @@
+{
+  "files": {
+    "fuel_prices_weekly.csv": "series"
+  },
+  "series_files": [
+    "fuel_prices_weekly.csv"
+  ],
+  "first_file": "fuel_prices_weekly.csv",
+  "time": "date",
+  "period": "day",
+  "entity": "fuel",
+  "value": "price_eur_per_litre",
+  "unit": "€",
+  "kind": "level",
+  "chart": "line_race",
+  "notes": "';' separator and decimal comma (1,722). Weekly dates (every Monday) - the engine has day/month/year, so 'day'. A price is a state -> level; 4 fuels over time -> line_race."
+}

@@ -1,0 +1,17 @@
+{
+  "files": {
+    "vaccinated_cumulative.csv": "series"
+  },
+  "series_files": [
+    "vaccinated_cumulative.csv"
+  ],
+  "first_file": "vaccinated_cumulative.csv",
+  "time": "date",
+  "period": "day",
+  "entity": "region",
+  "value": "total_vaccinated",
+  "unit": "מחוסנים",
+  "kind": "level",
+  "chart": "bar_race",
+  "notes": "The column is already a running total - must be a level, or the engine would sum it again."
+}

@@ -1,0 +1,151 @@
+<!-- גל 15: עמוד /styleguide - כל רכיבי מערכת העיצוב בעמוד אחד, מה-CSS האמיתי של הדף
+     (אותם קבצים מ-frontend/styles). לא חלק מהדף הראשי (לכן מחוץ ל-frontend/). -->
+<main class="sg">
+  <header class="sg-head">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <rect class="bm-bg" x="1" y="1" width="30" height="30" rx="8"/>
+      <path class="bm-play" d="M12.5 9.6v12.8l10.2-6.4z"/>
+      <path class="bm-spark" d="M24 5.2l.95 2.1 2.1.95-2.1.95-.95 2.1-.95-2.1-2.1-.95 2.1-.95z"/>
+    </svg>
+    <div>
+      <h1 class="sg-title">ClipForge · מערכת העיצוב</h1>
+      <p class="hint">tokens, טיפוגרפיה, אייקונים ורכיבים - מה-CSS האמיתי של הממשק.</p>
+    </div>
+    <span class="sg-spacer"></span>
+    <button type="button" onclick="const root = document.documentElement; root.dataset.theme = {light: 'contrast', contrast: 'dark'}[root.dataset.theme] || 'light'">🌓 כהה / בהירה / ניגודיות</button>
+    <button type="button" onclick="document.body.classList.toggle('ve-focus')">🎬 Pro Dark (סטודיו)</button>
+  </header>
+
+  <section class="sg-section">
+    <h2>🎨 צבעים</h2>
+    <div class="sg-swatches" id="sgSwatches"></div>
+  </section>
+
+  <section class="sg-section">
+    <h2>🔤 טיפוגרפיה</h2>
+    <div class="sg-type" id="sgType"></div>
+    <p class="t-mono">JetBrains Mono · 0:12.40 / 4:05 · 1920×1080 · 60 fps</p>
+  </section>
+
+  <section class="sg-section">
+    <h2>🔘 כפתורים</h2>
+    <div class="sg-row">
+      <button type="button">רגיל</button>
+      <button type="button" class="btn-primary">⚡ ראשי</button>
+      <button type="button" class="btn-run">▶ הרץ</button>
+      <button type="button" class="btn-pause">⏸️ השהה</button>
+      <button type="button" class="btn-stop">🛑 עצור</button>
+      <button type="button" class="btn-danger">🗑️ מחק</button>
+      <button type="button" class="btn-outline">מסגרת</button>
+      <button type="button" class="btn-ghost">שקוף</button>
+      <button type="button" disabled>מושבת</button>
+    </div>
+    <div class="sg-row">
+      <button type="button" class="btn-sm">💾 קטן</button>
+      <button type="button" class="btn-xs">↺ זעיר</button>
+      <button type="button" class="btn-ghost icon-only" title="הגדרות">⚙️ הגדרות</button>
+      <div class="ve-mode-toggle" role="group"><button type="button" aria-pressed="true">פשוט</button><button type="button" aria-pressed="false">מתקדם</button></div>
+      <div class="ve-chips"><button type="button" aria-checked="true">16:9</button><button type="button" aria-checked="false">9:16</button><button type="button" aria-checked="false">1:1</button></div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2>✏️ שדות</h2>
+    <div class="sg-grid">
+      <input type="text" placeholder="שדה טקסט">
+      <input type="search" placeholder="חיפוש...">
+      <input type="number" value="24" step="1">
+      <select><option>בורר</option><option>אפשרות 2</option></select>
+      <textarea rows="2" placeholder="טקסט ארוך"></textarea>
+      <input type="text" value="מושבת" disabled>
+    </div>
+    <div class="sg-row">
+      <label><input type="checkbox" checked> תיבת סימון</label>
+      <label><input type="radio" name="sgr" checked> בחירה</label>
+      <input type="range" min="0" max="100" value="40">
+      <span class="kbd-combo" dir="ltr"><kbd>Ctrl</kbd><kbd>K</kbd></span>
+    </div>
+    <div id="veCategories" class="sg-inspector">
+      <div class="ve-row"><label>עוצמה</label><input type="range" min="0" max="2" step="0.05" value="1"></div>
+      <div class="ve-row ve-row-changed"><label>גודל טקסט</label><input type="number" value="48" min="8" max="200"></div>
+      <div class="ve-row"><label><input type="checkbox" checked> מתג (switch) במפקח</label></div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2>🏷️ תגיות וסטטוס</h2>
+    <div class="sg-row">
+      <span class="badge">רגיל</span><span class="badge accent">מותג</span><span class="badge ok">✅ הצליח</span>
+      <span class="badge warn">⚠️ אזהרה</span><span class="badge bad">❌ נכשל</span>
+    </div>
+    <div class="sg-row">
+      <span class="status-pill" data-status="running">רץ</span><span class="status-pill" data-status="queued">בתור</span>
+      <span class="status-pill" data-status="ok">הושלם</span><span class="status-pill" data-status="bad">נכשל</span>
+      <span class="status-pill" data-status="cancelled">בוטל</span>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2>🗂️ משטחים</h2>
+    <div class="sg-grid">
+      <div class="card card-pad"><b>כרטיס</b><p class="hint">משטח מורם עם גבול עדין.</p></div>
+      <div class="empty-state"><span>📁</span><div class="empty-state-title">מצב ריק</div><div>הסבר קצר ופעולה.</div></div>
+      <div class="card card-pad"><div class="progress-wrap"><div class="progress-bar" style="width:62%"></div></div><div class="pct">62% · נותרו כ-1:20</div></div>
+    </div>
+    <div class="sg-row"><button type="button" onclick="uiToast('נשמר בהצלחה', 'ok')">הצג toast</button><button type="button" onclick="uiToast('שגיאה: משהו השתבש', 'bad')">toast שגיאה</button></div>
+  </section>
+
+  <section class="sg-section">
+    <h2>✨ אייקונים</h2>
+    <div class="sg-icons" id="sgIcons"></div>
+  </section>
+</main>
+<style>
+  body.styleguide { display: block; height: auto; overflow: auto; }
+  .sg { max-width: 1100px; margin: 0 auto; padding: var(--sp-6) var(--sp-5) var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-6); }
+  .sg-head { display: flex; align-items: center; gap: var(--sp-3); }
+  .sg-head .brand-mark { width: 40px; height: 40px; }
+  .sg-title { margin: 0; font-size: var(--fs-2xl); }
+  .sg-spacer { flex: 1; }
+  .sg-section h2 { font-size: var(--fs-lg); margin: 0 0 var(--sp-3); display: flex; align-items: center; gap: 8px; }
+  .sg-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+  .sg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-3); }
+  .sg-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-2); }
+  .sg-swatch { border: 1px solid var(--color-border); border-radius: var(--r-md); overflow: hidden; font-size: var(--fs-xs); }
+  .sg-swatch i { display: block; height: 44px; }
+  .sg-swatch span { display: block; padding: 6px 8px; font-family: var(--font-mono); direction: ltr; text-align: start; color: var(--color-text-2); }
+  .sg-type div { margin-bottom: 6px; }
+  .sg-inspector { max-width: 420px; display: flex; flex-direction: column; gap: 8px; padding: var(--sp-3); background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: var(--r-md); }
+  .sg-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+  .sg-icon { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--color-border); border-radius: var(--r-sm); font-size: var(--fs-xs); color: var(--color-text-2); direction: ltr; }
+  .sg-icon .ei { width: 18px; height: 18px; color: var(--color-text); }
+</style>
+<script>
+  (function () {
+    const swatches = ["--color-bg", "--color-surface-1", "--color-surface-2", "--color-surface-3", "--color-sunken", "--color-border-strong",
+      "--color-text", "--color-text-2", "--color-text-3", "--color-accent", "--color-accent-soft", "--color-success", "--color-warning",
+      "--color-danger", "--color-info", "--color-run", "--media-bg", "--color-playhead"];
+    document.getElementById("sgSwatches").replaceChildren(...swatches.map(name => {
+      const box = document.createElement("div"); box.className = "sg-swatch";
+      const chip = document.createElement("i"); chip.style.background = `var(${name})`;
+      const label = document.createElement("span"); label.textContent = name;
+      box.append(chip, label); return box;
+    }));
+    const sizes = [["--fs-3xl", "כותרת ראשית"], ["--fs-2xl", "כותרת מסך"], ["--fs-xl", "כותרת אזור"], ["--fs-lg", "כותרת דיאלוג"],
+      ["--fs-md", "טקסט מודגש / כותרת כרטיס"], ["--fs-sm", "טקסט רגיל (בסיס)"], ["--fs-xs", "רמז, מטא-דאטה"], ["--fs-2xs", "תגיות וספירות"]];
+    document.getElementById("sgType").replaceChildren(...sizes.map(([token, text]) => {
+      const row = document.createElement("div"); row.style.fontSize = `var(${token})`;
+      const code = document.createElement("code"); code.dir = "ltr"; code.className = "t-muted"; code.textContent = token;
+      row.append(text + " · ", code); return row;
+    }));
+    const seen = new Set();
+    const icons = [];
+    for (const [emoji, [name]] of Object.entries(UI_EMOJI_ICONS)) {
+      if (seen.has(name)) continue; seen.add(name);
+      const box = document.createElement("div"); box.className = "sg-icon";
+      box.append(uiIconSpan(emoji, name, null), document.createTextNode(name));
+      icons.push(box);
+    }
+    document.getElementById("sgIcons").replaceChildren(...icons);
+  })();
+</script>

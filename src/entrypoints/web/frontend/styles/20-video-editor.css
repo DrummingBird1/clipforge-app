@@ -1,0 +1,466 @@
+  @layer editor {
+  /* video_editor.py - למעלה מ-30 הגדרות אחרי שדרוגים חוזרים, יותר מדי כדי
+     לזרום יחד ב-flex-wrap הרגיל של .options-card (הגדרות לא-קשורות נחתות זו
+     לצד זו על אותה שורה, תלוי ברוחב החלון) - כל הגדרה בשורה נפרדת משלה, אותו
+     עיקרון כמו הפאנל המקביל בדסקטופ (ui/settings_tab.py).
+
+     max-height+overflow-y:auto - באג אמיתי שנמצא בפועל: .main (המכיל את
+     הכרטיס הזה + כפתורי הרצה/עצירה + הקונסולה מתחתיו) הוא overflow:hidden
+     בכוונה (כדי שהקונסולה תישאר קבועה במקום בלי לגלול את כל הדף כל פעם) -
+     בלי הגבלת-גובה כאן, ברגע שהכרטיס הזה גדל מעבר לגובה הזמין (מה שקרה
+     בפועל אחרי שהתווספו ~13 הגדרות חדשות) כפתור "▶ הרץ" וכל מה שמתחתיו
+     נחתכים לגמרי ע"י ה-overflow:hidden של .main - בלי שום דרך לגלול ולהגיע
+     אליהם, לא רק "מכוער". גלילה פנימית כאן (אותו עיקרון בדיוק כמו
+     ui/settings_tab.py's CTkScrollableFrame בגודל קבוע לאותו פאנל) פותרת
+     את זה - שאר .main (כפתורי הרצה + קונסולה) נשארים תמיד גלויים מתחת לכרטיס,
+     לא משנה כמה הגדרות יש בפנים. 52vh (הוגדל מ-45vh בגל 2 - הפס הצף+כרטיס-התקציר תופסים עכשיו יותר מקום; לא ערך קבוע בפיקסלים) כדי שזה יתאים
+     גם לחלונות נמוכים יותר, לא רק למסך גדול. */
+  /* flex-wrap:nowrap דורס במפורש את .options-card's flex-wrap:wrap - בלעדיו,
+     ברגע שהתוכן חורג מ-max-height (הרבה יותר סביר עכשיו עם 11 קטגוריות +
+     פס פעולות צף + באנר הכרות), flex-direction:column + flex-wrap:wrap יחד
+     גורמים ל-flexbox "לעטוף" לעמודה חדשה במקום לגלול אנכית - בדיוק ההתנהגות
+     השבורה (כמה קטגוריות זו-לצד-זו, לא זו-מתחת-לזו) שנמצאה תוך כדי בדיקה
+     ידנית בדפדפן אחרי הוספת פס-הפעולות/הבאנר. */
+  #videoEditorOptions { flex-direction: column; flex-wrap: nowrap; align-items: stretch; max-height: 52vh; overflow-y: auto; }
+  #videoEditorOptions .ve-row { display: flex; align-items: center; gap: 8px; }
+  /* display:flex של .ve-row גובר על ה-display:none שהדפדפן נותן ל-[hidden] -
+     בלי זה שורות מותנות (למשל פריסט NVENC רק ל-HEVC/AV1) לא היו מוסתרות בפועל. */
+  #videoEditorOptions [hidden] { display: none !important; }
+  .ve-range-value { font-size:var(--fs-sm); color:var(--text-muted); min-width:34px; display:inline-block; }
+  .ve-queue-badge { font-size:var(--fs-2xs); padding:1px 6px; border-radius:var(--r-pill); background:var(--surface3); color:var(--text-muted); white-space:nowrap; }
+  .ve-list-row { padding:8px 10px; border-bottom:1px solid var(--border2); display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:var(--fs-sm); }
+  .ve-list-row .ve-list-row-actions { display:flex; gap:6px; flex-shrink:0; }
+  .ve-list-row .ve-list-row-actions button { font-size:var(--fs-xs); padding:4px 8px; }
+  /* קטגוריות מסודרות (item) - <details>/<summary> נותן פתיחה/סגירה מובנית
+     בחינם מהדפדפן (פתוח כברירת מחדל דרך תכונת open ב-HTML למטה) - בלי צורך
+     לבנות accordion ידני כמו בדסקטופ (ui/settings_tab.py, ל-CTk/Tkinter אין
+     רכיב מקביל מובנה). */
+  #videoEditorOptions .ve-category { width: 100%; box-sizing: border-box; border: 1px solid var(--border2); border-radius: var(--r-sm); background: var(--surface2); }
+  #videoEditorOptions .ve-category > summary { cursor: pointer; padding: 8px 10px; font-size: var(--fs-sm); font-weight: 600; color: var(--text); list-style: none; user-select: none; }
+  #videoEditorOptions .ve-category > summary::-webkit-details-marker { display: none; }
+  #videoEditorOptions .ve-category > summary::before { content: "▾ "; }
+  #videoEditorOptions .ve-category:not([open]) > summary::before { content: "▸ "; }
+  #videoEditorOptions .ve-category-body { padding: 4px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+  /* item: תקציר-מצב + קידוד-צבע לקטגוריה - אותו עיקרון כמו הדסקטופ
+     (ui/settings_tab.py's _update_category_summaries/_CATEGORY_COLORS), גוון
+     גבול-ימין קבוע לכל קטגוריה (לא תלוי accent הניתן-להתאמה) לסריקה חזותית
+     מהירה בין 11 קטגוריות פתוחות בבת-אחת, ותווית תקציר דהויה ליד הכותרת. */
+  #videoEditorOptions .ve-cat-summary { font-size:var(--fs-2xs); font-weight:normal; color:var(--text-muted); margin-inline-start:8px; }
+  /* גל 18: צבע-זיהוי לכל אזור (--cat-color) - צובע את אייקון הכותרת ואת פס הצד כשהאזור פתוח */
+  #videoEditorOptions .ve-category[data-cat="output"] { --cat-color: var(--hue-sky); }
+  #videoEditorOptions .ve-category[data-cat="time"] { --cat-color: var(--hue-emerald); }
+  #videoEditorOptions .ve-category[data-cat="look"] { --cat-color: var(--hue-orange); }
+  #videoEditorOptions .ve-category[data-cat="layers"] { --cat-color: var(--hue-pink); }
+  #videoEditorOptions .ve-category[data-cat="sound"] { --cat-color: var(--hue-rose); }
+  #videoEditorOptions .ve-category[data-cat="export"] { --cat-color: var(--hue-blue); }
+  #videoEditorOptions .ve-category[data-cat="perf"] { --cat-color: var(--hue-slate); }
+  #videoEditorOptions .ve-category[data-cat="queue"] { --cat-color: var(--hue-cyan); }
+  #videoEditorOptions .ve-category[data-cat="preview"] { --cat-color: var(--hue-yellow); }
+  #videoEditorOptions .ve-category[data-cat="runs"] { --cat-color: var(--hue-violet); }
+  /* item: פס פעולות צף - אח של #videoEditorOptions (לא בתוכו), נשאר גלוי בלי
+     קשר לגלילה הפנימית של הפאנל (max-height:52vh למעלה). */
+  .ve-sticky-bar { display:flex; align-items:center; gap:8px; padding:8px; margin-bottom:8px; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r-sm); flex-wrap:wrap; }
+  .ve-sticky-bar button { font-size:var(--fs-sm); padding:6px 10px; }
+  /* item: ארגון וסידור הפאנל (גל 2) - הפס נשאר צמוד למעלה בתוך הגלילה הפנימית
+     של הפאנל עצמו (#videoEditorOptions הוא ה-scroll container), כך שכפתור
+     "▶ הרץ"/חיפוש/שמירה תמיד בהישג יד בלי לגלול חזרה למעלה. */
+  #videoEditorOptions .ve-sticky-bar { position:sticky; top:-12px; z-index:6; box-shadow:var(--shadow-1); }
+  #videoEditorOptions { min-height:220px; }
+  .ve-sticky-bar input[type=search] { width:170px; background:var(--surface3); border:1px solid var(--border2); color:var(--text); border-radius:var(--r-sm); padding:5px 8px; font-size:var(--fs-sm); }
+  .ve-chip { font-size:var(--fs-xs); padding:2px 8px; border-radius:var(--r-pill); background:var(--surface3); color:var(--text-muted); white-space:nowrap; }
+  .ve-categories { display:flex; flex-direction:column; gap:8px; }
+  .ve-categories.ve-layout-tabs:not(.ve-searching) > .ve-category:not(.ve-tab-active) { display:none; }
+  .ve-cat-tabs { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }
+  .ve-cat-tabs button { font-size:var(--fs-xs); padding:4px 9px; font-weight:normal; }
+  .ve-cat-tabs button.active { background:var(--accent); color:var(--accent-text); font-weight:bold; }
+  #videoEditorOptions .ve-category > summary { display:flex; align-items:center; gap:6px; }
+  #videoEditorOptions .ve-cat-title { flex-shrink:0; }
+  #videoEditorOptions .ve-cat-summary { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #videoEditorOptions .ve-cat-summary.ve-empty { font-style:italic; opacity:.65; }
+  .ve-cat-warn { cursor:help; font-size:var(--fs-sm); }
+  .ve-cat-reset { font-size:var(--fs-xs); padding:1px 7px; opacity:.5; font-weight:normal; flex-shrink:0; }
+  .ve-cat-reset:hover, .ve-cat-reset:focus-visible { opacity:1; }
+  #videoEditorOptions .ve-category.ve-cat-drag-over { outline:2px dashed var(--accent); outline-offset:2px; }
+  #videoEditorOptions .ve-category.ve-cat-dragging { opacity:.45; }
+  .ve-subcat { display:flex; flex-direction:column; gap:8px; border-top:1px dashed var(--border2); padding-top:8px; }
+  .ve-subcat:first-child { border-top:none; padding-top:0; }
+  .ve-subcat-title { font-size:var(--fs-sm); font-weight:700; color:var(--text-muted); }
+  #videoEditorOptions .ve-dep-hidden { display:none !important; }
+  #videoEditorOptions .ve-dep-dim { opacity:.45; }
+  #videoEditorOptions .ve-search-hidden { display:none !important; }
+  #videoEditorOptions .ve-search-match { outline:1px solid var(--accent); outline-offset:2px; border-radius:var(--r-sm); }
+  .ve-summary-card { font-size:var(--fs-sm); padding:6px 10px; margin-bottom:8px; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r-sm); line-height:1.9; }
+  .ve-summary-chip { display:inline-block; padding:0 8px; margin:0 2px; border-radius:var(--r-pill); background:var(--surface3); font-size:var(--fs-xs); white-space:nowrap; }
+  .ve-warnings { margin-top:4px; display:flex; flex-direction:column; gap:2px; }
+  .ve-warning { font-size:var(--fs-xs); cursor:pointer; border-radius:var(--r-xs); padding:1px 4px; }
+  .ve-warning:hover { background:var(--surface3); }
+  .ve-warning.warn { color:var(--color-warning); }
+  .ve-warning.info { color:var(--text-muted); }
+  .ve-menu-wrap { position:relative; display:inline-block; }
+  .ve-menu { position:absolute; top:calc(100% + 4px); inset-inline-end:0; z-index:25; min-width:210px; background:var(--surface); border:1px solid var(--border2); border-radius:var(--r-sm); padding:6px; display:flex; flex-direction:column; gap:3px; box-shadow:var(--shadow-2); }
+  .ve-menu[hidden] { display:none; }
+  .ve-menu button { text-align:start; font-weight:normal; font-size:var(--fs-sm); padding:6px 10px; background:transparent; }
+  .ve-menu button:hover, .ve-menu button:focus-visible { background:var(--surface3); }
+  .ve-menu label { font-size:var(--fs-sm); padding:4px 8px; display:flex; gap:6px; align-items:center; }
+  .ve-menu hr { border:none; border-top:1px solid var(--border2); margin:3px 0; width:100%; }
+  .ve-menu-title { font-size:var(--fs-2xs); color:var(--text-muted); padding:2px 8px; }
+  /* item: מצב צפוף - שורות נמוכות יותר ללפטופ/מסך קטן. */
+  #videoEditorOptions.ve-compact .ve-categories { gap:4px; }
+  #videoEditorOptions.ve-compact .ve-category > summary { padding:4px 8px; font-size:var(--fs-sm); }
+  #videoEditorOptions.ve-compact .ve-category-body { padding:2px 8px 6px; gap:4px; }
+  #videoEditorOptions.ve-compact .ve-subcat { gap:4px; padding-top:4px; }
+  #videoEditorOptions.ve-compact input[type=text], #videoEditorOptions.ve-compact input[type=number], #videoEditorOptions.ve-compact select { padding:2px 6px; font-size:var(--fs-xs); }
+  #videoEditorOptions.ve-compact .options-card label, #videoEditorOptions.ve-compact label { font-size:var(--fs-xs); }
+  #paletteList div.ve-palette-active { background:var(--border); }
+  #paletteList .ve-palette-section { font-size:var(--fs-2xs); color:var(--text-muted); padding:6px 10px 2px; cursor:default; }
+  .ve-shortcuts-table { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+  .ve-shortcuts-table td { padding:6px 8px; border-bottom:1px solid var(--border2); }
+  .ve-shortcuts-table kbd { background:var(--surface3); border:1px solid var(--border2); border-radius:var(--r-xs); padding:1px 6px; font-family:inherit; font-size:var(--fs-xs); }
+  /* גל 3: שדות וקלט */
+  .ve-browse-btn { font-size:var(--fs-xs); padding:3px 8px; flex-shrink:0; }
+  #videoEditorOptions input.ve-invalid { border-color:var(--fail) !important; box-shadow:0 0 0 1px var(--fail); }
+  #videoEditorOptions input.ve-warn-input { border-color:var(--color-warning) !important; }
+  .ve-field-msg { font-size:var(--fs-xs); color:var(--text-muted); white-space:nowrap; }
+  .ve-field-msg.bad { color:var(--fail); }
+  .ve-field-msg.warn { color:var(--color-warning); }
+  .ve-color-swatch { width:30px; height:24px; padding:0; border:1px solid var(--border2); border-radius:var(--r-xs); background:transparent; cursor:pointer; flex-shrink:0; }
+  .ve-font-preview { font-size:var(--fs-md); color:var(--text); min-width:44px; }
+  .ve-time-hint { font-size:var(--fs-xs); color:var(--text-muted); min-width:52px; }
+  .ve-ranges-editor { display:flex; flex-direction:column; gap:4px; padding-inline-start:24px; }
+  .ve-range-row { display:flex; align-items:center; gap:6px; font-size:var(--fs-sm); }
+  .ve-range-row input { width:72px; }
+  .ve-range-row.bad input { border-color:var(--fail); }
+  .ve-range-row button, .ve-ranges-editor > button { font-size:var(--fs-xs); padding:2px 8px; }
+  .ve-range-number { width:58px !important; padding:2px 4px !important; }
+  /* תוויות-הערך הישנות (לקריאה בלבד) מוחלפות בשדה-מספר ניתן-לעריכה - !important כי חלקן עם display inline. */
+  #videoEditorOptions .ve-row > span[id$="Value"]:not(.ve-cat-summary), #videoEditorOptions .ve-range-value { display:none !important; }
+  .ve-info-btn { font-size:var(--fs-xs); padding:0 6px; opacity:.55; font-weight:normal; background:transparent; flex-shrink:0; }
+  .ve-info-btn:hover, .ve-info-btn[aria-expanded="true"] { opacity:1; }
+  .ve-info-box { font-size:var(--fs-xs); color:var(--text-muted); background:var(--surface3); border-radius:var(--r-sm); padding:6px 10px; margin:-2px 0 2px; line-height:1.6; }
+  .ve-trim-slider { display:flex; flex-direction:column; gap:4px; padding:6px 10px; margin-inline-start:24px; background:var(--surface3); border-radius:var(--r-sm); font-size:var(--fs-xs); }
+  .ve-trim-slider label { display:flex; align-items:center; gap:8px; }
+  .ve-trim-slider input[type=range] { flex:1; }
+  /* גל 4: תצוגה מקדימה ומשוב */
+  .ve-preview-stage-wrap { display:flex; flex-direction:column; gap:6px; align-items:center; }
+  .ve-preview-stage { position:relative; display:inline-block; direction:ltr; line-height:0; border-radius:var(--r-sm); overflow:hidden; background:var(--media-bg); }
+  .ve-preview-stage img { max-width:100%; max-height:55vh; display:block; }
+  .ve-preview-stage img.ve-after { position:absolute; top:0; left:0; width:100%; height:100%; clip-path:inset(0 0 0 var(--ve-split, 50%)); } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-preview-divider { position:absolute; top:0; bottom:0; left:var(--ve-split, 50%); width:2px; background:var(--color-playhead); pointer-events:none; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-preview-tag { position:absolute; top:6px; font-size:var(--fs-xs); line-height:1.4; padding:1px 7px; border-radius:var(--r-pill); background:var(--media-scrim); color:var(--media-text); }
+  .ve-tag-before { left:6px; } .ve-tag-after { right:6px; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-preview-notes { font-size:var(--fs-xs); color:var(--text-muted); margin:0; padding-inline-start:18px; align-self:stretch; }
+  .ve-validation-box { font-size:var(--fs-sm); border-radius:var(--r-sm); padding:8px 10px; background:var(--surface3); display:flex; flex-direction:column; gap:3px; }
+  .ve-validation-box .ok { color:var(--ok); font-weight:600; }
+  .ve-validation-box .bad { color:var(--fail); font-weight:600; }
+  .ve-validate-msg { font-size:var(--fs-xs); color:var(--fail); padding-inline-start:10px; margin-top:-4px; }
+  .ve-validate-msg.warn { color:var(--color-warning); }
+  .ve-timeline { position:relative; width:100%; direction:ltr; line-height:0; border-radius:var(--r-sm); overflow:hidden; cursor:crosshair; background:var(--media-bg-2); }
+  .ve-timeline img { width:100%; height:auto; display:block; min-height:40px; }
+  .ve-tl-dim { position:absolute; top:0; bottom:0; background:var(--media-scrim-strong); pointer-events:none; }
+  .ve-tl-range { position:absolute; top:0; bottom:0; background:var(--color-cut-fill); border-inline:1px solid var(--color-cut); pointer-events:none; }
+  .ve-tl-cursor { position:absolute; top:0; bottom:0; width:2px; margin-left:-1px; background:var(--color-playhead); pointer-events:none; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-waveform { width:100%; height:90px; background:var(--bg); border-radius:var(--r-sm); margin-top:6px; }
+  .ve-estimate-box table { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+  .ve-estimate-box td, .ve-estimate-box th { padding:3px 6px; border-bottom:1px solid var(--border2); text-align:start; }
+  .ve-estimate-box tfoot td { font-weight:700; }
+  .ve-log-tail { margin-bottom:8px; border:1px solid var(--border2); border-radius:var(--r-sm); background:var(--surface2); padding:4px 10px; font-size:var(--fs-sm); }
+  .ve-log-tail > summary { cursor:pointer; font-weight:600; padding:4px 0; }
+  .ve-log-tail-box { max-height:180px; overflow:auto; margin:6px 0; padding:6px 8px; background:var(--console-bg); color:var(--console-text); border-radius:var(--r-sm); font-size:var(--fs-xs); white-space:pre-wrap; direction:ltr; text-align:left; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-log-tail-box .err { color:var(--fail); } .ve-log-tail-box .warn { color:var(--color-warning); } .ve-log-tail-box .ok { color:var(--ok); }
+  .ve-region-stage { position:relative; display:inline-block; direction:ltr; line-height:0; cursor:crosshair; user-select:none; }
+  .ve-region-stage img { max-width:100%; max-height:62vh; display:block; }
+  .ve-region-rect { position:absolute; border:2px dashed var(--color-region); background:var(--color-region-fill); pointer-events:none; }
+  /* גל 5: תור העיבוד */
+  .ve-queue-row { cursor:pointer; }
+  .ve-queue-row.ve-queue-picked { background:var(--color-accent-soft); border-color:var(--accent); }
+  .ve-queue-row.ve-queue-excluded { opacity:.5; }
+  .ve-queue-thumb { width:64px; height:36px; object-fit:cover; border-radius:var(--r-xs); background:var(--media-bg); flex-shrink:0; }
+  .ve-queue-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .ve-queue-meta { font-size:var(--fs-xs); color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ve-badge-hdr { background:var(--color-hdr); color:var(--color-on-solid); }
+  .ve-badge-status { background:transparent; font-size:var(--fs-md); padding:0 2px; }
+  .ve-queue-toolbar { display:flex; flex-direction:column; gap:4px; font-size:var(--fs-xs); }
+  .ve-queue-toolbar button { font-size:var(--fs-xs); padding:3px 8px; }
+  .ve-queue-toolbar input[type=date] { font-size:var(--fs-xs); }
+  #videoEditorOptions .ve-category.ve-queue-drop-active { outline:2px dashed var(--accent); outline-offset:3px; }
+  /* גל 6: פרופילים */
+  .ve-profile-chips { flex-wrap:wrap; gap:4px; }
+  .ve-profile-chips button { font-size:var(--fs-xs); padding:3px 10px; border-radius:var(--r-pill); font-weight:normal; }
+  .ve-profile-chips button.active { background:var(--accent); color:var(--accent-text); }
+  .ve-profile-notes { font-size:var(--fs-xs); color:var(--text-muted); white-space:pre-wrap; background:var(--surface3); border-radius:var(--r-sm); padding:4px 8px; }
+  .ve-color-choices { display:flex; gap:6px; flex-wrap:wrap; }
+  .ve-color-choices button { width:28px; height:28px; border-radius:50%; padding:0; border:2px solid transparent; font-size:var(--fs-sm); }
+  .ve-color-choices button[aria-checked="true"] { border-color:var(--text); }
+  .ve-diff-line { font-size:var(--fs-xs); color:var(--text-muted); }
+  .ve-diff-line b { color:var(--text); font-weight:600; }
+  .ve-merge-btn { font-size:var(--fs-2xs); padding:2px 7px; font-weight:normal; }
+  /* גל 7: עורך תמלול */
+  .ve-transcript-editor { display:flex; flex-direction:column; gap:6px; }
+  #veTranscriptRows { display:flex; flex-direction:column; gap:3px; max-height:260px; overflow:auto; }
+  .ve-transcript-row { display:grid; grid-template-columns:70px 70px 1fr auto; gap:4px; align-items:center; direction:rtl; }
+  .ve-transcript-row input { font-size:var(--fs-xs); min-width:0; }
+  .ve-transcript-row button { font-size:var(--fs-xs); padding:2px 6px; }
+  .ve-transcript-row.ve-invalid input { border-color:var(--fail); }
+  /* גל 7ב: עורך שכבות מתוזמנות */
+  .ve-layers-rows { display:flex; flex-direction:column; gap:6px; }
+  .ve-layer-row { display:flex; flex-wrap:wrap; gap:4px; align-items:center; padding:6px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface2); }
+  .ve-layer-row input, .ve-layer-row select { font-size:var(--fs-xs); }
+  .ve-layer-row .ve-layer-kind { font-size:var(--fs-lg); min-width:22px; text-align:center; }
+  .ve-layer-row .ve-layer-content { flex:1 1 160px; min-width:120px; }
+  .ve-layer-row input.ve-layer-time { width:62px; }
+  .ve-layer-row button { font-size:var(--fs-xs); padding:2px 6px; }
+  /* גל 8: שליטה בריצה + ריצות אחרונות */
+  .ve-run-control { border:1px solid var(--border); border-radius:var(--r-md); padding:8px; margin:6px 0; background:var(--surface2); display:flex; flex-direction:column; gap:4px; }
+  .ve-rc-row { display:flex; align-items:center; gap:6px; font-size:var(--fs-sm); flex-wrap:wrap; }
+  .ve-rc-row .ve-rc-name { flex:1 1 180px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ve-rc-row button { font-size:var(--fs-xs); padding:2px 7px; }
+  .ve-rc-row.paused .ve-rc-name::after { content:" ⏸"; }
+  .ve-rc-row.cancelled { opacity:0.55; text-decoration:line-through; }
+  .ve-runs-list { display:flex; flex-direction:column; gap:4px; max-height:320px; overflow:auto; }
+  .ve-run-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:var(--fs-sm); padding:5px 6px; border:1px solid var(--border); border-radius:var(--r-sm); }
+  .ve-run-row .ve-run-main { flex:1 1 200px; min-width:0; }
+  .ve-run-row .ve-run-meta { color:var(--text-muted); font-size:var(--fs-xs); }
+  .ve-run-row button { font-size:var(--fs-xs); padding:2px 7px; }
+  /* גל 9 (item 99): במובייל כל קטגוריה נפתחת כ-bottom-sheet (אחת בכל פעם) */
+  .ve-sheet-close, .ve-sheet-backdrop { display:none; }
+  @media (max-width: 700px) {
+    body.ve-sheets #veCategories > details.ve-category[open] > .ve-category-body {
+      position:fixed; inset-inline:0; bottom:0; max-height:74vh; overflow:auto; z-index:71;
+      background:var(--surface); border-radius:var(--r-lg) var(--r-lg) 0 0; box-shadow:var(--shadow-3);
+      padding:12px 12px 28px; overscroll-behavior:contain;
+    }
+    body.ve-sheets .ve-sheet-close { display:block; position:sticky; top:-12px; margin:-12px -12px 8px; padding:8px 12px; width:calc(100% + 24px);
+      background:var(--surface2); border:0; border-bottom:1px solid var(--border); border-radius:var(--r-lg) var(--r-lg) 0 0; font-weight:600; text-align:center; }
+    body.ve-sheets .ve-sheet-backdrop.show { display:block; position:fixed; inset:0; background:var(--overlay); z-index:70; }
+  }
+
+  /* ===== סידור מחדש של עורך-העל (פס עליון, צד קבצים/תצוגה, 6 אזורים, פשוט/מתקדם) ===== */
+  #videoEditorOptions { max-height: 78vh; }
+  .ve-topbar { flex-direction:column; align-items:stretch; gap:6px; }
+  .ve-topbar-row, .ve-topbar-status { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .ve-topbar-status:empty { display:none; }
+  .ve-topbar #vePreset { max-width:220px; font-weight:600; }
+  .ve-split { display:inline-flex; }
+  .ve-split > button:first-child { border-start-end-radius:0; border-end-end-radius:0; }
+  .ve-split > .ve-split-toggle { border-start-start-radius:0; border-end-start-radius:0; padding-inline:6px; margin-inline-start:1px; }
+  .ve-mode-toggle { display:inline-flex; border:1px solid var(--border2); border-radius:var(--r-sm); overflow:hidden; }
+  .ve-mode-toggle button { border:0; border-radius:0; background:transparent; }
+  .ve-mode-toggle button[aria-pressed="true"] { background:var(--accent); color:var(--accent-text); }
+  .ve-profile-chips { display:flex; gap:4px; flex-wrap:wrap; }
+  .ve-shell { display:grid; grid-template-columns:minmax(290px, 36%) minmax(0, 1fr); gap:10px; align-items:start; }
+  .ve-side { display:flex; flex-direction:column; gap:8px; position:sticky; top:84px; max-height:calc(78vh - 110px); overflow:auto; }
+  .ve-main { min-width:0; display:flex; flex-direction:column; gap:8px; }
+  /* הצד-לצד רק כשלעורך עצמו יש רוחב (container query - לא רוחב החלון, העורך יושב בין סרגלים) */
+  #videoEditorOptions { container-type:inline-size; container-name:ve; }
+  @container ve (max-width: 1020px) {
+    .ve-shell { grid-template-columns:1fr; }
+    .ve-side { position:static; max-height:none; }
+  }
+  .ve-drawer { margin-top:8px; }
+  .ve-legacy-fields { display:none !important; }
+  .ve-chips { display:flex; flex-wrap:wrap; gap:4px; }
+  .ve-chips button { font-size:var(--fs-sm); padding:4px 10px; border-radius:var(--r-pill); }
+  .ve-chips button[aria-checked="true"] { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+  /* פשוט/מתקדם - בזמן חיפוש מוצג הכל */
+  #videoEditorOptions.ve-simple #veCategories:not(.ve-searching) [data-adv],
+  #videoEditorOptions.ve-simple .ve-side [data-adv] { display:none !important; }
+  /* "רק מה ששיניתי" */
+  #videoEditorOptions.ve-only-changed #veCategories:not(.ve-searching) .ve-category-body > .ve-row:not(.ve-row-changed),
+  #videoEditorOptions.ve-only-changed #veCategories:not(.ve-searching) .ve-subcat > .ve-row:not(.ve-row-changed),
+  #videoEditorOptions.ve-only-changed #veCategories:not(.ve-searching) .ve-layer-add-bar,
+  #videoEditorOptions.ve-only-changed #veCategories:not(.ve-searching) .ve-subcat:not(:has(.ve-row-changed, .ve-layer-row)),
+  #videoEditorOptions.ve-only-changed #veCategories:not(.ve-searching) > .ve-category:not(:has(.ve-row-changed, .ve-layer-row)) { display:none !important; }
+  /* ⓘ חלש תמיד, מלא בריחוף/פוקוס (גל 28). ↺ קיים רק בשדה ששונה (גל 27 - הנקודה ליד התווית מסמנת אותו),
+     ובמחשב גם הוא רק בריחוף/פוקוס - או בקליק ימני על השדה */
+  #videoEditorOptions .ve-row:not(.ve-row-changed) .ve-field-reset { display:none; }
+  #videoEditorOptions .ve-category:not(.ve-cat-changed) > summary .ve-cat-reset { display:none; }
+  @media (hover: hover) {
+    #videoEditorOptions .ve-row .ve-field-reset { opacity:0; transition:opacity .12s; }
+    #videoEditorOptions .ve-row .ve-info-btn { opacity:.35; transition:opacity .12s; }
+    #videoEditorOptions .ve-row:hover .ve-info-btn, #videoEditorOptions .ve-row:focus-within .ve-info-btn,
+    #videoEditorOptions .ve-row:hover .ve-field-reset, #videoEditorOptions .ve-row:focus-within .ve-field-reset,
+    #videoEditorOptions .ve-info-btn[aria-expanded="true"] { opacity:.8; }
+  }
+  .ve-layer-card { border:1px solid var(--border2); border-radius:var(--r-sm); padding:8px; border-top-style:solid; }
+  .ve-card-remove { font-size:var(--fs-2xs); padding:0 6px; margin-inline-start:6px; opacity:.7; }
+  .ve-profile-modal, .ve-transcript-modal { width:min(760px, 94vw); max-height:86vh; overflow:auto; }
+  .ve-profile-actions { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 10px; }
+  .ve-profile-actions button { font-size:var(--fs-sm); }
+  .ve-profile-current { border:1px solid var(--border2); border-radius:var(--r-sm); padding:8px; margin:8px 0; }
+  .ve-preview-stage video.ve-clip { display:none; max-width:100%; max-height:55vh; }
+  .ve-preview-stage video.ve-clip.ve-after { position:absolute; top:0; left:0; width:100%; height:100%; clip-path:inset(0 0 0 var(--ve-split, 50%)); } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-preview-stage.ve-stage-video img { display:none; }
+  .ve-preview-stage.ve-stage-video video.ve-clip { display:block; }
+  .ve-preview-clip-bar { gap:6px; align-items:center; }
+  .ve-preview-divider { cursor:ew-resize; touch-action:none; pointer-events:auto; width:18px; margin-left:-9px; background:transparent; z-index:2; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-preview-divider::before { content:""; position:absolute; top:0; bottom:0; left:8px; width:2px; background:var(--color-playhead); box-shadow:0 0 3px var(--media-scrim); } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-preview-divider:focus-visible { outline:2px solid var(--accent); }
+  .ve-drag-handles { z-index:3; line-height:1.4; }
+  .ve-safe-zones { line-height:1.3; }
+  .ve-drag-handle.ve-in-zone { background:var(--color-handle-alert); color:var(--color-on-solid); }
+  .ve-tl-handle { position:absolute; top:0; bottom:0; width:12px; margin-left:-6px; cursor:ew-resize; touch-action:none; z-index:2; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-tl-handle::before { content:""; position:absolute; top:0; bottom:0; left:4px; width:4px; border-radius:2px; background:var(--color-trim); box-shadow:0 0 0 1px var(--media-scrim); } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-tl-handle:focus-visible::before { background:var(--color-trim-focus); }
+  /* הקו של כל ידית פונה פנימה - גלוי במלואו גם כשהחיתוך בקצה הפס (0%/100%) */
+  #veTlHandle-start::before { left:6px; } /* ltr: קואורדינטות מדיה/לוג */
+  #veTlHandle-end::before { left:2px; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-tl-draft { position:absolute; top:0; bottom:0; background:var(--color-cut-draft); border-inline:2px dashed var(--color-cut); pointer-events:none; }
+  .ve-tl-peak { position:absolute; top:2px; transform:translateX(-50%); font-size:var(--fs-md); line-height:1; cursor:pointer; z-index:2; text-shadow:0 0 3px var(--media-bg); }
+  #veTimelineOverlays { position:absolute; inset:0; }
+  .ve-divider-grip { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--accent); color:var(--accent-text); border-radius:var(--r-md); font-size:var(--fs-sm); padding:2px 5px; pointer-events:none; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-safe-zones { position:absolute; inset:0; pointer-events:none; }
+  .ve-safe-zones div { position:absolute; background:var(--color-safe-zone); outline:1px dashed var(--media-text-2); }
+  .ve-safe-zones span { position:absolute; font-size:var(--fs-2xs); color:var(--media-text); background:var(--media-scrim); padding:1px 4px; border-radius:var(--r-xs); white-space:nowrap; }
+  .ve-safe-zones .ve-zone-tall { writing-mode:vertical-rl; overflow:hidden; text-overflow:ellipsis; }
+  .ve-menu-sub > summary { cursor:pointer; list-style:none; }
+  .ve-menu-sub > summary::before { content:"▸ "; }
+  .ve-menu-sub[open] > summary::before { content:"▾ "; }
+  .ve-menu-sub > div { display:flex; flex-direction:column; }
+  .ve-drag-handles { position:absolute; inset:0; pointer-events:none; }
+  .ve-drag-handle { position:absolute; transform:translate(-50%,-50%); pointer-events:auto; cursor:grab; font-size:var(--fs-xs); padding:2px 6px; border-radius:var(--r-md); background:var(--color-handle); color:var(--color-on-handle); font-weight:700; white-space:nowrap; touch-action:none; box-shadow:var(--shadow-1); }
+  .ve-drag-handle:active { cursor:grabbing; }
+  /* גל 12: יעדים, היקף עריכת זמן (מתכון/קליפ), ערכת מותג, פרויקט */
+  #videoEditorOptions .ve-targets-row { flex-wrap:wrap; }
+  #videoEditorOptions .ve-targets-row .ve-chips { flex:1 1 220px; min-width:0; }
+  #videoEditorOptions .ve-targets-row #veTargetsNote { flex-basis:100%; }
+  #videoEditorOptions .ve-targets-row .ve-chips button[aria-pressed="true"] { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+  #videoEditorOptions .ve-targets-active [data-composite="format"] { opacity:.45; }
+  #videoEditorOptions .ve-targets-active [data-composite="format"]::after { content:"לפי היעדים"; font-size:var(--fs-xs); color:var(--text-muted); }
+  /* גל 25: גלגלי צבע (lift/gamma/gain) ועורך עקומות */
+  #videoEditorOptions .ve-wheels { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--sp-3); margin-block:var(--sp-2); }
+  #videoEditorOptions .ve-wheel-box { display:flex; flex-direction:column; align-items:center; gap:var(--sp-1); min-width:0; }
+  #videoEditorOptions .ve-wheel { width:100%; max-width:112px; aspect-ratio:1; }
+  #videoEditorOptions .ve-wheel-disc { position:relative; width:100%; height:100%; border-radius:50%; cursor:crosshair; touch-action:none;
+    background:radial-gradient(circle, var(--color-surface-2) 0%, transparent 72%), var(--grade-wheel); box-shadow:inset 0 0 0 1px var(--color-border-strong); }
+  #videoEditorOptions .ve-wheel-puck { position:absolute; width:12px; height:12px; translate:-50% -50%; border-radius:50%; pointer-events:none;
+    background:var(--color-surface-1); box-shadow:0 0 0 2px var(--color-text), var(--shadow-1); }
+  #videoEditorOptions .ve-wheel.is-set .ve-wheel-puck { box-shadow:0 0 0 2px var(--color-accent), var(--shadow-1); }
+  #videoEditorOptions .ve-wheel-name { font-size:var(--fs-sm); font-weight:var(--fw-semibold); }
+  #videoEditorOptions .ve-wheel-name small { color:var(--color-text-3); font-weight:normal; }
+  #videoEditorOptions .ve-wheel-luma, #videoEditorOptions .ve-wheel-value { width:100%; }
+  #videoEditorOptions .ve-wheel-value, #videoEditorOptions .ve-curve-field input { font-family:var(--font-mono); font-size:var(--fs-xs); direction:ltr; }
+  #videoEditorOptions .ve-wheel-value { text-align:center; }
+  #videoEditorOptions .ve-curves { display:grid; gap:var(--sp-2); max-width:260px; }
+  #videoEditorOptions .ve-curve-channels { display:flex; gap:var(--sp-1); }
+  #videoEditorOptions .ve-curve-channels button[aria-pressed="true"] { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+  #videoEditorOptions .ve-curves-canvas { width:100%; aspect-ratio:1; height:auto; background:var(--media-bg-2); border-radius:var(--r-md); cursor:crosshair; touch-action:none; }
+  #videoEditorOptions .ve-curve-field { display:flex; }
+  #videoEditorOptions .ve-unit { color:var(--color-text-3); font-size:var(--fs-xs); }
+  .ve-svg-defs { position:absolute; width:0; height:0; overflow:hidden; }
+  /* גל 26: B-roll במסך מלא בנגן החי */
+  .ve-live-item.ve-live-broll-full { inset:0; width:100%; height:100%; transform:none; }
+  .ve-layer-clip { max-width:150px; }
+  .ve-project-banner { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:6px 10px; margin:4px 0; border:1px solid var(--accent); border-radius:var(--r-sm); background:var(--surface2); font-size:var(--fs-sm); }
+  .ve-project-banner[hidden] { display:none; }
+  /* גל 13: מסך מלא + פריסת סטודיו (קבצים | נגן + ציר-זמן | מפקח) */
+  body.ve-focus .sidebar, body.ve-focus .history { display:none !important; }
+  body.ve-focus #videoEditorOptions { max-height:calc(100vh - 190px); }
+  body.ve-focus .main > .info-card, body.ve-focus .ve-onboarding { display:none !important; }
+  body.ve-focus .console { max-height:90px; }
+  .ve-viewer { min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .ve-shell { grid-template-areas:"side main" "viewer main"; }
+  .ve-side { grid-area:side; }
+  .ve-viewer { grid-area:viewer; }
+  .ve-main { grid-area:main; }
+  @container ve (min-width: 1100px) {
+    .ve-shell { grid-template-columns:minmax(220px, 19%) minmax(0, 1.2fr) minmax(360px, 1fr); grid-template-areas:"side viewer main"; }
+    .ve-side { position:sticky; top:84px; max-height:calc(100vh - 330px); }
+    .ve-viewer { position:sticky; top:84px; max-height:calc(100vh - 330px); overflow:auto; }
+  }
+  @container ve (max-width: 1020px) {
+    .ve-shell { grid-template-areas:"viewer" "side" "main"; }
+  }
+  .ve-timeline-dock { border:1px solid var(--border2); border-radius:var(--r-sm); padding:6px 8px; background:var(--surface2); }
+  .ve-inspect-focus { outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--r-sm); transition:outline-color .3s; }
+  /* נגן חי */
+  .ve-live { display:none; position:relative; overflow:hidden; background:var(--media-bg); }
+  .ve-preview-stage.ve-stage-live .ve-live { display:block; }
+  .ve-preview-stage.ve-stage-live > img, .ve-preview-stage.ve-stage-live > video.ve-clip,
+  .ve-preview-stage.ve-stage-live:not(.ve-live-compare) .ve-preview-divider, .ve-preview-stage.ve-stage-live:not(.ve-live-compare) .ve-preview-tag { display:none !important; }
+  .ve-live-bg { position:absolute; inset:-5%; width:110%; height:110%; object-fit:cover; }
+  .ve-live-rot { position:absolute; left:50%; top:50%; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-live-video { width:100%; height:100%; display:block; }
+  .ve-live-fill { position:absolute; inset:0; pointer-events:none; }
+  .ve-live-fade { background:var(--media-bg); opacity:0; }
+  .ve-live-item { position:absolute; line-height:1.15; white-space:pre; }
+  .ve-live-pip { aspect-ratio:16/9; object-fit:cover; background:var(--media-bg-3); }
+  .ve-live-progress { position:absolute; left:0; width:0; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-live-caption { position:absolute; left:4%; right:4%; text-align:center; line-height:1.2; direction:rtl; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-live-bar { gap:6px; align-items:center; }
+  /* 📋 עבודות */
+  #videoEditorOptions.ve-jobs-open .ve-shell, #videoEditorOptions.ve-jobs-open #veRunsDrawer,
+  #videoEditorOptions.ve-jobs-open .ve-summary-card { display:none !important; }
+  .ve-jobs { border:1px solid var(--border2); border-radius:var(--r-md); padding:10px; background:var(--surface2); }
+  .ve-jobs-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:8px; margin-top:8px; }
+  .ve-job-card { border:1px solid var(--border2); border-radius:var(--r-md); padding:10px; background:var(--surface); display:flex; flex-direction:column; gap:6px; }
+  .ve-job-card.ve-job-current { border-color:var(--accent); }
+  .ve-job-card.ve-job-missing { opacity:.55; }
+  .ve-job-title { font-weight:700; font-size:var(--fs-md); }
+  .ve-job-meta { font-size:var(--fs-xs); color:var(--text-muted); word-break:break-all; }
+  .ve-job-status { font-size:var(--fs-sm); font-weight:600; }
+  .ve-job-status.ok { color:var(--color-success); } .ve-job-status.bad { color:var(--fail); } .ve-job-status.running { color:var(--accent); }
+  .ve-job-actions { display:flex; gap:6px; }
+  .ve-jobs-empty { padding:18px; text-align:center; color:var(--text-muted); }
+  /* גל 14: ציר-זמן מקצועי, keyframes, סקופים, שגיאות עם פתרון, תור רינדור */
+  .ve-timeline-scroll { overflow-x:auto; overflow-y:hidden; }
+  .ve-timeline-scroll .ve-timeline, .ve-timeline-scroll .ve-waveform { min-width:100%; }
+  .ve-timeline:focus-visible { outline:2px solid var(--accent); }
+  .ve-tl-tools { display:inline-flex; gap:3px; align-items:center; margin-inline-start:8px; font-size:var(--fs-xs); }
+  .ve-tl-tools button { font-size:var(--fs-xs); padding:1px 6px; }
+  .ve-tl-scene { position:absolute; top:0; bottom:0; width:1px; background:var(--color-scene); pointer-events:none; }
+  .ve-tl-snap { position:absolute; top:-2px; bottom:-2px; width:2px; margin-left:-1px; background:var(--color-snap); box-shadow:0 0 6px var(--color-snap); pointer-events:none; } /* ltr: קואורדינטות מדיה/לוג */
+  .ve-kf-toggle { font-size:var(--fs-xs); padding:1px 6px; }
+  .ve-kf-panel { border:1px dashed var(--border2); border-radius:var(--r-sm); padding:4px 8px; margin:0 0 4px; background:var(--surface3); font-size:var(--fs-sm); }
+  .ve-kf-row { gap:4px; flex-wrap:wrap; }
+  .ve-scopes { border:1px solid var(--border2); border-radius:var(--r-sm); padding:6px; background:var(--surface2); }
+  .ve-scopes-grid { display:flex; flex-wrap:wrap; gap:6px; }
+  .ve-scopes figure { margin:0; text-align:center; font-size:var(--fs-2xs); color:var(--text-muted); }
+  .ve-scopes canvas { background:var(--media-bg); border-radius:var(--r-xs); display:block; max-width:100%; }
+  .ve-loudness { width:100%; height:90px; border-radius:var(--r-xs); }
+  .ve-fix-box { margin-top:4px; padding:6px 8px; border:1px solid var(--fail); border-radius:var(--r-sm); background:var(--surface3); }
+  .ve-fix-title { font-weight:700; font-size:var(--fs-sm); }
+  .ve-fix-actions { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+  .ve-fix-actions button { font-size:var(--fs-xs); padding:3px 8px; }
+  .ve-fix-box pre { white-space:pre-wrap; font-size:var(--fs-2xs); max-height:120px; overflow:auto; direction:ltr; }
+  .ve-render-queue { margin-top:10px; border-top:1px solid var(--border2); padding-top:8px; }
+  .ve-sleep-banner { position:fixed; bottom:16px; inset-inline:16px; z-index:60; background:var(--surface); border:2px solid var(--accent); border-radius:var(--r-md); padding:10px 14px; display:flex; gap:10px; align-items:center; box-shadow:var(--shadow-3); }
+  .ve-unsaved { font-size:var(--fs-sm); font-weight:600; color:var(--fail); }
+  /* item: טור הכרות ראשוני - באנר חד-פעמי, נעלם לצמיתות בלחיצת "הבנתי". */
+  .ve-onboarding { display:flex; align-items:center; gap:10px; padding:8px 12px; margin-bottom:8px; background:var(--surface3); border:1px solid var(--border2); border-radius:var(--r-sm); font-size:var(--fs-sm); color:var(--text-muted); }
+  .ve-onboarding button { flex-shrink:0; font-size:var(--fs-xs); padding:4px 10px; }
+  .ve-favorite-row { display:flex; align-items:center; gap:6px; cursor:grab; }
+  .ve-favorite-row.dragging { opacity:0.4; }
+  .ve-favorite-row.drag-over { outline:2px dashed var(--accent); outline-offset:2px; }
+  .ve-favorite-reorder { display:flex; flex-direction:column; gap:2px; }
+  .ve-favorite-reorder button { padding:0 4px; font-size:var(--fs-2xs); line-height:1.4; }
+  /* item: תור-אצווה ניתן-לעריכה - שורה גרירה-ושחרור אמיתית (draggable=true),
+     לא כפתורי ▲/▼ כמו במועדפים - שני מנגנוני-סידור שונים בכוונה, ראו item:
+     גרירה אמיתית למועדפים למטה לגבי למה שם דווקא לא. */
+  .ve-queue-list { display:flex; flex-direction:column; gap:3px; margin-top:6px; }
+  .ve-queue-row { display:flex; align-items:center; gap:8px; padding:4px 8px; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--r-sm); cursor:grab; font-size:var(--fs-sm); }
+  .ve-queue-row.dragging { opacity:0.4; }
+  .ve-queue-row.drag-over { border-color:var(--accent); }
+  .ve-queue-row .ve-queue-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ve-field-reset { font-size:var(--fs-2xs); padding:1px 5px; margin-inline-start:4px; opacity:0.6; }
+  .ve-field-reset:hover { opacity:1; }
+  /* item: קישור עמוק/מקראה - הבהוב קצר על השדה שקופצים אליו, כדי שיהיה ברור
+     איזה שדה בדיוק זה מתוך פאנל עם עשרות שדות. */
+  @keyframes veFlashHighlight { 0%, 100% { background:transparent; } 30% { background:var(--color-accent-soft); } }
+  .ve-flash-highlight { animation:veFlashHighlight 1.5s ease-out; border-radius:var(--r-sm); }
+  #glossaryList > div.ve-glossary-active { background:var(--surface3); }
+  .wm-preview { position:relative; width:213px; height:120px; background:var(--surface3); border:1px solid var(--border2); border-radius:var(--r-sm); overflow:hidden; flex-shrink:0; }
+  .wm-preview img { position:absolute; cursor:move; }
+  .wm-preview-error { font-size:var(--fs-xs); color:var(--fail); }
+
+  /* מובייל: שורות ההגדרות נערמות אנכית (תווית מעל שדה), השדות מתרחבים לכל הרוחב,
+     ופס-הפעולות הצף נערם כדי שהכפתורים לא יידחסו. (שלד הדף במובייל: 14-shell.css) */
+  @media (max-width: 768px) {
+    #videoEditorOptions { max-height: 55vh; }
+    #videoEditorOptions .ve-row { flex-wrap: wrap; }
+    #videoEditorOptions .ve-row > label { flex-basis: 100%; }
+    #videoEditorOptions .ve-row input[type=text], #videoEditorOptions .ve-row input[type=number],
+    #videoEditorOptions .ve-row input[type=range], #videoEditorOptions .ve-row select { flex:1; min-width:0; width:auto !important; }
+    .ve-sticky-bar { flex-direction: column; align-items: stretch; }
+    .ve-sticky-bar button { width: 100%; }
+  }
+  }

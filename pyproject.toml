@@ -1,0 +1,249 @@
+[project]
+name = "clipforge"
+# שמור בסנכרון ידני עם utils/shared/version.py's APP_VERSION - ראו שם למה זה לא
+# נקרא משם בזמן ריצה (ראו שם).
+version = "1.1.0"
+description = "Discord bot + desktop control center for video automation and stream monitoring"
+# 3.11 ומעלה מ-21.10.2026: Pillow 13 (תיקוני האבטחה) לא תומך ב-3.10, שסיים את חייו באוקטובר 2026.
+requires-python = ">=3.11"
+# 30.10.2026: ‏MIT (LICENSE). רכיבי צד ג' ורישיונותיהם - THIRD_PARTY_NOTICES.md
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+dependencies = [
+    "discord.py>=2.3",
+    "aiosqlite>=0.19",
+    "aiohttp>=3.9",
+    "feedparser>=6.0",
+    "customtkinter>=5.2",
+    "psutil>=5.9",
+    "tkinterdnd2>=0.4",
+    "pystray>=0.19",
+    "keyboard>=0.13",
+    "winotify>=1.1",
+    "Pillow>=13.0",
+    "pydub>=0.25",
+    "tqdm>=4.66",
+    "pyautogui>=0.9",
+    "requests>=2.31",
+    "google-genai>=0.3",
+    "opencv-python>=4.9",
+    "faster-whisper>=1.0",
+    "google-api-python-client>=2.100",
+    "google-auth-httplib2>=0.2",
+    "google-auth-oauthlib>=1.1",
+    "python-dotenv>=1.0",
+    "keyring>=24.0",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "simpleobsws>=1.4",
+    "openpyxl>=3.1",
+    "send2trash>=2.1.0",
+    "pytesseract>=0.3.13",
+    "slowapi>=0.1.10",
+    "cryptography>=50.0.1",
+    "qrcode>=8.2",
+    # src/dataviz (סרטוני נתונים): matplotlib 3.11 מטפל בעברית RTL בעצמו ודורש Python 3.11+
+    "pandas>=3.0 ; python_full_version >= '3.11'",
+    "numpy>=2.3 ; python_full_version >= '3.11'",
+    "matplotlib>=3.11 ; python_full_version >= '3.11'",
+    "pyyaml>=6.0",
+]
+
+# פרויקט הרצה (scripts/GUI/בוט), לא ספרייה שמישהו מתקין עם pip install - יש
+# תיקיית src/ (ראו [tool.mypy]/[tool.coverage.run] למטה - קוד המקור הראשוני
+# יושב שם) אבל זה רק ארגון תיקיות, לא src-layout במובן של packaging/pip
+# install; עדיין אין כוונה לפרסם חבילה, אז לא צריך build backend בכלל.
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    # build_exe.py עושה import PyInstaller.__main__, אבל זה מעולם לא היה רשום כתלות
+    # בשום מקום (לא כאן ולא ב-requirements.txt הישן) - build_exe.py היה יכול לרוץ
+    # רק אם למישהו קרה להיות מותקן PyInstaller בנפרד, בלי שום קשר לסביבת הפרויקט.
+    "pyinstaller>=6.0",
+    "pytest-cov>=7.1.0",
+    "mypy>=2.3.1",
+    "hypothesis>=6.167.1",
+    "mutmut>=3.7.0",
+    "pip-audit>=2.10.1",
+    "pytest-benchmark>=5.3.0",
+    "playwright>=1.63.0",
+    "pytest-xdist>=3.8.0",
+]
+
+[tool.pytest.ini_options]
+# בלי זה .pytest_cache/ יושב בשורש הפרויקט לצד קוד המקור - מאחד אותו עם
+# .ruff_cache/ תחת תיקיית מטמון חבויה אחת (.cache/), פחות "בלגן" בשורש.
+cache_dir = ".cache/pytest"
+# שורש הפרויקט (בשביל "from tests..." ו-tests.dataviz_visual) ו-src/ ב-sys.path לכל קובץ טסט, בכל עומק תחת tests/<אזור>/ -
+# במקום sys.path.insert לפי עומק התיקייה בראש כל קובץ (הוסר ב-19.10.2026, כשהטסטים עברו לתיקיות לפי אזור)
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+# tests/infra/test_benchmarks.py (item: dev/infra - benchmark suite) - בלי תקרה,
+# pytest-benchmark מכייל את מספר הסבבים כך שירוץ עד ~1 שנייה *לכל* בנצ'מארק
+# בנפרד כדי לייצב את המדידה, מה שהופך את ריצת ה-suite הרגילה (שאמורה להישאר
+# מהירה כדי לא לשבור את מחזור implement→test→commit הקיים) לאיטית משמעותית
+# בלי תועלת אמיתית (דיוק-יתר על פונקציות שכבר איטרציה בודדת שלהן היא מיקרו-
+# שניות). 0.1 שנייה/3 סבבים לכל בנצ'מארק מספיק ליציבות סבירה בלי לנפח את
+# זמן הריצה של כל ה-suite.
+addopts = "--benchmark-max-time=0.1 --benchmark-min-rounds=3 --benchmark-storage=file://.cache/benchmarks --benchmark-disable"
+# גל 23: טסטי דפדפן אמיתי (Playwright + Edge) - מסומנים אוטומטית ב-tests/conftest.py.
+# CI: uv run pytest -m "not browser" -n auto (עם כיסוי), ו-job נפרד ל--m browser.
+markers = ["browser: real-browser test (Playwright + Edge), marked automatically by tests/conftest.py", "allow_network: lift the test network guard (tests/network_guard) for one test and its child processes; the browser stays behind the blocking proxy", "tk: Tk/GUI test (tkinter / customtkinter / src/ui), marked automatically by tests/conftest.py; CI runs them as a separate job"]
+# טסט שנתקע יותר מ-2 דקות מדפיס את המחסנית של כל ה-threads (במקום המתנה שקטה ב-CI)
+faulthandler_timeout = 120
+
+[tool.coverage.run]
+# רק utils/cogs/my_scripts - "הלוגיקה" שהטסטים בפועל בודקים. gui_manager.pyw/ui/*
+# הם קוד tkinter אינטראקטיבי שלא רץ בכלל תחת pytest (ולכן תמיד יראה 0% ומזהם
+# את המספר הכולל בלי לשקף שום דבר אמיתי) - ראו item 1 (E2E test) לכיסוי בפועל
+# של pipeline מלא, שזה עדיין לא מכסה GUI אינטראקטיבי.
+source = ["src/utils", "src/cogs", "src/dataviz", "my_scripts"]
+data_file = ".cache/.coverage"
+omit = ["*/__pycache__/*"]
+
+[tool.coverage.report]
+# שורות שלא הגיוני לדרוש מהן כיסוי (הגנות תיאורטיות/קוד דיבוג) - לא כדי להסתיר
+# חוסר-כיסוי אמיתי, אלא כדי שהאחוז ישקף קוד שבאמת ניתן לבדוק.
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
+# 55% - כמה נקודות מתחת לרמה הנוכחית (60%, אחרי הרחבת הכיסוי בפריטים 1-2 של
+# סבב השדרוגים) - סף שאמור לתפוס נסיגה אמיתית (PR שמוסיף קוד בלי טסטים),
+# לא לגרום ל-CI אדום על תנודה קטנה. יש להעלות את הסף בהדרגה ככל שהכיסוי גדל,
+# לא רק פעם אחת ולשכוח.
+fail_under = 55
+
+[tool.mypy]
+# מוגבל בכוונה למודולי utils/ "טהורים" (בלי תלות ב-discord.py/customtkinter/
+# pystray/keyboard/winsound/winotify וכו', שאין להם type stubs ומייצגים קוד
+# אינטראקטיבי/GUI שלא שווה "לתרגם" ל-type hints בכוחניות) - הרצת mypy על כל
+# הקודבייס הזה, שנכתב כולו בלי type hints מלכתחילה, הייתה מציפה אלפי שגיאות
+# בבת אחת בלי תועלת אמיתית. הורחב מ-5 ל-45 קבצים (item: dev/infra - הרחבת
+# היקף mypy) - כל שאר מודולי utils/ ה"טהורים" עברו נקי בלי אף שגיאה חדשה,
+# חוץ משתיים שתוקנו בעצם ההרחבה (script_metadata.py's _CACHE, secrets_vault.py's
+# keyring fallback). מודולים חדשים/קטנים מתווספים לכאן עם type hints מהיום
+# הראשון שלהם, במקום לנסות "להמיר" את כל הפרויקט בבת אחת.
+files = [
+    "src/entrypoints/web/frontend_assembly.py",
+    "src/entrypoints/web/server_startup.py",
+    "src/entrypoints/web/path_checks.py",
+    "src/entrypoints/web/config_files.py",
+    "src/entrypoints/web/auth.py",
+    "src/entrypoints/web/bot_process.py",
+    "src/entrypoints/web/run_lifecycle.py",
+    "src/utils/shared/backup_sync.py",
+    "src/utils/media/captions.py",
+    "src/utils/media/clip_tagger.py",
+    "src/utils/video/contact_sheet.py",
+    "src/utils/shared/crash_supervisor.py",
+    "src/utils/shared/db.py",
+    "src/utils/shared/disk_space.py",
+    "src/utils/media/duplicate_scene_detector.py",
+    "src/utils/shared/encrypted_backup.py",
+    "src/utils/shared/ffmpeg_locator.py",
+    "src/utils/shared/tailscale.py",
+    "src/utils/shared/device_pairing.py",
+    "src/utils/shared/export_dir.py",
+    "src/utils/shared/data_paths.py",
+    "src/utils/shared/outputs_index.py",
+    "src/utils/shared/notification_log.py",
+    "src/utils/bot/wake_timer.py",
+    "src/utils/media/ffmpeg_progress.py",
+    "src/utils/media/ffprobe_cache.py",
+    "src/utils/shared/gui_thread.py",
+    "src/utils/shared/hardware.py",
+    "src/utils/shared/hardware_history.py",
+    "src/utils/shared/health_status.py",
+    "src/utils/media/highlight_reel.py",
+    "src/utils/shared/job_history.py",
+    "src/utils/media/local_vision_judge.py",
+    "src/utils/shared/log_cleanup.py",
+    "src/utils/shared/logging_setup.py",
+    "src/utils/shared/move_undo_log.py",
+    "src/utils/media/ocr_highlights.py",
+    "src/utils/shared/python_locator.py",
+    "src/utils/shared/render_lock.py",
+    "src/utils/shared/report_excel.py",
+    "src/utils/shared/report_html.py",
+    "src/utils/shared/retry.py",
+    "src/utils/bot/scheduler.py",
+    "src/utils/bot/scheduler_store.py",
+    "src/utils/shared/script_metadata.py",
+    "src/utils/shared/secrets_vault.py",
+    "src/utils/bot/seo_generator.py",
+    "src/utils/media/smart_crop.py",
+    "src/utils/shared/subprocess_flags.py",
+    "src/utils/media/tesseract_locator.py",
+    "src/utils/media/thumbnail_generator.py",
+    "src/utils/media/timelapse.py",
+    "src/utils/bot/title_generator.py",
+    "src/utils/shared/tls_cert.py",
+    "src/utils/shared/update_checker.py",
+    "src/utils/shared/version.py",
+    "src/utils/video/video_editor.py",
+    "src/utils/video/video_editor_estimate.py",
+    "src/utils/video/video_editor_layers.py",
+    "src/utils/video/video_editor_post.py",
+    "src/utils/video/highlight_detect.py",
+    "src/utils/video/run_control.py",
+    "src/utils/video/editor_runs.py",
+    "src/utils/video/video_editor_field_help_en.py",
+    "src/utils/video/video_editor_profiles.py",
+    "src/utils/video/video_editor_validation.py",
+    "src/utils/shared/worker.py",
+    "src/utils/bot/youtube_uploader.py",
+    # מנוע סרטוני הנתונים - חבילה מבודדת עם type hints מההתחלה
+    "src/dataviz",
+]
+ignore_missing_imports = true
+cache_dir = ".cache/mypy"
+
+[[tool.mypy.overrides]]
+# 24.10.2026: הקבצים שיוצאים מ-web_app.py בפיצול (src/entrypoints/web/*.py) נבדקים, אבל web_app עצמו - בלי type hints,
+# ועם כל ה-routes שהוא מייבא - לא: הם ניגשים אליו דרך W, שכאן הוא Any
+module = ["entrypoints.web_app"]
+follow_imports = "skip"
+
+[tool.mutmut]
+# mutmut מסרב לרוץ ב-Windows רגיל (רק WSL/לינוקס - ראו README, "Mutation
+# Testing") - הקונפיגורציה כאן מוכנה לשימוש מרגע שמישהו מריץ את זה מ-WSL,
+# גם אם לא ניתן להריץ בפועל בסביבת הפיתוח/CI הרגילה של הפרויקט (שתי סיבות
+# בדיוק: (1) המגבלה של mutmut עצמו, (2) חלק גדול מהתלויות של הפרויקט
+# (winsound/pystray/keyboard/winotify) הן ייחודיות ל-Windows ולא יטענו בכלל
+# תחת לינוקס - אז only_mutate מוגבל בכוונה למודולים טהורים/חוצי-פלטפורמה
+# שכבר מכוסים בטסטים ישירים.
+source_paths = ["src"]
+only_mutate = [
+    "src/utils/video/video_editor.py",
+    "src/utils/media/timelapse.py",
+    "src/utils/shared/retry.py",
+    "src/utils/shared/disk_space.py",
+    "src/utils/shared/render_lock.py",
+    "src/utils/media/ffmpeg_progress.py",
+    "src/utils/shared/rtl_layout.py",
+    "src/utils/bot/seo_generator.py",
+    "src/utils/shared/backup_sync.py",
+]
+
+[tool.ruff]
+line-length = 160
+target-version = "py311"
+# ראו הערה מעל [tool.pytest.ini_options] - אותו עיקרון בדיוק.
+cache-dir = ".cache/ruff"
+# extend-include: ruff לא בודק *.pyw בברירת מחדל (רק *.py/*.pyi) - gui_manager.pyw
+# (הקובץ עם הכי הרבה עריכות בפרויקט) נבדק בפועל *אפס פעמים* על ידי "ruff check ."
+# עד עכשיו, כי כל ריצה "עברה נקי" בלי לגעת בו בכלל. התגלה רק כש-F821 אמיתי
+# (NameError בזמן ריצה, מוסתר בשקט על ידי except Exception רחב ב-draw_ring())
+# נמצא בטעות דרך "ruff check gui_manager.pyw" מפורש.
+extend-include = ["*.pyw"]
+exclude = [".venv", "ffmpeg", "dist", "data"]
+
+[tool.ruff.lint]
+# מתמקד בבאגים אמיתיים (imports לא בשימוש, שמות לא מוגדרים וכו') ולא באכיפת
+# סגנון על קודבייס קיים בגודל הזה - reformat גורף היה יוצר diff ענק בלי תועלת אמיתית.
+select = ["E9", "F"]

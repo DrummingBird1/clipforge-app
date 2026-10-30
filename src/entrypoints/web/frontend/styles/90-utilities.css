@@ -1,0 +1,104 @@
+  /* גל 15 - מחלקות utility: מחליפות את style="..." שהיו פזורים ב-HTML.
+     השכבה האחרונה - גוברת על כל רכיב, בדיוק כמו ש-inline style גבר קודם. */
+  @layer utilities {
+    .u-bg { background:var(--color-bg); }
+    .u-bg-danger { background:var(--color-danger-solid); }
+    .u-bg-media { background:var(--media-bg); }
+    .u-bg-surface { background:var(--color-surface-1); }
+    .u-bg-white { background:var(--media-text); }
+    .u-block { display:block; }
+    .u-border { border:1px solid var(--color-border-strong); }
+    .u-border-box { box-sizing:border-box; }
+    .u-break-all { word-break:break-all; }
+    .u-center { text-align:center; }
+    .u-flex { display:flex; }
+    .u-flex-0 { flex:0; }
+    .u-fs-md { font-size:var(--fs-md); }
+    .u-fs-sm { font-size:var(--fs-sm); }
+    .u-fs-xs { font-size:var(--fs-xs); }
+    .u-gap-4px { gap:4px; }
+    .u-gap-6px { gap:6px; }
+    .u-gap-8px { gap:8px; }
+    .u-grow { flex:1; }
+    .u-height-200px { height:200px; }
+    .u-height-220px { height:220px; }
+    .u-indent { padding-inline-start:24px; }
+    .u-info { color:var(--color-info); }
+    .u-inline-block { display:inline-block; }
+    .u-items-center { align-items:center; }
+    .u-items-start { align-items:flex-start; }
+    .u-justify-between { justify-content:space-between; }
+    .u-lh-relaxed { line-height:1.6; }
+    .u-ltr { direction:ltr; }
+    .u-m-0 { margin:0; }
+    .u-margin-0-0-10px { margin:0 0 10px; }
+    .u-margin-0-0-6px { margin:0 0 6px; }
+    .u-margin-0-0-8px { margin:0 0 8px; }
+    .u-margin-10px-0-4px { margin:10px 0 4px; }
+    .u-margin-14px-0-6px { margin:14px 0 6px; }
+    .u-margin-16px-0-10px { margin:16px 0 10px; }
+    .u-margin-4px-0 { margin:4px 0; }
+    .u-margin-6px-0 { margin:6px 0; }
+    .u-margin-bottom-10px { margin-bottom:10px; }
+    .u-margin-bottom-14px { margin-bottom:14px; }
+    .u-margin-bottom-4px { margin-bottom:4px; }
+    .u-margin-bottom-6px { margin-bottom:6px; }
+    .u-margin-bottom-8px { margin-bottom:8px; }
+    .u-margin-top-10px { margin-top:10px; }
+    .u-margin-top-12px { margin-top:12px; }
+    .u-margin-top-6px { margin-top:6px; }
+    .u-margin-top-8px { margin-top:8px; }
+    .u-max-height-360px { max-height:360px; }
+    .u-max-height-45vh { max-height:45vh; }
+    .u-max-height-50vh { max-height:50vh; }
+    .u-max-height-65vh { max-height:65vh; }
+    .u-max-height-88vh { max-height:88vh; }
+    .u-max-width-100 { max-width:100%; }
+    .u-max-width-220px { max-width:220px; }
+    .u-max-width-240px { max-width:240px; }
+    .u-max-width-500px { max-width:500px; }
+    .u-max-width-720px { max-width:720px; }
+    .u-min-height-120px { min-height:120px; }
+    .u-min-width-34px { min-width:34px; }
+    .u-min-width-74px { min-width:74px; }
+    .u-min-width-80px { min-width:80px; }
+    .u-min-width-84px { min-width:84px; }
+    .u-mono { font-family:var(--font-mono); }
+    .u-muted { color:var(--color-text-2); }
+    .u-on-solid { color:var(--color-on-solid); }
+    .u-padding-1px-6px { padding:1px 6px; }
+    .u-padding-1px-7px { padding:1px 7px; }
+    .u-padding-2px { padding:2px; }
+    .u-padding-3px-8px { padding:3px 8px; }
+    .u-padding-6px { padding:6px; }
+    .u-padding-8px { padding:8px; }
+    .u-pointer { cursor:pointer; }
+    .u-pre-line { white-space:pre-line; }
+    .u-rounded { border-radius:var(--r-sm); }
+    .u-scroll { overflow:auto; }
+    .u-semibold { font-weight:var(--fw-semibold); }
+    .u-ta-left { text-align:left; } /* ltr: שדה טקסט LTR */
+    .u-text { color:var(--color-text); }
+    .u-w-full { width:100%; }
+    .u-width-100px { width:100px; }
+    .u-width-110px { width:110px; }
+    .u-width-120px { width:120px; }
+    .u-width-160px { width:160px; }
+    .u-width-220px { width:220px; }
+    .u-width-50px { width:50px; }
+    .u-width-52px { width:52px; }
+    .u-width-56px { width:56px; }
+    .u-width-60px { width:60px; }
+    .u-width-64px { width:64px; }
+    .u-width-66px { width:66px; }
+    .u-width-70px { width:70px; }
+    .u-width-80px { width:80px; }
+    .u-width-90px { width:90px; }
+    .u-width-min-92vw-420px { width:min(92vw,420px); }
+    .u-width-min-92vw-460px { width:min(92vw,460px); }
+    .u-width-min-92vw-480px { width:min(92vw,480px); }
+    .u-width-min-92vw-900px { width:min(92vw,900px); }
+    .u-width-min-94vw-900px { width:min(94vw,900px); }
+    .u-width-min-94vw-960px { width:min(94vw,960px); }
+    .u-wrap { flex-wrap:wrap; }
+  }

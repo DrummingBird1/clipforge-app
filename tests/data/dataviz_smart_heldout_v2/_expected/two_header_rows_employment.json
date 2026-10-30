@@ -1,0 +1,17 @@
+{
+  "files": {
+    "תעסוקה_לפי_מחוז.csv": "series"
+  },
+  "series_files": [
+    "תעסוקה_לפי_מחוז.csv"
+  ],
+  "first_file": "תעסוקה_לפי_מחוז.csv",
+  "time": "שנה",
+  "period": "year",
+  "entity": "מחוז",
+  "value": "מועסקים",
+  "unit": "מועסקים",
+  "kind": "level",
+  "chart": "bar_race",
+  "notes": "Two header rows: a group title row above the real column names. Employed people is a stock -> level."
+}

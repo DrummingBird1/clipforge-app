@@ -1,0 +1,268 @@
+  <!-- גל 38: עורך הגרפים בשלושה אזורים כמו בסטודיו - פרקים | תצוגה חיה | הגדרות. קבצי המסך:
+       html/31-dataviz.html, styles/17-dataviz.css, js/42-dataviz-screen.js, js/43-dataviz-studio.js -->
+  <div class="tab-content" data-tab-panel="dataviz" hidden>
+    <!-- גל 56: אותה מסגרת כמו בסטודיו - מסך מלא, סרגל עליון ו-☰ (65-ui-shell.js). גל 57: גם "מה להפיק", הרץ/עצור, המצב וההתקדמות כאן -
+         לא בתחתית עמודת ההגדרות, שם פתיחת העורך דחפה אותם למטה -->
+    <div class="dvz-topbar" role="toolbar" aria-label="עורך הגרפים">
+      <button type="button" id="dvzNavBtn" class="ve-nav-btn" onclick="dvzToggleNav()" aria-expanded="false" aria-label="תפריט ראשי" title="תפריט ראשי - הצג/הסתר את סרגל הניווט (מסכים אחרים, הגדרות, סקריפטים)">☰</button>
+      <strong>📊 עורך הגרפים</strong>
+      <span id="dvzTopbarEpisode" class="dvz-topbar-episode"></span>
+      <span class="ve-topbar-spacer"></span>
+      <button type="button" id="dvzOtherRunChip" class="ve-chip ve-other-run" hidden onclick="uiGoToRunOwner()" title="ריצה של כלי אחר בתור המשותף - לחיצה עוברת אליו"></button>
+      <button type="button" class="btn-sm dvz-episodes-toggle" onclick="dvzToggleEpisodes()" aria-pressed="false" title="רשימת הפרקים - בזמן עריכה היא מתקפלת כדי לפנות מקום לעורך">📋 פרקים</button>
+      <!-- 23.10.2026 (המלצה 8): עורך רחב או תצוגה גדולה בלחיצה אחת (dvzSetLayout, 87-dataviz-shell.js) -->
+      <div class="dvz-mode-toggle dvz-layout-toggle" role="group" aria-label="פריסת המסך">
+        <button type="button" id="dvzLayoutEditBtn" onclick="dvzSetLayout('edit')" aria-pressed="false" title="עורך רחב - ההגדרות והעורך מקבלים את רוב הרוחב. לחיצה נוספת מחזירה לפריסה הרגילה">✏️ עריכה</button>
+        <button type="button" id="dvzLayoutViewBtn" onclick="dvzSetLayout('view')" aria-pressed="false" title="תצוגה גדולה - רק התצוגה החיה, ברוחב מלא. לחיצה נוספת מחזירה לפריסה הרגילה">👁 צפייה</button>
+      </div>
+      <span id="dvzRunGroup" class="dvz-run-group" hidden>
+        <span class="dvz-run-status" id="dvzStatus" role="status" aria-live="polite"></span>
+        <button type="button" id="dvzDataBadge" class="btn-sm dvz-data-badge" onclick="dvzOpenPrerender()" hidden title="הנתונים, המספרים על המסך מול הקבצים והקריאות לפי היעד - רשימה אחת עם התיקונים">✅ לפני רינדור</button>
+        <select id="dvzMode" onchange="dvzModeChanged()" aria-label="מה להפיק">
+          <option value="preview">תצוגה מקדימה מהירה</option>
+          <option value="stills">פריימים בודדים</option>
+          <option value="test">סרטון בדיקה קצר</option>
+          <option value="full">סרטון מלא</option>
+          <option value="share">תמונה ו-GIF לשיתוף</option>
+          <option value="shorts">Shorts אוטומטיים</option>
+        </select>
+        <button type="button" class="btn-run btn-sm" id="dvzRunBtn" onclick="dvzRun()">▶️ הרץ</button>
+        <button type="button" class="btn-stop btn-sm" id="dvzStopBtn" onclick="dvzStop()" disabled>🛑 עצור</button>
+      </span>
+      <!-- 21.10.2026 (סבב הפישוט): רמת הפירוט לכל המסך (הייתה בתוך העורך המלא). "פשוט" = תיקייה -> סקירה -> רינדור:
+           שינויים להרצה, חלון הנתונים, ההשוואות, לשוניות העורך מלבד ההגדרות ופעולות הסדרה מוסתרים (27-dataviz-pro.css) -->
+      <div class="dvz-mode-toggle" role="group" aria-label="רמת פירוט">
+        <button type="button" id="dvzModeSimpleBtn" onclick="setDvzMode('simple')" title="תיקייה -> סקירה -> רינדור: רק ההגדרות העיקריות, והשאר מוסתר עד שמבקשים">פשוט</button>
+        <button type="button" id="dvzModeRegularBtn" onclick="setDvzMode('regular')" title="כמו לפני הסבב: כל הכלים, בלי קבוצות ההגדרות הנדירות (מפה, שיתוף, כתוביות, סדרה, מיתוג, ניקוי) - הגדרה ששינית תמיד מוצגת">רגיל</button>
+        <button type="button" id="dvzModeAdvancedBtn" onclick="setDvzMode('advanced')" title="כל ההגדרות, כולל הטכניות">מומחה</button>
+      </div>
+      <button type="button" class="btn-sm" id="dvzSearchAllBtn" onclick="openCommandPalette()" aria-label="חיפוש בכל האפליקציה" title="חיפוש בכל האפליקציה - מסכים, סקריפטים, פרויקטים ופעולות (Ctrl+K)">🔍</button>
+      <button type="button" class="btn-sm" onclick="openStudio()" title="עורך הווידאו - חיתוך, צבע, שמע ושכבות">🎬 לסטודיו</button>
+      <button type="button" class="btn-sm" onclick="goHome()" title="חזרה למסך הבית - הכל כבר שמור">✕ סגור</button>
+      <div class="progress-wrap dvz-top-progress"><div class="progress-bar" id="dvzProgressBar"></div></div>
+    </div>
+    <!-- lazy-html:dataviz -->
+    <div class="dvz-studio">
+    <aside class="tc-section dvz-pane dvz-episodes-pane" aria-label="פרקים">
+      <!-- 21.10.2026 (סבב הפישוט): מדריך המנוע, לוח הצפיות, הקטלוג, דוח התמונות, ההתראות והסל - ב"🧰 כלים" בסרגל העליון (87-dataviz-shell.js) -->
+      <h3 title="הפרקים נקראים מהתיקייה data/dataviz_episodes (לקריאה בלבד), והתוצרים נשמרים בתיקיית הייצוא שבהגדרות הכלליות (או ב-workspace).">📊 סרטוני נתונים
+        <button type="button" class="btn-xs" id="dvzNewBtn" onclick="dvzOpenNew()" title="מתיקייה (העורך בוחר הכל ומסביר), מקבצים או מהקטלוג - אפשר גם לגרור קובץ למסך">➕ פרק חדש</button></h3>
+      <!-- גל 59: ההסבר רק כשאין פרקים (בשאר הזמן - בריחוף על הכותרת) -->
+      <div class="hint u-block u-margin-bottom-8px" id="dvzIntroHint">פרק = תיקיית נתונים והגדרות. אחרי שיש פרק: בוחרים אותו, מה להפיק, ולוחצים "הרץ".</div>
+      <div class="dvz-episode-tools" role="toolbar" aria-label="חיפוש, מיון וסינון פרקים">
+        <input type="search" id="dvzSearch" placeholder="🔍 חיפוש פרק..." aria-label="חיפוש פרק" oninput="dvzRenderEpisodes()">
+        <select id="dvzSort" onchange="dvzRenderEpisodes()" aria-label="מיון הפרקים">
+          <option value="recent">ריצה אחרונה קודם</option>
+          <option value="title">לפי כותרת</option>
+          <option value="name">לפי שם התיקייה</option>
+        </select>
+        <select id="dvzChartFilter" onchange="dvzRenderEpisodes()" aria-label="סינון לפי סוג תרשים">
+          <option value="">כל סוגי התרשים</option>
+          <option value="bar_race">מרוץ עמודות</option>
+          <option value="line_race">מרוץ קווים</option>
+          <option value="stacked_area_race">שטח מוערם</option>
+          <option value="scatter_race">פיזור</option>
+          <option value="bump_race">גרף דירוגים</option>
+          <option value="heatmap_race">מפת חום</option>
+          <option value="map_race">מפה</option>
+          <option value="pie_race">עוגה</option><option value="small_multiples">גרפים קטנים</option>
+        </select>
+        <label class="dvz-hidden-chip" title="פרקים שהוסתרו מהרשימה - לא נמחקו"><input type="checkbox" id="dvzShowHidden" onchange="dvzToggleHidden(this.checked)"> 🗄️ הצג מוסתרים <span id="dvzHiddenCount"></span></label>
+      </div>
+      <div id="dvzEpisodes" class="dvz-episodes"></div>
+      <!-- גל 41: תור של כמה פרקים בריצה אחת -->
+      <div id="dvzQueueBar" class="tc-row dvz-queue-bar" hidden>
+        <button type="button" id="dvzQueueRun" class="btn-run btn-sm" onclick="dvzRunQueue()"></button>
+        <button type="button" class="btn-sm" onclick="dvzClearQueue()">נקה סימון</button>
+      </div>
+      <div id="dvzQueueProgress" class="dvz-queue-progress" aria-live="polite" hidden></div>
+    </aside>
+    <section class="tc-section dvz-pane dvz-preview-pane" id="dvzPreviewPane" hidden aria-label="תצוגה חיה">
+      <h3>👁 תצוגה חיה</h3>
+      <div class="dvz-preview-stage">
+        <img id="dvzPreviewImg" alt="הפריים ברגע שנבחר">
+        <div id="dvzPreviewBusy" class="dvz-preview-busy" hidden>⏳</div>
+      </div>
+      <div class="tc-row dvz-preview-bar">
+        <input type="range" id="dvzPreviewPos" min="0" max="1000" value="600" aria-label="הרגע בסרטון" oninput="dvzPreviewSoon()">
+        <span id="dvzPreviewInfo" class="hint"></span>
+      </div>
+      <div id="dvzStrip" class="dvz-strip" role="list" aria-label="פריימים לאורך הסרטון - לחיצה בוחרת את הרגע"></div>
+      <div class="tc-row dvz-adv">
+        <button type="button" class="btn-sm" onclick="dvzCompare('charts')" title="אותו רגע בכל סוגי התרשים - לחיצה על אחד בוחרת אותו להרצה">🔀 השווה סוגי תרשים</button>
+        <button type="button" class="btn-sm" onclick="dvzCompare('themes')" title="אותו רגע בערכה הבהירה ובכהה, זו לצד זו">🌓 בהיר מול כהה</button>
+      </div>
+      <div id="dvzCompareBox" class="dvz-compare" hidden></div>
+    </section>
+    <div class="tc-section dvz-pane dvz-settings-pane" id="dvzControls" hidden>
+      <!-- גל 41: שכפול, הפרק הבא בסדרה וערכת ערוץ. גל 59: בתפריט ⋯ ליד שם הפרק - "מה להפיק" ו"הרץ" ראשונים -->
+      <div class="dvz-pane-head">
+        <h3 id="dvzSelectedTitle"></h3>
+        <div class="ve-menu-wrap">
+          <button type="button" id="dvzEpisodeMenuBtn" class="btn-sm btn-ghost" onclick="toggleVeMenu('dvzEpisodeMenu', event)" aria-haspopup="true" aria-expanded="false" aria-label="פעולות על הפרק" title="שכפול, הפרק הבא בסדרה וערכת ערוץ">⋯</button>
+          <div class="ve-menu" id="dvzEpisodeMenu" hidden role="menu">
+            <button type="button" class="dvz-adv" onclick="dvzDuplicate(false)" role="menuitem" title="עותק של הפרק בשם חדש - כל הקבצים וההגדרות; המקורי לא משתנה">⧉ שכפל פרק</button>
+            <button type="button" class="dvz-adv" onclick="dvzDuplicate(true)" role="menuitem" title="עותק עם המספר הבא בסדרה">➕ הפרק הבא בסדרה</button>
+            <button type="button" class="dvz-adv" onclick="dvzOpenKits()" role="menuitem" title="עיצוב קבוע לכל הפרקים של הערוץ: ערכה, צבעים, פלטה ולוגו">🏷️ ערכת ערוץ</button>
+            <button type="button" id="dvzStoryWizardBtn" onclick="dvzOpenStoryWizard()" role="menuitem" title="העורך מציע סוג סיפור לפי הנתונים (מרוץ, מגמה, השוואה, לפני-אחרי) ואפשר להחליף - התרשים, הקצב והטקסטים מתעדכנים (קודם רואים מה ישתנה)">📖 הסיפור</button>
+            <button type="button" id="dvzSmartPanelBtn" onclick="dvzOpenSmartPanel()" role="menuitem">🤖 הבחירות האוטומטיות</button>
+            <button type="button" id="dvzDeleteMenuBtn" onclick="dvzDeleteEpisode(dvzState.selected)" role="menuitem" title="הפרק עובר לסל של עורך הגרפים - אפשר לשחזר">🗑️ מחק פרק</button>
+          </div>
+        </div>
+      </div>
+      <div class="hint u-block u-margin-bottom-8px" id="dvzSelectedInfo"></div>
+      <div id="dvzKits" class="dvz-kits" hidden></div>
+      <div class="hint u-block" id="dvzModeHint"></div>
+      <div class="hint u-block" id="dvzEstimate" aria-live="polite"></div>
+      <!-- גל 59: מה שמשנים רק להרצה אחת - מקופל, עם תקציר (87-dataviz-shell.js) -->
+      <details id="dvzRunOverrides" class="dvz-run-overrides">
+      <summary>⚙️ שינויים להרצה הזו <span id="dvzRunOverridesSummary" class="hint"></span></summary>
+      <div class="tc-row">
+        <label class="u-flex-0" for="dvzChart">סוג תרשים:</label>
+        <select id="dvzChart">
+          <option value="">לפי הגדרות הפרק</option>
+          <option value="bar_race">מרוץ עמודות</option>
+          <option value="line_race">מרוץ קווים</option>
+          <option value="stacked_area_race">שטח מוערם</option>
+          <option value="scatter_race">פיזור</option>
+          <option value="bump_race">גרף דירוגים</option>
+          <option value="heatmap_race">מפת חום</option>
+          <option value="map_race">מפה</option>
+          <option value="pie_race">עוגה</option><option value="small_multiples">גרפים קטנים</option>
+        </select>
+      </div>
+      <div class="tc-row">
+        <label class="u-flex-0" for="dvzTarget" title="Shorts ו-TikTok - פריים לאורך 1080x1920 בשם קובץ משלו">יעד:</label>
+        <select id="dvzTarget">
+          <option value="">לפי הגדרות הפרק</option>
+          <option value="youtube">YouTube (16:9)</option>
+          <option value="shorts">YouTube Shorts (9:16)</option>
+          <option value="tiktok">TikTok (9:16)</option>
+        </select>
+      </div>
+      <div class="tc-row">
+        <label class="u-flex-0" for="dvzPublish">חבילת פרסום (תמונה, SEO ואישור):</label>
+        <select id="dvzPublish">
+          <option value="default">לפי הגדרות הפרק</option>
+          <option value="on">כן</option>
+          <option value="off">לא</option>
+        </select>
+      </div>
+      <div class="hint u-block">חבילת הפרסום נוצרת רק אחרי סרטון מלא, ושום דבר לא מועלה אוטומטית.</div>
+      </details>
+      <!-- גל 39: העורך המלא - כל ההגדרות בקבוצות, אירועים, צבעים, ישויות ומה שונה. טיוטה שמוצגת בתצוגה החיה עד "שמור" -->
+      <details id="dvzEditor" class="dvz-editor" ontoggle="if (this.open) dvzLoadEditor()">
+        <summary>🧰 כל ההגדרות, אירועים, צבעים וישויות</summary>
+        <div class="hint u-block">כל שינוי מוצג מיד בתצוגה החיה. "שמור" כותב לקובץ השינויים של הפרק - config.yaml לא משתנה.</div>
+        <div class="tc-row dvz-editor-bar">
+          <span id="dvzDraftCount" class="hint"></span>
+          <button type="button" id="dvzDraftSave" class="btn-sm btn-primary" onclick="dvzSaveDraft()" disabled>💾 שמור שינויים</button>
+          <button type="button" id="dvzDraftDiscard" class="btn-sm" onclick="dvzDiscardDraft()" disabled>בטל טיוטה</button>
+          <button type="button" id="dvzResetAllBtn" class="btn-sm" onclick="dvzResetAllOverrides()" title="מוחק את כל השינויים של הפרק (קובץ השינויים) - config.yaml של הפרק לא משתנה">↩️ אפס הכל</button>
+          <button type="button" id="dvzFinalBtn" class="btn-sm" onclick="dvzShowFinalConfig()" title="מה הרינדור יקבל בפועל: config.yaml + השינויים מהדפדפן + ברירות המחדל, ולכל הגדרה מאיפה היא - לקריאה בלבד">📜 ההגדרות הסופיות</button>
+        </div>
+        <div id="dvzEditorTabs" class="dvz-editor-tabs" role="tablist" aria-label="חלקי העורך"></div>
+        <div id="dvzEditorBody"></div>
+        <div class="hint u-block" id="dvzEditorStatus" role="status" aria-live="polite"></div>
+      </details>
+      <!-- גל 40: הנתונים - מקורות, בדיקה, מצטבר, קצב וציר זמן, פיזור ועדכון נתונים -->
+      <details id="dvzData" class="dvz-editor" ontoggle="if (this.open) dvzLoadData()">
+        <summary>📊 נתונים ובדיקות</summary>
+        <div id="dvzDataTabs" class="dvz-editor-tabs" role="tablist" aria-label="חלקי הנתונים"></div>
+        <div id="dvzDataBody"></div>
+        <div class="hint u-block" id="dvzDataStatus" role="status" aria-live="polite"></div>
+      </details>
+    </div>
+    </div>
+    <div class="tc-section">
+      <h3>🎞️ תוצרים</h3>
+      <div class="tc-row">
+        <button type="button" class="btn-sm btn-outline" id="dvzShowAllBtn" onclick="dvzToggleAll()">🔎 הצג את כל התוצרים</button>
+        <button type="button" class="btn-sm btn-outline" onclick="loadDatavizOutputs()">🔄 רענן</button>
+        <button type="button" class="btn-sm btn-outline" onclick="switchTab('approvals')">📦 חבילות פרסום ואישור</button>
+        <button type="button" class="btn-sm btn-outline" id="dvzCompareOutputsBtn" onclick="dvzCompareOutputs()" hidden>⇆ השווה את שני הנבחרים</button>
+        <button type="button" class="btn-sm btn-outline" id="dvzCaptionsBtn" onclick="dvzDownloadCaptions()" title="קובץ SRT עם האירועים והשיאים בזמנים של הסרטון המלא - בלי לרנדר">💬 כתוביות (SRT)</button>
+      </div>
+      <div id="dvzSavedTo" class="dvz-saved-to" hidden></div>
+      <div id="dvzOutputCompare" class="dvz-output-compare" hidden></div>
+      <div id="dvzOutputs"></div>
+    </div>
+    <!-- גל 41: חבילות הפרסום של הפרק שנבחר, ואשף פרסום -->
+    <div class="tc-section" id="dvzPublishSection" hidden>
+      <h3>📦 פרסום הפרק</h3>
+      <div id="dvzPackages" class="approvals-list"></div>
+    </div>
+    <!-- גל 59: "פרק חדש" בחלון. 21.10.2026 (סבב הפישוט): כניסה אחת עם שלוש דרכים - מתיקייה (ברירת המחדל: תיקייה עם config.yaml
+         מיובאת כמו שהיא, אחרת טיוטה חכמה ואז מסך הסקירה), מקבצים (הטופס) ובלי קבצים (הקטלוג). במקום "📂 ייבא תיקייה" ו"📂→🎬 מתיקייה" -->
+    <dialog id="dvzNewDialog" class="dvz-dialog" aria-labelledby="dvzNewHeading">
+        <div class="tc-row dvz-dialog-head">
+          <h3 id="dvzNewHeading">➕ פרק חדש</h3>
+          <button type="button" class="btn-sm" onclick="dvzCloseNew()">✕ סגור</button>
+        </div>
+        <div class="dvz-new-ways" role="tablist" aria-label="מאיפה הנתונים">
+          <button type="button" role="tab" data-new-way="folder" onclick="dvzNewWay('folder')"><strong>📂 מתיקייה</strong><span class="hint">הכי מהיר - העורך בוחר הכל ומסביר</span></button>
+          <button type="button" role="tab" data-new-way="files" onclick="dvzNewWay('files')"><strong>📄 מקבצים</strong><span class="hint">CSV, Excel או JSON - ממלאים טופס</span></button>
+          <button type="button" role="tab" data-new-way="catalog" onclick="dvzNewWay('catalog')"><strong>📚 בלי קבצים</strong><span class="hint">סדרה מוכנה מהקטלוג</span></button>
+        </div>
+        <div id="dvzNewFolder" role="tabpanel" aria-label="מתיקייה">
+          <div class="hint u-block u-margin-bottom-8px">תיקייה עם קובצי נתונים (CSV / Excel, ואם יש - SOURCES.md ואירועים). המקור רק נקרא; הקבצים מועתקים לפרק חדש, ופרק קיים לא נדרס.</div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzSmartPath">התיקייה:</label><input id="dvzSmartPath" dir="ltr" list="dvzImportRecent" placeholder="C:\...\my_episode">
+            <button type="button" class="btn-sm" onclick="dvzBrowseNewFolder()" title="בחירת תיקייה מהמחשב">📁 בחר</button></div>
+          <datalist id="dvzImportRecent"></datalist>
+          <div id="dvzImportReady" class="dvz-import-ready" role="list" aria-label="פרקים מוכנים בתיקיית הטיוטה"></div>
+          <label class="u-block" title="פרק מוכן (staging, ColdData/Graphs) - כל התיקייה מועתקת כמו שהיא. כבוי: טיוטה חכמה מהנתונים, עם הסבר לכל בחירה"><input type="checkbox" id="dvzUseConfig" checked> יש בתיקייה config.yaml - להשתמש בו כמו שהוא</label>
+          <details class="dvz-new-more">
+            <summary>שם וערכת ערוץ</summary>
+            <div class="tc-row"><label class="u-flex-0" for="dvzSmartName">שם הפרק:</label><input id="dvzSmartName" dir="ltr" maxlength="40" placeholder="(לפי שם התיקייה)">
+              <label class="u-flex-0" for="dvzSmartKit">ערכת ערוץ:</label><select id="dvzSmartKit"></select></div>
+          </details>
+          <div class="tc-row"><button type="button" class="btn-primary" id="dvzSmartGoBtn" onclick="dvzRunSmart()">✅ צור פרק</button></div>
+          <div class="hint u-block" id="dvzSmartMsg" role="status" aria-live="polite"></div>
+        </div>
+        <div id="dvzNewFiles" role="tabpanel" aria-label="מקבצים" hidden>
+          <div class="hint u-block u-margin-bottom-8px">הפרק נוצר בשם חדש בלבד - פרק קיים לא נדרס ולא נמחק.</div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzNewCsv" title="CSV, Excel או JSON - אפשר לבחור כמה קבצים (כל קובץ נוסף הוא מקור משלו), וגם לגרור קובץ לכל מקום במסך">קובץ נתונים:</label><input type="file" id="dvzNewCsv" accept=".csv,.tsv,.xlsx,.xls,.json,text/csv" multiple onchange="dvzCsvChosen(this)"></div>
+          <div id="dvzNewExtra" class="dvz-sources" role="group" aria-label="קבצים נוספים - כל קובץ הוא מקור נתונים משלו"></div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzNewName">שם הפרק (אותיות, ספרות, מקף):</label><input id="dvzNewName" maxlength="40" dir="ltr"></div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzNewTitle">כותרת:</label><input id="dvzNewTitle"></div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzNewSubtitle">תת-כותרת:</label><input id="dvzNewSubtitle"></div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzNewTime">עמודת תאריך:</label><select id="dvzNewTime"></select>
+            <label class="u-flex-0" for="dvzNewPeriod">רזולוציית הזמן:</label>
+            <select id="dvzNewPeriod"><option value="day">יום</option><option value="month">חודש</option><option value="year">שנה</option></select></div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzNewValue">ערך:</label><select id="dvzNewValue"><option value="">ספור שורות</option></select>
+            <label class="u-flex-0" for="dvzNewGroup">קבץ לפי:</label><select id="dvzNewGroup"><option value="">שנת התאריך</option></select></div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzNewKind" title="כמות - כל שורה מוסיפה והסרטון מצטבר (אזעקות, עולים). רמה - כל ערך הוא המצב באותו זמן, לא מחברים (טמפרטורה, מפלס, מחיר)">סוג הערכים:</label>
+            <select id="dvzNewKind"><option value="amount">כמות (מצטבר)</option><option value="level">רמה (טמפרטורה, מפלס)</option></select></div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzNewChart">סוג תרשים:</label>
+            <select id="dvzNewChart"><option value="bar_race">מרוץ עמודות</option><option value="line_race">מרוץ קווים</option><option value="stacked_area_race">שטח מוערם</option><option value="scatter_race">פיזור</option><option value="bump_race">גרף דירוגים</option><option value="heatmap_race">מפת חום</option><option value="pie_race">עוגה</option><option value="small_multiples">גרפים קטנים</option></select>
+            <label class="u-flex-0" for="dvzNewTheme">ערכת צבעים:</label>
+            <select id="dvzNewTheme"><option value="light">בהיר</option><option value="dark">כהה</option></select></div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzNewTemplate" title="העיצוב, הקצב, התוויות והסדרה עוברים מהפרק הזה - לא הכותרת, הנתונים והאירועים">תבנית:</label>
+            <select id="dvzNewTemplate"><option value="">בלי תבנית</option></select></div>
+          <div class="tc-row"><button type="button" class="btn-primary" id="dvzCreateBtn" onclick="dvzCreateEpisode()">✅ צור פרק</button></div>
+          <div class="hint u-block" id="dvzNewMsg" role="status" aria-live="polite"></div>
+        </div>
+        <div id="dvzNewCatalog" role="tabpanel" aria-label="בלי קבצים" hidden>
+          <div class="hint u-block u-margin-bottom-8px">סדרות מוכנות מהלמ"ס, מהבנק העולמי ומה-OECD. שום דבר לא יורד עד שבוחרים סדרה ולוחצים "הורד לפרק חדש".</div>
+          <div class="tc-row"><button type="button" class="btn-primary" onclick="dvzCloseNew(); dvzOpenCatalog()">📚 פתח את הקטלוג</button></div>
+        </div>
+    </dialog>
+    <!-- 20.10.2026: קטלוג מקורות נתונים (למ"ס, הבנק העולמי, OECD) - ההורדה רק בלחיצה, מכתובת קבועה -->
+    <dialog id="dvzCatalogDialog" class="dvz-dialog" aria-labelledby="dvzCatalogHeading">
+        <div class="tc-row dvz-dialog-head">
+          <h3 id="dvzCatalogHeading">📚 קטלוג נתונים</h3>
+          <button type="button" class="btn-sm" onclick="document.getElementById('dvzCatalogDialog').close()">✕ סגור</button>
+        </div>
+        <div class="hint u-block u-margin-bottom-8px">סדרות מוכנות מהלמ"ס, מהבנק העולמי ומה-OECD. שום דבר לא יורד עד שלוחצים "הורד" - ואז רק מהכתובת הקבועה של הסדרה, עד 5MB, עם SOURCES.md (מקור, כתובת, טבלה, תאריך גישה ויחידות).</div>
+        <input type="search" id="dvzCatalogSearch" placeholder="חיפוש (אוכלוסייה, אבטלה, מדד...)" aria-label="חיפוש בקטלוג" oninput="dvzCatalogSearch()">
+        <div id="dvzCatalogList" class="dvz-catalog-list" role="list"></div>
+        <div id="dvzCatalogDetail" class="dvz-catalog-detail" hidden>
+          <div id="dvzCatalogMeta"></div>
+          <div class="tc-row"><label class="u-flex-0" for="dvzCatalogName">שם הפרק החדש:</label><input id="dvzCatalogName" maxlength="40" dir="ltr">
+            <button type="button" class="btn-sm btn-primary" id="dvzCatalogNewBtn" onclick="dvzCatalogFetch('new')">⬇️ הורד לפרק חדש</button></div>
+          <div class="tc-row"><button type="button" class="btn-sm" id="dvzCatalogSourceBtn" onclick="dvzCatalogFetch('source')">⬇️ הוסף כמקור לפרק הנבחר</button></div>
+        </div>
+        <div class="hint u-block" id="dvzCatalogMsg" role="status" aria-live="polite"></div>
+    </dialog>
+    <!-- /lazy-html:dataviz -->
+  </div>

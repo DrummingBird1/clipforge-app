@@ -1,0 +1,72 @@
+/* 27.10.2026: 25 ההצעות לעורך הגרפים (js/85-dataviz-plus.js) - נטען עם ה-bundle שלו (dataviz_plus) */
+/* layer shell, like 17-dataviz.css and 27-dataviz-pro.css */
+  @layer shell {
+
+      /* אזורי לחיצה מעל התמונה - שקופים, מסגרת בריחוף */
+      .dvz-hit-layer { position: absolute; z-index: 2; }
+      .dvz-hit-layer.is-off { pointer-events: none; }
+      .dvz-hit-layer.is-off .dvz-hit { display: none; }
+      .dvz-hit { position: absolute; padding: 0; margin: 0; border: 1px dashed transparent; border-radius: var(--r-xs); background: transparent; cursor: pointer; touch-action: none; }
+      .dvz-hit:hover, .dvz-hit:focus-visible { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+      .dvz-hit[data-target="outro"], .dvz-hit[data-target^="callout:"] { cursor: move; }
+      .dvz-hit.is-dragging { border-style: solid; border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+      .dvz-inline-edit { position: absolute; z-index: 4; font-size: var(--fs-md); padding: 2px 6px; border: 2px solid var(--color-accent); border-radius: var(--r-xs); background: var(--color-surface-1); color: var(--color-text); box-shadow: var(--shadow-2); }
+      .dvz-entity-pop { position: absolute; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; max-inline-size: 320px; border: 1px solid var(--color-border); border-radius: var(--r-sm); background: var(--color-surface-1); box-shadow: var(--shadow-2); }
+
+      /* לאורך לצד הרגילה, ואזורים בטוחים */
+      .dvz-preview-stage.has-side { display: inline-flex; inline-size: 68%; vertical-align: top; }
+      .dvz-preview-side { position: relative; display: inline-block; inline-size: 30%; margin: 0; margin-inline-start: 1%; vertical-align: top; text-align: center; }
+      .dvz-preview-side img { inline-size: 100%; display: block; border-radius: var(--r-sm); background: var(--media-bg-2); }
+      .dvz-safe-zones { position: absolute; pointer-events: none; z-index: 1; }
+      .dvz-safe-zones rect { fill: color-mix(in srgb, var(--color-danger) 22%, transparent); stroke: var(--color-danger); stroke-width: 0.4; stroke-dasharray: 1.5 1; }
+
+      /* וידאו במקום GIF, ולפני / אחרי */
+      .dvz-preview-video { max-inline-size: 100%; max-block-size: 52vh; display: block; }
+      .dvz-before-wrap { position: absolute; z-index: 1; overflow: hidden; pointer-events: none; }
+      .dvz-before-wrap img { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); }
+      .dvz-before-wrap::after { content: ""; position: absolute; inset-block: 0; left: var(--split, 50%); border-left: 2px solid var(--color-accent); }   /* ltr: like the image clip-path */
+      .dvz-before-handle { position: absolute; inset-inline: 0; inset-block-end: 4px; inline-size: 100%; pointer-events: auto; }
+      .dvz-before-tag, .dvz-after-tag { position: absolute; inset-block-start: 6px; padding: 1px 6px; border-radius: var(--r-pill); background: var(--media-scrim); color: var(--media-text); font-size: var(--fs-2xs); }
+      .dvz-before-tag { left: 6px; }   /* ltr: the old image side */
+      .dvz-after-tag { right: 6px; }   /* ltr */
+
+      /* מצב במאי, טווח לרינדור ובלוקי הסיפור */
+      .dvz-director { position: fixed; z-index: 50; display: flex; flex-direction: column; min-inline-size: 200px; }
+      .dvz-director-form { margin-block: var(--sp-1); }
+      .dvz-range-band { position: absolute; inset-block: 0; background: color-mix(in srgb, var(--color-accent) 18%, transparent); border-inline: 2px solid var(--color-accent); pointer-events: none; }
+      .dvz-range-chip { display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border-radius: var(--r-pill); background: var(--color-accent-soft); font-size: var(--fs-xs); }
+      .dvz-story-track { position: relative; block-size: 22px; margin-inline: 8px; margin-block: 2px; border-radius: var(--r-xs); background: var(--color-surface-2); }
+      .dvz-story-track:empty { display: none; }
+      .dvz-story-block { position: absolute; inset-block: 2px; display: inline-flex; align-items: center; padding: 0 3px; border: 0; border-radius: var(--r-xs); font-size: var(--fs-2xs); line-height: 1; cursor: grab; touch-action: none; }
+      .dvz-story-block.is-point { translate: 50% 0; background: transparent; }
+      [dir="ltr"] .dvz-story-block.is-point { translate: -50% 0; }
+      .dvz-story-block.is-range { overflow: hidden; white-space: nowrap; background: color-mix(in srgb, var(--color-accent) 28%, transparent); color: var(--color-text); }
+      .dvz-story-block.is-speed { background: color-mix(in srgb, var(--color-warning) 30%, transparent); }
+      .dvz-story-block.is-dragging { outline: 2px solid var(--color-accent); cursor: grabbing; }
+      .dvz-story-grip { position: absolute; inset-block: 0; inline-size: 6px; cursor: ew-resize; }
+      .dvz-story-grip[data-edge="start"] { inset-inline-start: 0; }
+      .dvz-story-grip[data-edge="end"] { inset-inline-end: 0; }
+
+      /* ישויות, מראות, גופן, ריחוף */
+      .dvz-spark { inline-size: 70px; block-size: 18px; margin-inline-start: 6px; vertical-align: middle; }
+      .dvz-spark polyline { fill: none; stroke: var(--color-accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+      .dvz-spark circle { fill: var(--color-danger); }
+      .dvz-flags-bar { margin-block-end: var(--sp-2); }
+      .dvz-look-thumb { display: block; inline-size: 120px; aspect-ratio: 16 / 9; object-fit: cover; margin-block-end: 2px; border-radius: var(--r-xs); }
+      .dvz-looks button[data-look] { display: inline-flex; flex-direction: column; align-items: center; }
+      .dvz-font-sample { margin-inline-start: var(--sp-2); font-size: var(--fs-md); }
+      .dvz-peek { display: flex; gap: var(--sp-1); margin-block: 4px; padding: 4px; border: 1px solid var(--color-border); border-radius: var(--r-sm); background: var(--color-surface-1); box-shadow: var(--shadow-2); }
+      .dvz-peek figure { margin: 0; inline-size: 160px; }
+      .dvz-peek img { inline-size: 100%; display: block; border-radius: var(--r-xs); }
+
+      /* ציון, גרסאות, כרטיס המסך, שימור */
+      .dvz-score { display: inline-block; padding: 1px 8px; border-radius: var(--r-pill); font-weight: 600; }
+      .dvz-score.is-good { background: var(--color-success-soft); }
+      .dvz-score.is-ok { background: var(--color-warning-soft); }
+      .dvz-score.is-bad { background: var(--color-danger-soft); }
+      .dvz-history-thumb { display: block; inline-size: 96px; aspect-ratio: 16 / 9; object-fit: cover; margin-block-end: 2px; border-radius: var(--r-xs); }
+      .dvz-gpu-chip { padding: 1px 8px; border-radius: var(--r-pill); background: var(--color-surface-2); font-size: var(--fs-xs); white-space: nowrap; }
+      .dvz-retention { display: block; inline-size: 100%; block-size: 20px; margin-inline: 8px; overflow: visible; }
+      .dvz-retention polyline { fill: none; stroke: var(--color-success); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+      .dvz-template-form { margin-block: var(--sp-1); }
+}

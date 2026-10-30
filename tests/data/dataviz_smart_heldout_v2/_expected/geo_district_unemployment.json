@@ -1,0 +1,17 @@
+{
+  "files": {
+    "unemployment_by_district.csv": "series"
+  },
+  "series_files": [
+    "unemployment_by_district.csv"
+  ],
+  "first_file": "unemployment_by_district.csv",
+  "time": "year",
+  "period": "year",
+  "entity": "district",
+  "value": "unemployment_pct",
+  "unit": "%",
+  "kind": "level",
+  "chart": "map_race",
+  "notes": "districts.geojson has the same 6 district names -> map_race. A rate -> level."
+}

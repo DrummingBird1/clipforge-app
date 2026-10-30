@@ -1,0 +1,17 @@
+{
+  "files": {
+    "ils_exchange_rates.csv": "series"
+  },
+  "series_files": [
+    "ils_exchange_rates.csv"
+  ],
+  "first_file": "ils_exchange_rates.csv",
+  "time": "month",
+  "period": "month",
+  "entity": "<columns>",
+  "value": "<cells>",
+  "unit": "₪",
+  "kind": "level",
+  "chart": "line_race",
+  "notes": "One column per currency (entities as columns) - a correct draft melts it; '<columns>'/'<cells>' mark that. Exchange rates are levels, in shekels per unit."
+}

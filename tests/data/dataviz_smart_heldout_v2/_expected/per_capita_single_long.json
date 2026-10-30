@@ -1,0 +1,18 @@
+{
+  "files": {
+    "road_injuries_rate.csv": "series"
+  },
+  "series_files": [
+    "road_injuries_rate.csv"
+  ],
+  "first_file": "road_injuries_rate.csv",
+  "time": "date",
+  "period": "month",
+  "entity": null,
+  "no_entity": true,
+  "value": "road_injuries_per_100k",
+  "unit": "ל-100 אלף",
+  "kind": "level",
+  "chart": "line_race",
+  "notes": "One long series (348 months), no entity column - nothing should be picked as the entity. A per-capita rate -> level, one line."
+}

@@ -1,0 +1,812 @@
+          <div class="ve-main">
+            <!-- גל 30: מצב "פשוט" = ארבעה צעדים. כל השאר ב"מתקדם" -->
+            <section id="veSteps" class="ve-steps" aria-label="ארבעה צעדים">
+              <div class="ve-step" data-step="folder">
+                <div class="ve-step-head"><span class="ve-step-num" aria-hidden="true">1</span><strong>📁 תיקייה</strong></div>
+                <div class="ve-step-body">
+                  <span id="veStepFolderText" class="ve-step-text"></span>
+                  <button type="button" id="veStepFolderBtn" onclick="openBrowser()">📂 בחר תיקייה...</button>
+                </div>
+              </div>
+              <div class="ve-step" data-step="targets">
+                <div class="ve-step-head"><span class="ve-step-num" aria-hidden="true">2</span><strong>🎯 לאן הסרטונים הולכים?</strong></div>
+                <div class="ve-step-body">
+                  <div class="ve-chips" id="veStepTargets" role="group" aria-label="יעדים"></div>
+                  <span id="veStepTargetsNote" class="ve-field-msg"></span>
+                </div>
+              </div>
+              <div class="ve-step" data-step="look">
+                <div class="ve-step-head"><span class="ve-step-num" aria-hidden="true">3</span><strong>🎨 מראה</strong></div>
+                <div class="ve-step-body">
+                  <div class="ve-look-cards" id="veStepLookCards" role="group" aria-label="מראה מוכן"></div>
+                  <span class="ve-look-custom ve-field-msg" hidden>🎛️ מותאם אישית</span>
+                  <!-- גל 58: הסגנונות השמורים נבחרים רק בבורר שבפס העליון (מקום אחד בכל המצבים) - הצעד הזה רק המראה -->
+                </div>
+              </div>
+              <div class="ve-step" data-step="run">
+                <div class="ve-step-head"><span class="ve-step-num" aria-hidden="true">4</span><strong>▶ הרצה</strong></div>
+                <div class="ve-step-body">
+                  <span id="veStepRunText" class="ve-step-text"></span>
+                  <button type="button" class="btn-run" id="veStepRunBtn" onclick="requestVeRun()" disabled>▶ הרץ</button>
+                </div>
+              </div>
+              <button type="button" class="ve-steps-more" onclick="setVeMode('regular')">⚙️ כל ההגדרות - חיתוך, שכבות, שמע, ייצוא (מתקדם)</button>
+            </section>
+            <!-- גל 31: ההגדרות מתקפלות לפס אייקונים (אזור לכל אייקון) -->
+            <nav id="veInspectorRail" class="ve-rail ve-inspector-railbar" aria-label="אזורי ההגדרות"></nav>
+            <button type="button" id="veInspectorCollapseBtn" class="ve-rail-collapse" onclick="setVePanelRail('inspector', true)" title="כווץ את ההגדרות לפס אייקונים - יותר מקום לנגן" aria-label="כווץ את ההגדרות">«</button>
+            <!-- גל 33: מסלול ניווט קבוע בראש המפקח - תיקייה › קובץ › עריכת קליפ › אזור -->
+            <nav id="veCrumbs" class="ve-crumbs" aria-label="מיקום בעורך"></nav>
+            <!-- גל 33: חיפוש ו"רק מה ששיניתי" בתוך המפקח (החיפוש עבר לכאן מהפס העליון) -->
+            <div id="veInspectorTools" class="ve-inspector-tools" role="toolbar" aria-label="כלי ההגדרות">
+              <input type="search" id="veSearchInput" placeholder="🔍 חפש הגדרה... ( / )" aria-label="חיפוש הגדרה בעורך" oninput="onVeSearchInput()" onkeydown="if (event.key === 'Escape') { this.value = ''; onVeSearchInput(); }">
+              <button type="button" id="veChangedChip" class="ve-chip" aria-pressed="false" onclick="toggleVeChangedChip()" title="מציג רק הגדרות שאינן בברירת המחדל">✎ רק מה ששיניתי</button>
+              <!-- גל 34: ב"רגיל" - כמה הגדרות טכניות מוסתרות; ספרייה אחת לסגנונות, מיתוג, יעדים ושכבות מוכנות -->
+              <button type="button" id="veRareChip" class="ve-chip" hidden onclick="setVeMode('advanced')" title="מעבר למצב מומחה - כל ההגדרות">🧰</button>
+              <button type="button" id="veLibraryBtn" onclick="openVeLibrary()" title="סגנונות, מיתוג, יעדים ושכבות מוכנות במקום אחד">📚 ספרייה</button>
+            </div>
+            <div id="veCatTabs" class="ve-cat-tabs" role="tablist" hidden></div>
+            <div id="veCategories" class="ve-categories">
+              <details class="ve-category" open data-cat="time">
+                <summary><span class="ve-cat-title">✂️ זמן</span><span class="ve-cat-summary" id="veCatSummary-time"></span><span class="ve-cat-warn" id="veCatWarn-time" hidden>⚠️</span><button type="button" class="ve-cat-reset" data-cat-reset="time" title="אפס את כל ההגדרות באזור הזה" aria-label="אפס אזור">↺</button></summary>
+                <div class="ve-category-body">
+                  <div class="ve-row">
+                    <label title="כמה שניות לדלג מתחילת הקובץ המקורי לפני שמתחילים לרנדר.">התחלת חיתוך:</label>
+                    <input type="text" id="veTrimStart" class="ve-time u-width-80px" value="0" inputmode="decimal" placeholder="0 / 1:30">
+                  </div>
+                  <div class="ve-row">
+                    <label title="כמה שניות לרנדר מנקודת ההתחלה - ריק = עד הסוף.">אורך:</label>
+                    <input type="text" id="veTrimDuration" class="ve-time u-width-80px" inputmode="decimal" placeholder="עד הסוף">
+                  </div>
+                  <div class="ve-row ve-composite-row" data-composite="silence">
+                    <label title="מסיר קטעי שקט אוטומטית - רק בהתחלה ובסוף, או גם באמצע הקובץ (מסונכרן בין וידאו לשמע).">הסרת שקט:</label>
+                    <select id="veSilenceMode">
+                      <option value="off">כבוי</option>
+                      <option value="edges">רק בהתחלה ובסוף</option>
+                      <option value="all">בכל הקובץ</option>
+                    </select>
+                  </div>
+                  <div class="ve-row ve-composite-sub u-indent" id="veSilenceTuneRow" data-adv hidden>
+                    <label title="מתחת לעוצמה הזו (dB) נחשב שקט - גבוה יותר (למשל -20) מחשיב יותר רעש-רקע כשקט. הקו הכתום בגרף.">↳ סף (dB) / מינימום (שנ'):</label>
+                    <input type="range" id="veSilenceThresholdDb" value="-30" min="-60" max="-10" step="1" class="u-width-100px" oninput="drawVeWaveform()">
+                    <input type="number" id="veSilenceMinDuration" value="0.3" min="0.05" max="30" step="0.05" class="u-width-64px" title="כמה שניות רצופות של שקט נדרשות כדי שקטע ייחשב שקט.">
+                  </div>
+                  <div class="ve-row ve-composite-row" data-composite="speed">
+                    <label title="מהירות קבועה (0.25x-4x, בלי שינוי גובה-הצליל), או טיימלאפס - כיווץ כל הקליפ לאורך יעד.">מהירות:</label>
+                    <select id="veSpeedMode">
+                      <option value="normal">רגילה</option>
+                      <option value="speed">⚡ מהירות קבועה</option>
+                      <option value="timelapse">⏩ טיימלאפס לאורך יעד</option>
+                    </select>
+                    <span id="veSpeedSliderWrap" hidden>
+                      <input type="range" id="veSpeed" value="1" min="0.25" max="4" step="0.05" class="u-width-120px" aria-label="מהירות">
+                      <span class="ve-range-value" data-for="veSpeed">1.00</span>
+                    </span>
+                    <span id="veTargetSecondsWrap" hidden>
+                      <input type="text" id="veTargetSeconds" class="ve-time u-width-80px" value="0" inputmode="decimal" placeholder="1:00" aria-label="אורך יעד">
+                    </span>
+                  </div>
+                  <div class="ve-subcat" data-subcat="cuts" data-primary>
+                    <div class="ve-subcat-title">✂️ טווחים להסרה</div>
+                    <div class="ve-row">
+                      <label title="טווחים [התחלה, סוף] בשניות שיוסרו מהקובץ - אפשר לסמן גם על ציר-הזמן.">טווחים:</label>
+                      <input type="text" id="veRemoveRanges" placeholder="[[10,15],[40,42]]" class="u-grow" hidden>
+                      <button type="button" id="veRemoveRangesJsonToggle" onclick="toggleVeRangesJson()" title="עריכה ישירה של ה-JSON הגולמי" class="u-fs-xs u-padding-3px-8px" data-adv>{ } JSON</button>
+                    </div>
+                    <div id="veRangesEditor" class="ve-ranges-editor"></div>
+                    <div class="ve-row ve-highlights-row u-wrap" data-clip-ok>
+                      <button type="button" onclick="detectVeHighlights()" title="מאתר את הרגעים הרועשים (שיאי שמע) ומשאיר רק אותם - ממלא את הטווחים להסרה.">🔎 השאר רק הייליטס</button>
+                      <span data-adv>
+                        <label title="כמה dB מעל העוצמה הממוצעת נחשב שיא (נמוך = יותר שיאים).">סף:</label>
+                        <input type="number" id="veHighlightThreshold" value="18" min="3" max="40" step="1" class="u-width-56px">
+                        <label title="שניות לשמור לפני כל שיא.">לפני:</label>
+                        <input type="number" id="veHighlightBefore" value="20" min="0" max="120" step="1" class="u-width-56px">
+                        <label title="שניות לשמור אחרי כל שיא.">אחרי:</label>
+                        <input type="number" id="veHighlightAfter" value="5" min="0" max="60" step="1" class="u-width-56px">
+                      </span>
+                      <span id="veHighlightStatus" class="ve-field-msg" aria-live="polite"></span>
+                    </div>
+                  </div>
+                  <div class="ve-subcat" data-subcat="bookends" data-adv>
+                    <div class="ve-subcat-title">🎬 מעברים, פתיח, סיום וחזרות</div>
+                    <div class="ve-row" data-adv>
+                      <label title="עמעום-כניסה ועמעום-יציאה (וידאו ושמע) בשניות - 0 מכבה.">Fade כניסה / יציאה:</label>
+                      <input type="text" id="veFadeInSeconds" class="ve-time u-width-64px" value="0" inputmode="decimal" aria-label="Fade-in">
+                      <input type="text" id="veFadeOutSeconds" class="ve-time u-width-64px" value="0" inputmode="decimal" aria-label="Fade-out">
+                    </div>
+                    <div class="ve-row">
+                      <label title="קליפ שמודבק לפני/אחרי כל פלט - מותאם אוטומטית למידות ולקצב הפלט.">intro / outro:</label>
+                      <input type="text" id="veIntroPath" data-ve-browse="video" placeholder="intro.mp4" class="u-grow">
+                      <input type="text" id="veOutroPath" data-ve-browse="video" placeholder="outro.mp4" class="u-grow">
+                    </div>
+                    <div class="ve-row">
+                      <label title="קדימה ואז אחורה (עד 60 שניות)."><input type="checkbox" id="veBoomerang"> 🔁 בומרנג</label>
+                      <label title="חוזר על הפלט N פעמים (1 = בלי).">🔂 חזרות:</label>
+                      <input type="number" id="veLoopCount" value="1" min="1" max="10" step="1" class="u-width-56px">
+                    </div>
+                  </div>
+                </div>
+              </details>
+              <details class="ve-category" open data-cat="look">
+                <summary><span class="ve-cat-title">🎨 צבע</span><span class="ve-cat-summary" id="veCatSummary-look"></span><span class="ve-cat-warn" id="veCatWarn-look" hidden>⚠️</span><button type="button" class="ve-cat-reset" data-cat-reset="look" title="אפס את כל ההגדרות באזור הזה" aria-label="אפס אזור">↺</button></summary>
+                <div class="ve-category-body">
+                  <div class="ve-subcat" data-subcat="color" data-primary>
+                    <div class="ve-subcat-title">🎨 בהירות, ניגודיות ו-LUT</div>
+                    <!-- גל 30: מראות מוכנים - הפריים הנוכחי בכל מראה; לחיצה מחילה והסליידרים נשארים לכוונון -->
+                    <div class="ve-look-block" data-clip-lock>
+                      <div class="ve-look-cards" id="veLookCards" role="group" aria-label="מראה מוכן"></div>
+                      <span class="ve-look-custom ve-field-msg" hidden>🎛️ מותאם אישית - הכרטיסים מחליפים את ערכי הצבע</span>
+                    </div>
+                    <div class="ve-row" data-adv>
+                      <label title="קובץ גריידינג צבע (.cube) - ריק = בלי.">LUT:</label>
+                      <input type="text" id="veLutPath" data-ve-browse="lut" placeholder="C:\...\look.cube" class="u-grow">
+                    </div>
+                    <div class="ve-row u-indent" data-adv>
+                      <label title="כמה מהגריידינג להחיל - 100% מלא, 50% חצי-דרך.">↳ עוצמת LUT:</label>
+                      <input type="range" id="veLutIntensity" value="1" min="0" max="1" step="0.05" class="u-width-110px" data-ve-value-format="percent">
+                      <span class="ve-range-value" data-for="veLutIntensity">100%</span>
+                    </div>
+                    <div class="ve-row">
+                      <label title="בהירות (-1 עד 1, 0 = ללא שינוי).">בהירות:</label>
+                      <input type="range" id="veEqBrightness" value="0" min="-1" max="1" step="0.02" class="u-width-110px">
+                      <span class="ve-range-value" data-for="veEqBrightness">0.00</span>
+                    </div>
+                    <div class="ve-row">
+                      <label title="ניגודיות (1 = ללא שינוי).">ניגודיות:</label>
+                      <input type="range" id="veEqContrast" value="1" min="0" max="3" step="0.05" class="u-width-110px">
+                      <span class="ve-range-value" data-for="veEqContrast">1.00</span>
+                    </div>
+                    <div class="ve-row">
+                      <label title="רוויית הצבעים (0 = שחור-לבן, 1 = ללא שינוי).">רוויה:</label>
+                      <input type="range" id="veEqSaturation" value="1" min="0" max="3" step="0.05" class="u-width-110px">
+                      <span class="ve-range-value" data-for="veEqSaturation">1.00</span>
+                    </div>
+                    <div class="ve-row" data-adv>
+                      <label title="גמא (1 = ללא שינוי) - מבהיר/מכהה את הגוונים האמצעיים.">גמא:</label>
+                      <input type="range" id="veEqGamma" value="1" min="0.1" max="3" step="0.05" class="u-width-110px">
+                      <span class="ve-range-value" data-for="veEqGamma">1.00</span>
+                    </div>
+                    <div class="ve-row" data-adv><label title="מתקן אוטומטית את טווח הבהירות/ניגודיות."><input type="checkbox" id="veAutoLevels"> מתיחת בהירות אוטומטית</label></div>
+                    <div class="ve-row" data-adv>
+                      <label title="איך מקור HDR מומר ל-SDR (עם H.264): hable (קולנועי), mobius (שומר צבעים), reinhard (רך).">HDR→SDR:</label>
+                      <select id="veTonemap"><option value="hable">hable (קולנועי)</option><option value="mobius">mobius (שומר צבעים)</option><option value="reinhard">reinhard (רך)</option></select>
+                    </div>
+                  </div>
+                  <div class="ve-subcat" data-subcat="grade" data-adv>
+                    <div class="ve-subcat-title">🎨 גלגלי צבע ועקומות</div>
+                    <div class="ve-wheels">
+                      <div class="ve-wheel-box">
+                        <div class="ve-wheel" data-grade="shadows"><div class="ve-wheel-disc" tabindex="0" role="application" aria-label="גלגל הצללים (Lift) - גרירה בוחרת גוון, המרחק מהמרכז הוא העוצמה. חיצים מזיזים, Delete מאפס" title="גרירה: גוון ועוצמה · Shift: עדין · לחיצה כפולה: איפוס"><span class="ve-wheel-puck"></span></div></div>
+                        <div class="ve-wheel-name">צללים <small>Lift</small></div>
+                        <input type="range" class="ve-wheel-luma" min="-0.3" max="0.3" step="0.01" value="0" aria-label="בהירות הצללים" title="מבהיר/מכהה רק את האזורים הכהים">
+                        <input type="text" id="veGradeShadows" class="ve-wheel-value" placeholder="0,0,0" spellcheck="false" aria-label="היסט R,G,B של הצללים" title="היסט אדום,ירוק,כחול (-1 עד 1) - אפשר גם להקליד">
+                        <button type="button" class="btn-sm btn-ghost ve-wheel-reset" title="אפס את הגלגל" aria-label="אפס את גלגל הצללים">↺</button>
+                      </div>
+                      <div class="ve-wheel-box">
+                        <div class="ve-wheel" data-grade="midtones"><div class="ve-wheel-disc" tabindex="0" role="application" aria-label="גלגל הגוונים האמצעיים (Gamma) - גרירה בוחרת גוון, המרחק מהמרכז הוא העוצמה. חיצים מזיזים, Delete מאפס" title="גרירה: גוון ועוצמה · Shift: עדין · לחיצה כפולה: איפוס"><span class="ve-wheel-puck"></span></div></div>
+                        <div class="ve-wheel-name">אמצעיים <small>Gamma</small></div>
+                        <input type="range" class="ve-wheel-luma" min="-0.3" max="0.3" step="0.01" value="0" aria-label="בהירות הגוונים האמצעיים" title="מבהיר/מכהה רק את הגוונים האמצעיים">
+                        <input type="text" id="veGradeMidtones" class="ve-wheel-value" placeholder="0,0,0" spellcheck="false" aria-label="היסט R,G,B של הגוונים האמצעיים" title="היסט אדום,ירוק,כחול (-1 עד 1) - אפשר גם להקליד">
+                        <button type="button" class="btn-sm btn-ghost ve-wheel-reset" title="אפס את הגלגל" aria-label="אפס את גלגל הגוונים האמצעיים">↺</button>
+                      </div>
+                      <div class="ve-wheel-box">
+                        <div class="ve-wheel" data-grade="highlights"><div class="ve-wheel-disc" tabindex="0" role="application" aria-label="גלגל ההדגשות (Gain) - גרירה בוחרת גוון, המרחק מהמרכז הוא העוצמה. חיצים מזיזים, Delete מאפס" title="גרירה: גוון ועוצמה · Shift: עדין · לחיצה כפולה: איפוס"><span class="ve-wheel-puck"></span></div></div>
+                        <div class="ve-wheel-name">הדגשות <small>Gain</small></div>
+                        <input type="range" class="ve-wheel-luma" min="-0.3" max="0.3" step="0.01" value="0" aria-label="בהירות ההדגשות" title="מבהיר/מכהה רק את האזורים הבהירים">
+                        <input type="text" id="veGradeHighlights" class="ve-wheel-value" placeholder="0,0,0" spellcheck="false" aria-label="היסט R,G,B של ההדגשות" title="היסט אדום,ירוק,כחול (-1 עד 1) - אפשר גם להקליד">
+                        <button type="button" class="btn-sm btn-ghost ve-wheel-reset" title="אפס את הגלגל" aria-label="אפס את גלגל ההדגשות">↺</button>
+                      </div>
+                    </div>
+                    <div class="ve-row">
+                      <label title="עקומת טון מוכנה - נקודות שמסמנים בעורך למטה גוברות עליה באותו ערוץ.">עקומה מוכנה:</label>
+                      <select id="veCurvesPreset">
+                        <option value="none">בלי</option>
+                        <option value="lighter">הבהרה</option>
+                        <option value="darker">הכהיה</option>
+                        <option value="increase_contrast">ניגודיות מוגברת</option>
+                        <option value="linear_contrast">ניגודיות לינארית</option>
+                        <option value="medium_contrast">ניגודיות בינונית</option>
+                        <option value="strong_contrast">ניגודיות חזקה</option>
+                        <option value="vintage">וינטג'</option>
+                        <option value="cross_process">Cross process</option>
+                        <option value="color_negative">נגטיב צבעוני</option>
+                      </select>
+                    </div>
+                    <div class="ve-curves">
+                      <div class="ve-curve-channels" id="veCurvesChannels" role="group" aria-label="ערוץ העקומה">
+                        <button type="button" data-channel="master" onclick="setVeCurveChannel('master')" aria-pressed="true">ראשי</button>
+                        <button type="button" data-channel="red" onclick="setVeCurveChannel('red')" aria-pressed="false" aria-label="ערוץ אדום">R</button>
+                        <button type="button" data-channel="green" onclick="setVeCurveChannel('green')" aria-pressed="false" aria-label="ערוץ ירוק">G</button>
+                        <button type="button" data-channel="blue" onclick="setVeCurveChannel('blue')" aria-pressed="false" aria-label="ערוץ כחול">B</button>
+                        <button type="button" class="btn-ghost" onclick="resetVeCurveChannel()" title="אפס את העקומה של הערוץ" aria-label="אפס את העקומה של הערוץ">↺</button>
+                      </div>
+                      <canvas id="veCurvesCanvas" class="ve-curves-canvas" width="220" height="220" role="img" aria-label="עורך העקומות: לחיצה מוסיפה נקודה, גרירה מזיזה, לחיצה כפולה מוחקת"></canvas>
+                      <div class="ve-curve-field"><input type="text" id="veCurvesMaster" class="u-grow" placeholder="0/0 0.5/0.5 1/1" spellcheck="false" aria-label="נקודות העקומה הראשית" title="נקודות x/y בין 0 ל-1, מופרדות ברווח"></div>
+                      <div class="ve-curve-field" hidden><input type="text" id="veCurvesRed" class="u-grow" placeholder="0/0 0.5/0.5 1/1" spellcheck="false" aria-label="נקודות עקומת האדום" title="נקודות x/y בין 0 ל-1, מופרדות ברווח"></div>
+                      <div class="ve-curve-field" hidden><input type="text" id="veCurvesGreen" class="u-grow" placeholder="0/0 0.5/0.5 1/1" spellcheck="false" aria-label="נקודות עקומת הירוק" title="נקודות x/y בין 0 ל-1, מופרדות ברווח"></div>
+                      <div class="ve-curve-field" hidden><input type="text" id="veCurvesBlue" class="u-grow" placeholder="0/0 0.5/0.5 1/1" spellcheck="false" aria-label="נקודות עקומת הכחול" title="נקודות x/y בין 0 ל-1, מופרדות ברווח"></div>
+                    </div>
+                  </div>
+                </div>
+              </details>
+              <details class="ve-category" open data-cat="effects">
+                <summary><span class="ve-cat-title">✨ אפקטים וניקוי</span><span class="ve-cat-summary" id="veCatSummary-effects"></span><span class="ve-cat-warn" id="veCatWarn-effects" hidden>⚠️</span><button type="button" class="ve-cat-reset" data-cat-reset="effects" title="אפס את כל ההגדרות באזור הזה" aria-label="אפס אזור">↺</button></summary>
+                <div class="ve-category-body">
+                  <div class="ve-subcat" data-subcat="cleanup" data-primary>
+                    <div class="ve-subcat-title">🧹 ניקוי תמונה</div>
+                    <div class="ve-row ve-composite-row" data-composite="cleanup">
+                      <label title="הפחתת רעש (לצילום בתאורה חלשה) וחידוד (מדגיש קצוות) - לכל אחד עוצמה.">רעש / חידוד:</label>
+                      <select id="veDenoiseMode" aria-label="הפחתת רעש">
+                        <option value="off">בלי הפחתת רעש</option>
+                        <option value="light">רעש: קלה</option>
+                        <option value="medium">רעש: בינונית</option>
+                        <option value="strong">רעש: חזקה</option>
+                      </select>
+                      <select id="veSharpenMode" aria-label="חידוד">
+                        <option value="off">בלי חידוד</option>
+                        <option value="light">חידוד: קל</option>
+                        <option value="medium">חידוד: בינוני</option>
+                        <option value="strong">חידוד: חזק</option>
+                      </select>
+                    </div>
+                    <div class="ve-row" data-adv>
+                      <label title="מייצב רעידות מצלמה (שני מעברים) - איטי משמעותית."><input type="checkbox" id="veStabilize"> ייצוב</label>
+                      <label title="מסיר &quot;פסים&quot; של וידאו משודר/ישן (interlaced)."><input type="checkbox" id="veDeinterlace"> Deinterlace</label>
+                    </div>
+                  </div>
+                  <div class="ve-subcat" data-subcat="effects" data-adv>
+                    <div class="ve-subcat-title">✨ אפקטים</div>
+                    <div class="ve-row">
+                      <label title="החשכה עדינה של שולי הפריים שממקדת את העין במרכז.">🌘 וינייטה:</label>
+                      <select id="veVignette"><option value="none">בלי</option><option value="light">קלה</option><option value="medium">בינונית</option><option value="strong">חזקה</option></select>
+                    </div>
+                    <div class="ve-row">
+                      <label title="זום-אין איטי ורציף לאורך הסרטון (0-50%).">🔍 Ken Burns:</label>
+                      <input type="range" id="veKenBurns" value="0" min="0" max="0.5" step="0.01" class="u-width-110px" data-ve-value-format="percent">
+                      <span class="ve-range-value" data-for="veKenBurns">0%</span>
+                    </div>
+                  </div>
+                  <div class="ve-subcat" data-subcat="chromakey" data-adv>
+                    <div class="ve-subcat-title">🟩 כרומה קי</div>
+                    <div class="ve-row"><label title="מחליף רקע צבע אחיד (מסך ירוק) ברקע חלופי אחיד."><input type="checkbox" id="veChromakey"> כרומה קי</label></div>
+                    <div class="ve-row">
+                      <label title="צבע הרקע להסרה, ואז צבע הרקע החלופי (0xRRGGBB).">צבעים:</label>
+                      <input type="text" id="veChromakeyColor" data-ve-color="0x" value="0x00FF00" class="u-width-90px" title="צבע הרקע שרוצים להחליף.">
+                      <input type="text" id="veChromakeyBgColor" data-ve-color="0x" value="0x000000" class="u-width-90px" title="הצבע שמחליף את הרקע.">
+                    </div>
+                    <div class="ve-row u-indent">
+                      <label title="כמה קרוב לצבע-המסך צבע צריך להיות כדי להיעלם.">↳ רגישות:</label>
+                      <input type="range" id="veChromakeySimilarity" value="0.2" min="0.01" max="1" step="0.01" class="u-width-100px">
+                      <span class="ve-range-value" data-for="veChromakeySimilarity">0.20</span>
+                    </div>
+                    <div class="ve-row u-indent">
+                      <label title="רכות המעבר בקצוות - 0 חד לגמרי.">↳ החלקת קצוות:</label>
+                      <input type="range" id="veChromakeyBlend" value="0.05" min="0" max="1" step="0.01" class="u-width-100px">
+                      <span class="ve-range-value" data-for="veChromakeyBlend">0.05</span>
+                    </div>
+                  </div>
+                </div>
+              </details>
+              <details class="ve-category" open data-cat="layers">
+                <summary><span class="ve-cat-title">🧩 שכבות</span><span class="ve-cat-summary" id="veCatSummary-layers"></span><span class="ve-cat-warn" id="veCatWarn-layers" hidden>⚠️</span><button type="button" class="ve-cat-reset" data-cat-reset="layers" title="אפס את כל ההגדרות באזור הזה" aria-label="אפס אזור">↺</button></summary>
+                <div class="ve-category-body">
+                  <div class="ve-row ve-brand-row u-wrap" id="veBrandRow">
+                    <label title="לוגו, עיצוב כתוביות, צבעים ו-intro/outro משותפים לכמה סגנונות. מקושר: עדכון המיתוג חל על כל סגנון שמשתמש בו (בריצה המיתוג גובר).">🏷️ מיתוג:</label>
+                    <select id="veBrandKit" onchange="onVeBrandKitSelected()" aria-label="מיתוג"><option value="">— בלי מיתוג —</option></select>
+                    <button type="button" onclick="saveVeBrandKitFromCurrent()" title="יוצר מיתוג מהלוגו/כתוביות/צבעים/intro-outro הנוכחיים">💾 שמור כמיתוג...</button>
+                    <button type="button" id="veBrandUpdateBtn" onclick="updateVeBrandKitFromCurrent()" hidden>🔄 עדכן את המיתוג</button>
+                    <button type="button" id="veBrandDeleteBtn" onclick="deleteVeBrandKit()" hidden data-adv aria-label="מחק מיתוג">🗑️</button>
+                    <span id="veBrandStatus" class="ve-field-msg" aria-live="polite"></span>
+                  </div>
+                  <div class="ve-row u-wrap" id="veBrandTemplatesRow" hidden>
+                    <label title="שכבות מוכנות מהמיתוג (כותרת תחתונה, פתיחה...)">📑 שכבה מוכנה:</label>
+                    <select id="veBrandTemplate" aria-label="שכבה מוכנה"></select>
+                    <button type="button" onclick="addVeLayerFromTemplate()">➕ הוסף שכבה</button>
+                    <button type="button" onclick="saveVeLastLayerAsTemplate()" data-adv>📌 שמור את השכבה האחרונה כשכבה מוכנה...</button>
+                  </div>
+                  <div id="veLayersList" class="ve-layers-list" role="list" aria-label="רשימת השכבות (העליונה למעלה)"></div>
+                  <!-- גל 36: יישור השכבה שנבחרה ופיזור השכבות שמוצגות עכשיו -->
+                  <div class="ve-row ve-layer-align-bar u-wrap" role="toolbar" aria-label="יישור שכבות">
+                    <span class="ve-field-msg">יישור:</span>
+                    <button type="button" onclick="alignVeLayer('left')" aria-label="יישור לשמאל" title="יישור השכבה שנבחרה לשמאל">⇤</button>
+                    <button type="button" onclick="alignVeLayer('hcenter')" aria-label="מרכז לרוחב" title="מרכז לרוחב">↔</button>
+                    <button type="button" onclick="alignVeLayer('right')" aria-label="יישור לימין" title="יישור השכבה שנבחרה לימין">⇥</button>
+                    <button type="button" onclick="alignVeLayer('top')" aria-label="יישור למעלה" title="יישור השכבה שנבחרה למעלה">⤒</button>
+                    <button type="button" onclick="alignVeLayer('vcenter')" aria-label="מרכז לגובה" title="מרכז לגובה">↕</button>
+                    <button type="button" onclick="alignVeLayer('bottom')" aria-label="יישור למטה" title="יישור השכבה שנבחרה למטה">⤓</button>
+                    <button type="button" onclick="distributeVeLayers()" title="פיזור שווה לרוחב של השכבות שמוצגות ברגע הנוכחי">⇹ פזר</button>
+                  </div>
+                  <div class="ve-row ve-layer-add-bar u-wrap" data-clip-ok>
+                    <span class="ve-field-msg">➕ הוסף:</span>
+                    <button type="button" onclick="addVeLayerCard('logo')">🏷️ לוגו</button>
+                    <button type="button" onclick="addVeLayer('text')">🔤 טקסט</button>
+                    <button type="button" onclick="addVeLayer('image')">🖼️ תמונה/מדבקה</button>
+                    <button type="button" onclick="addVeLayer('video')" title="קליפ שני (B-roll) בטווח זמן בתוך הפלט - מסך מלא, מותאם או חלון">🎞️ B-roll</button>
+                    <button type="button" onclick="addVeLayer('timer')">⏱️ טיימר</button>
+                    <button type="button" onclick="addVeLayer('timestamp')">🕒 חותמת-זמן</button>
+                    <button type="button" onclick="addVeLayerCard('pip')" data-clip-lock>📺 PiP</button>
+                    <button type="button" onclick="addVeLayerCard('progress')" data-clip-lock>▬ סרגל התקדמות</button>
+                    <button type="button" onclick="addVeLayerCard('frame')" data-clip-lock>🖼️ מסגרת</button>
+                    <button type="button" onclick="addVeLayerCard('removal')" data-clip-lock>🧽 מחיקת לוגו ישן</button>
+                  </div>
+                  <div class="ve-subcat ve-layer-card" data-subcat="watermark" data-card="logo">
+                    <div class="ve-subcat-title">🏷️ לוגו (סימן מים) <button type="button" class="ve-card-remove" onclick="removeVeLayerCard('logo')" title="הסר את הלוגו" aria-label="הסר לוגו">✕</button></div>
+                    <div class="ve-row">
+                      <label title="תמונת הלוגו (PNG עם שקיפות מומלץ) שתוצב על כל וידאו - ריק = בלי.">קובץ:</label>
+                      <input type="text" id="veWatermarkPath" data-ve-browse="image" placeholder="C:\...\logo.png" onchange="updateWatermarkPreview()">
+                    </div>
+                    <div class="ve-row">
+                      <label title="היכן הלוגו מוצב - נדרס אם גררת אותו על התצוגה המקדימה.">מיקום:</label>
+                      <select id="veWatermarkPosition" onchange="onWatermarkPositionSelected()">
+                        <option value="bottom-right">⬇️➡️ ימין-תחתון</option>
+                        <option value="bottom-center">⬇️ מרכז-תחתון</option>
+                        <option value="bottom-left">⬇️⬅️ שמאל-תחתון</option>
+                        <option value="top-right">⬆️➡️ ימין-עליון</option>
+                        <option value="top-center">⬆️ מרכז-עליון</option>
+                        <option value="top-left">⬆️⬅️ שמאל-עליון</option>
+                        <option value="center">⏺️ מרכז</option>
+                      </select>
+                      <span id="veWmDragCoords" class="u-fs-xs u-semibold u-muted"></span>
+                      <button type="button" onclick="clearWatermarkCustomPosition()" class="u-fs-xs" title="חזרה למיקום מהרשימה">↩️ בטל גרירה</button>
+                    </div>
+                    <div class="ve-row">
+                      <label title="רוחב הלוגו כאחוז מרוחב הפלט.">גודל:</label>
+                      <input type="range" id="veWatermarkScale" value="15" min="5" max="50" step="1" class="u-width-100px" oninput="onWatermarkScaleInput()">
+                      <span id="veWatermarkScaleValue" class="u-fs-sm u-muted u-min-width-34px u-inline-block">15%</span>
+                      <label title="כמה הלוגו אטום - 0 שקוף, 1 אטום.">שקיפות:</label>
+                      <input type="range" id="veWatermarkOpacity" value="1.0" min="0" max="1" step="0.05" class="u-width-90px" oninput="onWatermarkOpacityInput()">
+                      <span id="veWatermarkOpacityValue" class="u-fs-sm u-muted u-min-width-34px u-inline-block">1.00</span>
+                    </div>
+                    <div class="ve-row u-indent" data-adv>
+                      <label title="מיקום אחר ללוגו בפלט אנכי (למשל מרכז-תחתון בשורטס). ריק = כמו באופקי.">↳ באנכי:</label>
+                      <select id="veWatermarkPositionVertical">
+                        <option value="">כמו באופקי</option>
+                        <option value="bottom-right">⬇️➡️ ימין-תחתון</option>
+                        <option value="bottom-center">⬇️ מרכז-תחתון</option>
+                        <option value="bottom-left">⬇️⬅️ שמאל-תחתון</option>
+                        <option value="top-right">⬆️➡️ ימין-עליון</option>
+                        <option value="top-center">⬆️ מרכז-עליון</option>
+                        <option value="top-left">⬆️⬅️ שמאל-עליון</option>
+                        <option value="center">⏺️ מרכז</option>
+                      </select>
+                      <label title="מעביר את הלוגו בין ארבע הפינות כל N שניות (0 = קבוע).">נודד כל (שנ'):</label>
+                      <input type="number" id="veWatermarkMoveSeconds" value="0" min="0" max="3600" step="1" class="u-width-64px">
+                    </div>
+                    <input type="hidden" id="veWatermarkX" value="">
+                    <input type="hidden" id="veWatermarkY" value="">
+                    <div id="wmPreviewBox" class="wm-preview" hidden><img id="wmPreviewImg"></div>
+                    <div id="wmPreviewError" class="wm-preview-error" hidden></div>
+                  </div>
+                  <div class="ve-subcat ve-layer-card" data-subcat="pip" data-card="pip">
+                    <div class="ve-subcat-title">📺 PiP (תמונה-בתוך-תמונה) <button type="button" class="ve-card-remove" onclick="removeVeLayerCard('pip')" title="הסר PiP" aria-label="הסר PiP">✕</button></div>
+                    <div class="ve-row">
+                      <label title="וידאו שני שמוצב כשכבה קטנה מעל הראשי (למשל מצלמת-פנים) - ריק = בלי.">קובץ:</label>
+                      <input type="text" id="vePipPath" data-ve-browse="video" placeholder="C:\...\facecam.mp4">
+                    </div>
+                    <div class="ve-row">
+                      <label title="היכן ה-PiP מוצב - נדרס אם גררת אותו על התצוגה המקדימה.">מיקום:</label>
+                      <select id="vePipPosition" onchange="clearVePipCustomPosition()">
+                        <option value="bottom-right">⬇️➡️ ימין-תחתון</option>
+                        <option value="bottom-center">⬇️ מרכז-תחתון</option>
+                        <option value="bottom-left">⬇️⬅️ שמאל-תחתון</option>
+                        <option value="top-right">⬆️➡️ ימין-עליון</option>
+                        <option value="top-center">⬆️ מרכז-עליון</option>
+                        <option value="top-left">⬆️⬅️ שמאל-עליון</option>
+                        <option value="center">⏺️ מרכז</option>
+                      </select>
+                      <input type="hidden" id="vePipX" value="">
+                      <input type="hidden" id="vePipY" value="">
+                      <span id="vePipDragCoords" class="ve-field-msg"></span>
+                    </div>
+                    <div class="ve-row">
+                      <label title="רוחב ה-PiP כאחוז מרוחב הפלט.">גודל:</label>
+                      <input type="range" id="vePipScale" value="30" min="10" max="60" step="1" class="u-width-100px" oninput="document.getElementById('vePipScaleValue').textContent=this.value+'%'">
+                      <span id="vePipScaleValue" class="u-fs-sm u-muted u-min-width-34px u-inline-block">30%</span>
+                      <label title="כמה ה-PiP אטום - 0 שקוף, 1 אטום.">שקיפות:</label>
+                      <input type="range" id="vePipOpacity" value="1.0" min="0" max="1" step="0.05" class="u-width-90px" oninput="document.getElementById('vePipOpacityValue').textContent=parseFloat(this.value).toFixed(2)">
+                      <span id="vePipOpacityValue" class="u-fs-sm u-muted u-min-width-34px u-inline-block">1.00</span>
+                    </div>
+                    <div class="ve-row"><span class="ve-field-msg">🎙️ השמע של ה-PiP (פרשנות) נמצא ב"🔊 שמע וכתוביות".</span></div>
+                  </div>
+                  <div class="ve-subcat" data-subcat="timed-layers">
+                    <div class="ve-subcat-title" title="שכבות טקסט/תמונה/טיימר/חותמת-זמן, לכל אחת טווח-זמן, מיקום, גודל, צבע, שקיפות והנפשה.">📚 טקסט, תמונות וטיימרים</div>
+                    <input type="hidden" id="veLayers" value="[]">
+                    <div id="veLayersRows" class="ve-layers-rows"></div>
+                  </div>
+                  <div class="ve-subcat ve-layer-card" data-subcat="decor" data-card="progress">
+                    <div class="ve-subcat-title">▬ סרגל התקדמות <button type="button" class="ve-card-remove" onclick="removeVeLayerCard('progress')" title="הסר" aria-label="הסר סרגל התקדמות">✕</button></div>
+                    <div class="ve-row"><label title="פס צבעוני שמתמלא לאורך הסרטון - מראה כמה נשאר (נפוץ בשורטס)."><input type="checkbox" id="veProgressBar"> ▬ סרגל התקדמות</label></div>
+                    <div class="ve-row u-indent">
+                      <label title="צבע, מיקום ועובי הסרגל.">↳ צבע / מיקום / עובי:</label>
+                      <input type="text" id="veProgressBarColor" data-ve-color="hex" value="#FF0000" class="u-width-90px">
+                      <select id="veProgressBarPosition" title="למעלה או למטה בפריים."><option value="bottom">למטה</option><option value="top">למעלה</option></select>
+                      <input type="number" id="veProgressBarHeight" value="8" min="2" max="80" step="1" class="u-width-60px" title="עובי בפיקסלים (ברירת מחדל 8).">
+                    </div>
+                  </div>
+                  <div class="ve-subcat ve-layer-card" data-subcat="frame" data-card="frame">
+                    <div class="ve-subcat-title">🖼️ מסגרת <button type="button" class="ve-card-remove" onclick="removeVeLayerCard('frame')" title="הסר" aria-label="הסר מסגרת">✕</button></div>
+                    <div class="ve-row">
+                      <label title="מסגרת צבעונית סביב הפריים - עובי בפיקסלים, 0 = בלי.">עובי / צבע:</label>
+                      <input type="number" id="veFrameThickness" value="0" min="0" max="200" step="1" class="u-width-60px">
+                      <input type="text" id="veFrameColor" data-ve-color="hex" value="#FFFFFF" class="u-width-90px" title="צבע המסגרת.">
+                    </div>
+                  </div>
+                  <div class="ve-subcat ve-layer-card" data-subcat="removal" data-card="removal">
+                    <div class="ve-subcat-title">🧽 מחיקת לוגו ישן <button type="button" class="ve-card-remove" onclick="removeVeLayerCard('removal')" title="הסר" aria-label="הסר מחיקת לוגו">✕</button></div>
+                    <div class="ve-row ve-composite-row" data-composite="removal">
+                      <label title="אזור שמטושטש כדי להעלים לוגו ישן שכבר קיים במקור - סמן בגרירה על פריים, או בחר פינה מהירה.">אזור:</label>
+                      <input type="text" id="veRemoveWatermarkRegion" value="" hidden>
+                      <span id="veRemoveWatermarkRegionText" class="ve-field-msg"></span>
+                      <button type="button" onclick="openVeRegionDialog()" class="u-fs-xs u-padding-3px-8px">🖱️ סמן על פריים...</button>
+                      <select id="veRemovalCorner" aria-label="פינה מהירה" title="ממלא אזור מחיקה בגודל ברירת-מחדל בפינה הזו">
+                        <option value="">פינה מהירה...</option>
+                        <option value="bottom-right">⬇️➡️ ימין-תחתון</option>
+                        <option value="bottom-left">⬇️⬅️ שמאל-תחתון</option>
+                        <option value="top-right">⬆️➡️ ימין-עליון</option>
+                        <option value="top-left">⬆️⬅️ שמאל-עליון</option>
+                        <option value="bottom-center">⬇️ מרכז-תחתון</option>
+                        <option value="top-center">⬆️ מרכז-עליון</option>
+                      </select>
+                      <button type="button" id="veRegionClearBtn" onclick="clearVeRegion()" class="u-fs-xs u-padding-3px-8px" hidden>✖ נקה</button>
+                    </div>
+                  </div>
+                </div>
+              </details>
+              <details class="ve-category" open data-cat="sound">
+                <summary><span class="ve-cat-title">🔊 שמע וכתוביות</span><span class="ve-cat-summary" id="veCatSummary-sound"></span><span class="ve-cat-warn" id="veCatWarn-sound" hidden>⚠️</span><button type="button" class="ve-cat-reset" data-cat-reset="sound" title="אפס את כל ההגדרות באזור הזה" aria-label="אפס אזור">↺</button></summary>
+                <div class="ve-category-body">
+                  <div class="ve-row ve-composite-row" data-composite="audio">
+                    <label title="בלי שמע, השמע המקורי (אפשר לבחור ערוץ בקבצים עם כמה ערוצים), או פס-קול מקובץ אחר.">שמע:</label>
+                    <select id="veAudioSource">
+                      <option value="none">🔇 בלי שמע</option>
+                      <option value="original">🔊 השמע המקורי</option>
+                      <option value="file">🎵 מקובץ אחר</option>
+                    </select>
+                    <span id="veAudioTrackWrap" hidden data-adv>
+                      <label title="איזה ערוץ-שמע לקחת (0 = הראשון) - למשל OBS: משחק + מיקרופון.">ערוץ:</label>
+                      <input type="number" id="veAudioTrack" min="0" max="32" step="1" class="u-width-60px" placeholder="ראשון">
+                    </span>
+                  </div>
+                  <div class="ve-row ve-composite-sub u-indent" id="veReplaceAudioRow" hidden>
+                    <label title="קובץ אודיו/וידאו שפס-הקול שלו מחליף את המקורי.">↳ קובץ:</label>
+                    <input type="text" id="veReplaceAudioPath" data-ve-browse="audio" placeholder="C:\...\audio.mp3" class="u-grow">
+                  </div>
+                  <div class="ve-row">
+                    <label title="מיישר את עוצמת הקול לרמה אחידה (LUFS) בכל הקבצים."><input type="checkbox" id="veLoudnorm"> נרמול עוצמה</label>
+                    <input type="number" id="veLoudnormTarget" step="0.5" class="u-width-70px" placeholder="-14" title="יעד LUFS - ריק = -14." data-adv>
+                  </div>
+                  <div class="ve-row" data-adv><label title="מנטרל רעש-רקע שקט בין מילים."><input type="checkbox" id="veNoiseGate"> שער רעש</label></div>
+                  <div class="ve-row" data-adv>
+                    <label title="מערבב את השמע של קובץ ה-PiP (פרשנות/מצלמת-פנים) מעל השמע הראשי."><input type="checkbox" id="vePipAudio"> 🎙️ שמע מה-PiP</label>
+                    <label title="השמע הראשי יורד אוטומטית בזמן דיבור ב-PiP (ducking)."><input type="checkbox" id="vePipDuck"> ↳ הנמכה בזמן דיבור</label>
+                  </div>
+                  <div class="ve-subcat" data-subcat="audio-fx" data-adv>
+                    <div class="ve-subcat-title">🎚️ עיבוד שמע</div>
+                    <div class="ve-row">
+                      <label title="מסיר זמזום, רעש רוח ורעידות מתחת לתדר הזה (0 = כבוי). 80Hz מתאים לדיבור.">חיתוך נמוכים:</label>
+                      <input type="number" id="veAudioHighpass" value="0" min="0" max="400" step="10" class="u-width-70px" aria-label="חיתוך נמוכים (Hz)">
+                      <span class="ve-unit">Hz</span>
+                    </div>
+                    <div class="ve-row">
+                      <label title="הגברה/הנמכה של הבס (סביב 120Hz), בדציבלים.">EQ נמוכים:</label>
+                      <input type="range" id="veAudioEqLow" value="0" min="-12" max="12" step="0.5" class="u-width-110px" data-ve-value-format="db">
+                      <span class="ve-range-value" data-for="veAudioEqLow">0.0 dB</span>
+                    </div>
+                    <div class="ve-row">
+                      <label title="הגברה/הנמכה של תחום הביניים - למשל להבהרת קול (2-4kHz) או להפחתת &quot;בוץ&quot; (250-500Hz).">EQ אמצע:</label>
+                      <input type="range" id="veAudioEqMid" value="0" min="-12" max="12" step="0.5" class="u-width-110px" data-ve-value-format="db">
+                      <span class="ve-range-value" data-for="veAudioEqMid">0.0 dB</span>
+                      <input type="number" id="veAudioEqMidFreq" value="1000" min="200" max="5000" step="50" class="u-width-70px" aria-label="תדר ה-EQ האמצעי (Hz)" title="התדר שה-EQ האמצעי פועל סביבו">
+                      <span class="ve-unit">Hz</span>
+                    </div>
+                    <div class="ve-row">
+                      <label title="הגברה/הנמכה של הגבוהים (סביב 8kHz) - בהירות ו&quot;אוויר&quot;.">EQ גבוהים:</label>
+                      <input type="range" id="veAudioEqHigh" value="0" min="-12" max="12" step="0.5" class="u-width-110px" data-ve-value-format="db">
+                      <span class="ve-range-value" data-for="veAudioEqHigh">0.0 dB</span>
+                    </div>
+                    <div class="ve-row">
+                      <label title="מצמצם את ההפרש בין חלקים שקטים לרועשים - קול אחיד יותר. דיבור: מתאים לפרשנות ולמיקרופון.">קומפרסור:</label>
+                      <select id="veAudioCompressor">
+                        <option value="off">בלי</option>
+                        <option value="gentle">עדין</option>
+                        <option value="voice">דיבור</option>
+                        <option value="strong">חזק</option>
+                      </select>
+                    </div>
+                    <div class="ve-row">
+                      <label title="מפחית רעש רקע קבוע (מאוורר, זמזום). עם מודל RNNoise - רשת נוירונים שמותאמת לדיבור.">הפחתת רעש:</label>
+                      <select id="veAudioDenoise">
+                        <option value="off">בלי</option>
+                        <option value="light">קלה</option>
+                        <option value="medium">בינונית</option>
+                        <option value="strong">חזקה</option>
+                      </select>
+                    </div>
+                    <div class="ve-row u-indent">
+                      <label title="קובץ מודל RNNoise (.rnnn) - ריק = ההפחתה המובנית של ffmpeg (afftdn).">↳ מודל RNNoise:</label>
+                      <input type="text" id="veAudioDenoiseModel" placeholder="C:\...\model.rnnn" class="u-grow" spellcheck="false">
+                    </div>
+                  </div>
+                  <div class="ve-subcat" data-subcat="captions">
+                    <div class="ve-subcat-title">💬 כתוביות</div>
+                    <div class="ve-row">
+                      <label title="מתמלל את הדיבור (Whisper) ושורף כתוביות לפלט - דורש שמע."><input type="checkbox" id="veCaptions"> כתוביות אוטומטיות</label>
+                      <button type="button" onclick="openVeTranscriptDialog()" title="תמלול לעריכה ידנית לפני השריפה">📝 עורך תמלול</button>
+                    </div>
+                    <div class="ve-row">
+                      <label title="classic, bold (טיקטוק), outline, box (רקע כהה), karaoke (מילה-מילה).">עיצוב / שפה:</label>
+                      <select id="veCaptionStyle">
+                        <option value="classic">קלאסי</option>
+                        <option value="bold">מודגש (טיקטוק)</option>
+                        <option value="outline">קו-מתאר</option>
+                        <option value="box">תיבה עם רקע</option>
+                        <option value="karaoke">קריוקי (מילה-מילה)</option>
+                      </select>
+                      <select id="veCaptionsLanguage" title="שפת הדיבור - ריק = זיהוי אוטומטי.">
+                        <option value="">זיהוי אוטומטי</option>
+                        <option value="he">עברית</option>
+                        <option value="en">English</option>
+                        <option value="ar">العربية</option>
+                        <option value="ru">Русский</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                      </select>
+                    </div>
+                    <div class="ve-row" data-adv>
+                      <label title="גודל מודל Whisper: tiny/base מהירים, small מאוזן, medium/large-v3 מדויקים ואיטיים.">מודל / תרגום:</label>
+                      <select id="veCaptionsModel">
+                        <option value="tiny">tiny - מהיר מאוד</option>
+                        <option value="base">base</option>
+                        <option value="small" selected>small - מאוזן</option>
+                        <option value="medium">medium - מדויק</option>
+                        <option value="large-v3">large-v3 - הכי מדויק</option>
+                      </select>
+                      <label title="מתרגם את הכתוביות לאנגלית."><input type="checkbox" id="veCaptionsTranslate"> לאנגלית</label>
+                    </div>
+                    <div class="ve-row" data-adv>
+                      <label title="גופן, גודל, צבע ומיקום הכתוביות.">עיצוב:</label>
+                      <input type="text" id="veCaptionFont" data-ve-font value="Arial" class="u-width-110px" list="veSystemFontsList">
+                      <input type="number" id="veCaptionFontSize" value="16" min="1" class="u-width-60px">
+                      <input type="text" id="veCaptionColor" data-ve-color="hex" value="#FFFFFF" class="u-width-90px">
+                      <select id="veCaptionPosition">
+                        <option value="bottom">תחתון</option>
+                        <option value="top">עליון</option>
+                        <option value="center">מרכז</option>
+                      </select>
+                    </div>
+                    <div class="ve-row" data-adv>
+                      <label title="שומר את הכתוביות גם כקובץ SRT/VTT לצד הסרטון.">קובץ כתוביות:</label>
+                      <select id="veCaptionsExport">
+                        <option value="">בלי</option>
+                        <option value="srt">SRT</option>
+                        <option value="vtt">VTT</option>
+                        <option value="both">SRT + VTT</option>
+                      </select>
+                      <label title="רק לייצא קובץ, בלי לשרוף לווידאו."><input type="checkbox" id="veCaptionsNoBurn"> בלי שריפה</label>
+                    </div>
+                  </div>
+                </div>
+              </details>
+              <details class="ve-category" open data-cat="output">
+                <summary><span class="ve-cat-title">📐 פלט וצורה</span><span class="ve-cat-summary" id="veCatSummary-output"></span><span class="ve-cat-warn" id="veCatWarn-output" hidden>⚠️</span><button type="button" class="ve-cat-reset" data-cat-reset="output" title="אפס את כל ההגדרות באזור הזה" aria-label="אפס אזור">↺</button></summary>
+                <div class="ve-category-body">
+                  <div class="ve-row ve-targets-row" id="veTargetsRow">
+                    <label title="לאן הסרטונים הולכים - כל יעד קובע פורמט, איכות ואזור-בטיחות ומקבל תיקיית פלט משלו. כמה יעדים = ריצה לכל אחד, ברצף בתור.">🎯 יעדים:</label>
+                    <div class="ve-chips" id="veTargetChips" role="group" aria-label="יעדים"></div>
+                    <input type="hidden" id="veTargets" value="[]">
+                    <span id="veTargetsNote" class="ve-field-msg" hidden></span>
+                  </div>
+                  <div class="ve-row ve-composite-row" data-composite="format">
+                    <label title="צורת המסגרת של הפלט: 16:9 (יוטיוב), 9:16 (שורטס/טיקטוק), 1:1, 4:5 (פיד אינסטגרם), 4:3, מידות מותאמות, או שניהם יחד (אופקי + אנכי באותה ריצה).">פורמט:</label>
+                    <div class="ve-chips" id="veFormatChips" role="radiogroup" aria-label="פורמט">
+                      <button type="button" role="radio" data-format="16:9">🖥️ 16:9</button>
+                      <button type="button" role="radio" data-format="9:16">📱 9:16</button>
+                      <button type="button" role="radio" data-format="1:1">⬛ 1:1</button>
+                      <button type="button" role="radio" data-format="4:5">🖼️ 4:5</button>
+                      <button type="button" role="radio" data-format="4:3" data-adv>📺 4:3</button>
+                      <button type="button" role="radio" data-format="custom" data-adv>📐 מותאם</button>
+                    </div>
+                  </div>
+                  <div class="ve-row ve-composite-sub u-indent" id="veDualLegacyRow" hidden>
+                    <span class="ve-field-msg">🔀 פלט כפול (אופקי + אנכי) מסגנון ישן - היום עושים את זה עם שני יעדים.</span>
+                    <button type="button" onclick="convertVeDualToTargets()" title="מחליף את הפלט הכפול ביעדים YouTube + YouTube Shorts - אותה תוצאה, וכל יעד לתיקייה משלו">🎯 המר ליעדים</button>
+                  </div>
+                  <div class="ve-row ve-composite-sub u-indent" id="veCustomSizeRow" hidden>
+                    <label title="רוחב × גובה הפלט בפיקסלים (מעוגל לזוגי).">↳ רוחב × גובה:</label>
+                    <input type="number" id="veCustomWidth" min="16" max="8192" step="2" class="u-width-80px" placeholder="1080">
+                    <input type="number" id="veCustomHeight" min="16" max="8192" step="2" class="u-width-80px" placeholder="1350">
+                  </div>
+                  <div class="ve-row ve-composite-row" data-composite="fill">
+                    <label title="איך התמונה ממלאת את המסגרת: חיתוך במרכז, חיתוך חכם שעוקב אחרי הפעולה או הפנים, שוליים בצבע (כל הפריים נכנס), או רקע מטושטש מהסרטון עצמו.">מילוי המסגרת:</label>
+                    <select id="veFillMode">
+                      <option value="auto">אוטומטי (חיתוך לאנכי/ריבוע, שוליים לרחב)</option>
+                      <option value="center">✂️ חיתוך במרכז</option>
+                      <option value="smart">🎯 חיתוך חכם (לפי תנועה)</option>
+                      <option value="face">🙂 חיתוך לפי פנים</option>
+                      <option value="pad">▭ שוליים (כל הפריים)</option>
+                      <option value="blur">🌫️ רקע מטושטש (כל הפריים)</option>
+                    </select>
+                  </div>
+                  <div class="ve-row ve-composite-sub u-indent" id="vePadColorRow" hidden>
+                    <label title="צבע השוליים סביב הפריים (letterbox).">↳ צבע שוליים:</label>
+                    <input type="text" id="vePadColor" data-ve-color="hex" value="#000000" class="u-width-90px">
+                  </div>
+                  <div class="ve-row">
+                    <label title="סיבוב הפלט ב-90/180/270 מעלות, והיפוך (מראה) אופקי/אנכי.">סיבוב / מראה:</label>
+                    <select id="veRotate">
+                      <option value="0">בלי סיבוב</option>
+                      <option value="90">↻ 90°</option>
+                      <option value="180">↻ 180°</option>
+                      <option value="270">↺ 90° (270°)</option>
+                    </select>
+                    <select id="veFlip" title="היפוך אופקי (ימין↔שמאל), אנכי (למעלה↔למטה), או שניהם.">
+                      <option value="none">בלי מראה</option>
+                      <option value="h">↔ אופקי</option>
+                      <option value="v">↕ אנכי</option>
+                      <option value="both">↔↕ שניהם</option>
+                    </select>
+                  </div>
+                  <div class="ve-row ve-composite-row" data-composite="resolution" data-adv>
+                    <label title="הצלע הקצרה של הפלט (720p/1080p/1440p/4K), או כמו המקור (קלט 4K נשאר 4K). אוטומטי = 1080.">רזולוציה:</label>
+                    <select id="veResolutionMode">
+                      <option value="auto">אוטומטי (1080p)</option>
+                      <option value="source">כמו המקור</option>
+                      <option value="720p">720p</option>
+                      <option value="1080p">1080p</option>
+                      <option value="1440p">1440p</option>
+                      <option value="2160p">4K (2160p)</option>
+                    </select>
+                    <select id="veScaleAlgo" title="איך מחושבים הפיקסלים בשינוי גודל: bicubic (ברירת מחדל), lanczos (חד יותר), bilinear (רך), neighbor (פיקסל-ארט).">
+                      <option value="bicubic">bicubic (ברירת מחדל)</option>
+                      <option value="lanczos">lanczos (חד)</option>
+                      <option value="bilinear">bilinear (רך)</option>
+                      <option value="spline">spline</option>
+                      <option value="area">area (להקטנה)</option>
+                      <option value="neighbor">neighbor (פיקסל-ארט)</option>
+                    </select>
+                  </div>
+                </div>
+              </details>
+              <details class="ve-category" open data-cat="export">
+                <summary><span class="ve-cat-title">📦 ייצוא</span><span class="ve-cat-summary" id="veCatSummary-export"></span><span class="ve-cat-warn" id="veCatWarn-export" hidden>⚠️</span><button type="button" class="ve-cat-reset" data-cat-reset="export" title="אפס את כל ההגדרות באזור הזה" aria-label="אפס אזור">↺</button></summary>
+                <div class="ve-category-body">
+                  <!-- גל 36: תבניות יצוא שמורות - קודק, מיכל, איכות, שמות וקבצים נוספים -->
+                  <div class="ve-row u-wrap ve-export-templates">
+                    <label for="veExportTemplate" title="תבנית יצוא שמורה מחילה את הגדרות הקובץ, השמות והקבצים הנוספים">📦 תבנית:</label>
+                    <select id="veExportTemplate" onchange="applyVeExportTemplate(this.value)"></select>
+                    <button type="button" onclick="saveVeExportTemplate()" title="שומר את הגדרות היצוא הנוכחיות כתבנית">💾 שמור כתבנית</button>
+                    <button type="button" id="veExportTemplateDelete" onclick="deleteVeExportTemplate()" hidden aria-label="מחק את התבנית">🗑️</button>
+                  </div>
+                  <div class="ve-subcat" data-subcat="file" data-primary>
+                  <div class="ve-subcat-title">📄 קובץ</div>
+                  <div class="ve-row">
+                    <label title="H.264 - מעבד, תואם בכל מקום; HEVC/AV1 - כרטיס NVIDIA (NVENC), קבצים קטנים יותר.">קודק:</label>
+                    <select id="veCodec" onchange="updateVeEtaDisplay(); updateVeCodecDependentRows()">
+                      <option value="h264">H.264 (תאימות מקסימלית)</option>
+                      <option value="hevc">H.265 / HEVC (GPU)</option>
+                      <option value="av1">AV1 (GPU, הדור הבא)</option>
+                    </select>
+                  </div>
+                  <div class="ve-row ve-composite-row" data-composite="quality">
+                    <label title="איכות מול גודל קובץ - או יעד גודל מדויק (למשל 25MB לדיסקורד, two-pass).">איכות:</label>
+                    <select id="veQualityMode">
+                      <option value="default">גבוהה (ברירת מחדל)</option>
+                      <option value="best">מקסימלית (קבצים גדולים)</option>
+                      <option value="balanced">מאוזנת</option>
+                      <option value="small">חסכונית (קבצים קטנים)</option>
+                      <option value="size">🎯 יעד גודל קובץ...</option>
+                      <option value="manual" data-adv>ידני (CRF/CQ)</option>
+                    </select>
+                    <span id="veTargetSizeWrap" hidden>
+                      <input type="number" id="veTargetSizeMb" min="0" step="1" class="u-width-70px" placeholder="25" aria-label="יעד גודל (MB)"> MB
+                    </span>
+                    <span id="veQualityManualWrap" hidden>
+                      <span class="ve-h264-only"><input type="number" id="veCrf" min="0" max="51" step="1" class="u-width-60px" placeholder="20" aria-label="CRF (H.264)" title="CRF ל-H.264 - נמוך = איכותי יותר (ברירת מחדל 20)."></span>
+                      <span class="ve-nvenc-only"><input type="number" id="veNvencCq" min="0" max="51" step="1" class="u-width-60px" placeholder="אוטו'" aria-label="CQ (NVENC)" title="CQ ל-HEVC/AV1 - נמוך = איכותי יותר (ברירת מחדל 19/24)."></span>
+                    </span>
+                  </div>
+                  <div class="ve-row" data-adv>
+                    <label title="mp4 - הנפוץ ביותר; mkv - גמיש ועמיד יותר.">מיכל / FPS:</label>
+                    <select id="veContainer">
+                      <option value="mp4">MP4</option>
+                      <option value="mkv">MKV</option>
+                    </select>
+                    <input type="text" id="veFps" placeholder="FPS: כמו המקור" class="u-width-120px" title="קצב פריימים - ריק = כמו המקור (כולל 29.97), או למשל 30 / 30000/1001.">
+                    <label title="פריימי-ביניים אמיתיים כשמעלים קצב (30→60) - איטי."><input type="checkbox" id="veSmoothFps"> חלק</label>
+                  </div>
+                  </div>
+                  <div class="ve-subcat" data-subcat="naming" data-adv>
+                    <div class="ve-subcat-title">🏷️ שם ומספור</div>
+                    <div class="ve-row">
+                      <label title="תבנית לשם הקובץ: {name}, {date}, {codec}, {orientation}, {number} - ריק = ברירת מחדל.">תבנית:</label>
+                      <input type="text" id="veOutputTemplate" placeholder="{date}_{name}_{codec}" class="u-grow">
+                    </div>
+                    <div class="ve-row"><label title="שם הפלט בדיוק כמו המקור, בלי _edited_..."><input type="checkbox" id="veNoSuffix"> בלי סיומת</label></div>
+                    <div class="ve-row">
+                      <label title="מספר רץ בשם כל קובץ - ממשיך מהמספר האחרון שנוצל."><input type="checkbox" id="veNumberVideos"> מספור:</label>
+                      <input type="text" id="veNumberPrefix" value="Clip" class="u-width-90px" title="קידומת לפני המספר.">
+                      <input type="number" id="veNumberStart" min="1" step="1" class="u-width-70px" placeholder="1" title="מספר התחלתי - שינוי מאפס את המונה.">
+                    </div>
+                  </div>
+                  <div class="ve-subcat" data-subcat="extra-outputs">
+                    <div class="ve-subcat-title">➕ קבצים נוספים</div>
+                    <div class="ve-row"><label title="תמונה ממוזערת מהפריים הכי דרמטי, לצד כל וידאו."><input type="checkbox" id="veThumbnail"> 🖼️ תמונה ממוזערת</label></div>
+                    <div class="ve-row" data-adv>
+                      <label title="GIF ו/או WebP מונפש של הפלט.">GIF/WebP:</label>
+                      <select id="veExportGif"><option value="">בלי</option><option value="gif">GIF</option><option value="webp">WebP</option><option value="both">GIF + WebP</option></select>
+                      <span id="veGifOptionsWrap">
+                        <input type="number" id="veGifWidth" value="480" min="64" max="1920" step="16" class="u-width-66px" title="רוחב בפיקסלים.">
+                        <input type="number" id="veGifFps" value="12" min="1" max="30" step="1" class="u-width-52px" title="פריימים לשנייה.">
+                      </span>
+                    </div>
+                    <div class="ve-row" data-adv>
+                      <label title="פס-הקול של הפלט כקובץ נפרד.">🎵 שמע בלבד:</label>
+                      <select id="veExportAudio"><option value="">בלי</option><option value="mp3">MP3</option><option value="m4a">M4A</option><option value="wav">WAV</option></select>
+                    </div>
+                  </div>
+                  <div class="ve-subcat" data-subcat="metadata" data-adv>
+                    <div class="ve-subcat-title">📝 תגיות ופרקים</div>
+                    <div class="ve-row">
+                      <label title="כותרת והערה שנשמרות בתוך קובץ הווידאו.">כותרת / הערה:</label>
+                      <input type="text" id="veMetaTitle" class="u-grow" maxlength="500" placeholder="כותרת">
+                      <input type="text" id="veMetaComment" class="u-grow" maxlength="500" placeholder="הערה">
+                    </div>
+                    <div class="ve-row u-items-start">
+                      <label title="שורה לכל פרק: &quot;0:00 פתיחה&quot;, &quot;1:30 קרב בוס&quot;.">📑 פרקים:</label>
+                      <textarea id="veChapters" rows="3" class="u-grow u-fs-sm" placeholder="0:00 פתיחה&#10;1:30 קרב בוס"></textarea>
+                    </div>
+                  </div>
+                </div>
+              </details>
+              <details class="ve-category" data-cat="perf" data-adv>
+                <summary><span class="ve-cat-title">⚙️ ביצועים</span><span class="ve-cat-summary" id="veCatSummary-perf"></span><span class="ve-cat-warn" id="veCatWarn-perf" hidden>⚠️</span><button type="button" class="ve-cat-reset" data-cat-reset="perf" title="אפס את כל ההגדרות באזור הזה" aria-label="אפס אזור">↺</button></summary>
+                <div class="ve-category-body">
+                  <div class="ve-row ve-composite-row" data-composite="gpu">
+                    <label title="כמה מהעבודה עוברת לכרטיס NVIDIA: כבוי (הכל במעבד), פענוח בלבד (NVDEC - מתאים לכל קודק), או מלא (פענוח+עיבוד+קידוד, HEVC/AV1). פילטרים שאין להם גרסת GPU רצים על פריימים שכבר הוקטנו ב-GPU.">GPU:</label>
+                    <select id="veGpuMode">
+                      <option value="off">כבוי (מעבד)</option>
+                      <option value="decode">⚡ פענוח בלבד (NVDEC)</option>
+                      <option value="full">🚀 מלא (HEVC/AV1)</option>
+                    </select>
+                  </div>
+                  <div class="ve-row">
+                    <label title="כמה קבצים לרנדר בו-זמנית, וכמה משאבים להקצות לכל אחד.">מקביליות / מאמץ:</label>
+                    <input type="number" id="veParallel" value="1" min="1" step="1" class="u-width-64px">
+                    <select id="veEffort">
+                      <option value="high">גבוה (ברירת מחדל)</option>
+                      <option value="medium">בינוני</option>
+                      <option value="low">נמוך</option>
+                      <option value="auto">אוטומטי (לפי עומס)</option>
+                    </select>
+                  </div>
+                  <div class="ve-row ve-nvenc-only">
+                    <label title="p1 = הכי מהיר, p7 = איכות מרבית והכי איטי (ברירת מחדל p5).">פריסט NVENC:</label>
+                    <select id="veNvencPreset">
+                      <option value="">ברירת מחדל (p5)</option>
+                      <option value="p1">p1 - הכי מהיר</option>
+                      <option value="p2">p2</option>
+                      <option value="p3">p3</option>
+                      <option value="p4">p4</option>
+                      <option value="p5">p5</option>
+                      <option value="p6">p6</option>
+                      <option value="p7">p7 - איכות מרבית</option>
+                    </select>
+                    <label title="כמה קידודי NVENC מותר בו-זמנית - ריק = בדיקה אוטומטית של הכרטיס.">מגבלה:</label>
+                    <input type="number" id="veMaxConcurrentNvenc" min="1" step="1" class="u-width-64px" placeholder="אוטו'">
+                  </div>
+                  <div class="ve-row">
+                    <label title="התראה על כל קובץ בנפרד, לא רק בסוף."><input type="checkbox" id="veNotifyPerFile"> התראה לכל קובץ</label>
+                    <label title="דוח מפורט של הריצה.">דוח:</label>
+                    <select id="veExportReport">
+                      <option value="">בלי</option>
+                      <option value="csv">CSV</option>
+                      <option value="xlsx">Excel</option>
+                      <option value="both">שניהם</option>
+                    </select>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>

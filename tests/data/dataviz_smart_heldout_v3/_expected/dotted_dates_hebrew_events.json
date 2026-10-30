@@ -1,0 +1,18 @@
+{
+  "files": {
+    "מבקרים_במוזיאונים.csv": "series",
+    "אירועים.csv": "events"
+  },
+  "series_files": [
+    "מבקרים_במוזיאונים.csv"
+  ],
+  "first_file": "מבקרים_במוזיאונים.csv",
+  "time": "תאריך",
+  "period": "day",
+  "entity": "עיר",
+  "value": "מבקרים",
+  "unit": "מבקרים",
+  "kind": "amount",
+  "chart": "bar_race",
+  "notes": "Dates '15.03.23' (dd.mm.yy, daily). The events file has Hebrew headers (תאריך, אירוע)."
+}

@@ -1,0 +1,752 @@
+[
+ {
+  "month": "2021-01",
+  "app": "Waze",
+  "downloads": 228085
+ },
+ {
+  "month": "2021-01",
+  "app": "Moovit",
+  "downloads": 155265
+ },
+ {
+  "month": "2021-01",
+  "app": "Gett",
+  "downloads": 62174
+ },
+ {
+  "month": "2021-01",
+  "app": "Wolt",
+  "downloads": 172308
+ },
+ {
+  "month": "2021-01",
+  "app": "Pango",
+  "downloads": 51512
+ },
+ {
+  "month": "2021-02",
+  "app": "Waze",
+  "downloads": 193148
+ },
+ {
+  "month": "2021-02",
+  "app": "Moovit",
+  "downloads": 155303
+ },
+ {
+  "month": "2021-02",
+  "app": "Gett",
+  "downloads": 67151
+ },
+ {
+  "month": "2021-02",
+  "app": "Wolt",
+  "downloads": 158722
+ },
+ {
+  "month": "2021-02",
+  "app": "Pango",
+  "downloads": 68708
+ },
+ {
+  "month": "2021-03",
+  "app": "Waze",
+  "downloads": 187627
+ },
+ {
+  "month": "2021-03",
+  "app": "Moovit",
+  "downloads": 182886
+ },
+ {
+  "month": "2021-03",
+  "app": "Gett",
+  "downloads": 69267
+ },
+ {
+  "month": "2021-03",
+  "app": "Wolt",
+  "downloads": 175205
+ },
+ {
+  "month": "2021-03",
+  "app": "Pango",
+  "downloads": 52078
+ },
+ {
+  "month": "2021-04",
+  "app": "Waze",
+  "downloads": 244442
+ },
+ {
+  "month": "2021-04",
+  "app": "Moovit",
+  "downloads": 132579
+ },
+ {
+  "month": "2021-04",
+  "app": "Gett",
+  "downloads": 81888
+ },
+ {
+  "month": "2021-04",
+  "app": "Wolt",
+  "downloads": 159739
+ },
+ {
+  "month": "2021-04",
+  "app": "Pango",
+  "downloads": 54869
+ },
+ {
+  "month": "2021-05",
+  "app": "Waze",
+  "downloads": 192841
+ },
+ {
+  "month": "2021-05",
+  "app": "Moovit",
+  "downloads": 143516
+ },
+ {
+  "month": "2021-05",
+  "app": "Gett",
+  "downloads": 86590
+ },
+ {
+  "month": "2021-05",
+  "app": "Wolt",
+  "downloads": 197178
+ },
+ {
+  "month": "2021-05",
+  "app": "Pango",
+  "downloads": 66517
+ },
+ {
+  "month": "2021-06",
+  "app": "Waze",
+  "downloads": 222914
+ },
+ {
+  "month": "2021-06",
+  "app": "Moovit",
+  "downloads": 135762
+ },
+ {
+  "month": "2021-06",
+  "app": "Gett",
+  "downloads": 64205
+ },
+ {
+  "month": "2021-06",
+  "app": "Wolt",
+  "downloads": 216906
+ },
+ {
+  "month": "2021-06",
+  "app": "Pango",
+  "downloads": 73576
+ },
+ {
+  "month": "2021-07",
+  "app": "Waze",
+  "downloads": 233609
+ },
+ {
+  "month": "2021-07",
+  "app": "Moovit",
+  "downloads": 195275
+ },
+ {
+  "month": "2021-07",
+  "app": "Gett",
+  "downloads": 86898
+ },
+ {
+  "month": "2021-07",
+  "app": "Wolt",
+  "downloads": 190602
+ },
+ {
+  "month": "2021-07",
+  "app": "Pango",
+  "downloads": 66288
+ },
+ {
+  "month": "2021-08",
+  "app": "Waze",
+  "downloads": 208532
+ },
+ {
+  "month": "2021-08",
+  "app": "Moovit",
+  "downloads": 198574
+ },
+ {
+  "month": "2021-08",
+  "app": "Gett",
+  "downloads": 87273
+ },
+ {
+  "month": "2021-08",
+  "app": "Wolt",
+  "downloads": 230571
+ },
+ {
+  "month": "2021-08",
+  "app": "Pango",
+  "downloads": 67924
+ },
+ {
+  "month": "2021-09",
+  "app": "Waze",
+  "downloads": 231024
+ },
+ {
+  "month": "2021-09",
+  "app": "Moovit",
+  "downloads": 160329
+ },
+ {
+  "month": "2021-09",
+  "app": "Gett",
+  "downloads": 84198
+ },
+ {
+  "month": "2021-09",
+  "app": "Wolt",
+  "downloads": 213633
+ },
+ {
+  "month": "2021-09",
+  "app": "Pango",
+  "downloads": 75890
+ },
+ {
+  "month": "2021-10",
+  "app": "Waze",
+  "downloads": 244033
+ },
+ {
+  "month": "2021-10",
+  "app": "Moovit",
+  "downloads": 154027
+ },
+ {
+  "month": "2021-10",
+  "app": "Gett",
+  "downloads": 79103
+ },
+ {
+  "month": "2021-10",
+  "app": "Wolt",
+  "downloads": 181159
+ },
+ {
+  "month": "2021-10",
+  "app": "Pango",
+  "downloads": 77348
+ },
+ {
+  "month": "2021-11",
+  "app": "Waze",
+  "downloads": 200600
+ },
+ {
+  "month": "2021-11",
+  "app": "Moovit",
+  "downloads": 205858
+ },
+ {
+  "month": "2021-11",
+  "app": "Gett",
+  "downloads": 89055
+ },
+ {
+  "month": "2021-11",
+  "app": "Wolt",
+  "downloads": 194145
+ },
+ {
+  "month": "2021-11",
+  "app": "Pango",
+  "downloads": 72030
+ },
+ {
+  "month": "2021-12",
+  "app": "Waze",
+  "downloads": 188881
+ },
+ {
+  "month": "2021-12",
+  "app": "Moovit",
+  "downloads": 167275
+ },
+ {
+  "month": "2021-12",
+  "app": "Gett",
+  "downloads": 99289
+ },
+ {
+  "month": "2021-12",
+  "app": "Wolt",
+  "downloads": 213151
+ },
+ {
+  "month": "2021-12",
+  "app": "Pango",
+  "downloads": 75810
+ },
+ {
+  "month": "2022-01",
+  "app": "Waze",
+  "downloads": 265787
+ },
+ {
+  "month": "2022-01",
+  "app": "Moovit",
+  "downloads": 179816
+ },
+ {
+  "month": "2022-01",
+  "app": "Gett",
+  "downloads": 76016
+ },
+ {
+  "month": "2022-01",
+  "app": "Wolt",
+  "downloads": 252370
+ },
+ {
+  "month": "2022-01",
+  "app": "Pango",
+  "downloads": 59348
+ },
+ {
+  "month": "2022-02",
+  "app": "Waze",
+  "downloads": 209686
+ },
+ {
+  "month": "2022-02",
+  "app": "Moovit",
+  "downloads": 213254
+ },
+ {
+  "month": "2022-02",
+  "app": "Gett",
+  "downloads": 87400
+ },
+ {
+  "month": "2022-02",
+  "app": "Wolt",
+  "downloads": 233406
+ },
+ {
+  "month": "2022-02",
+  "app": "Pango",
+  "downloads": 63138
+ },
+ {
+  "month": "2022-03",
+  "app": "Waze",
+  "downloads": 214079
+ },
+ {
+  "month": "2022-03",
+  "app": "Moovit",
+  "downloads": 208496
+ },
+ {
+  "month": "2022-03",
+  "app": "Gett",
+  "downloads": 68657
+ },
+ {
+  "month": "2022-03",
+  "app": "Wolt",
+  "downloads": 232385
+ },
+ {
+  "month": "2022-03",
+  "app": "Pango",
+  "downloads": 71945
+ },
+ {
+  "month": "2022-04",
+  "app": "Waze",
+  "downloads": 286011
+ },
+ {
+  "month": "2022-04",
+  "app": "Moovit",
+  "downloads": 169731
+ },
+ {
+  "month": "2022-04",
+  "app": "Gett",
+  "downloads": 92014
+ },
+ {
+  "month": "2022-04",
+  "app": "Wolt",
+  "downloads": 180076
+ },
+ {
+  "month": "2022-04",
+  "app": "Pango",
+  "downloads": 76069
+ },
+ {
+  "month": "2022-05",
+  "app": "Waze",
+  "downloads": 223503
+ },
+ {
+  "month": "2022-05",
+  "app": "Moovit",
+  "downloads": 151751
+ },
+ {
+  "month": "2022-05",
+  "app": "Gett",
+  "downloads": 91324
+ },
+ {
+  "month": "2022-05",
+  "app": "Wolt",
+  "downloads": 212592
+ },
+ {
+  "month": "2022-05",
+  "app": "Pango",
+  "downloads": 67458
+ },
+ {
+  "month": "2022-06",
+  "app": "Waze",
+  "downloads": 237717
+ },
+ {
+  "month": "2022-06",
+  "app": "Moovit",
+  "downloads": 222147
+ },
+ {
+  "month": "2022-06",
+  "app": "Gett",
+  "downloads": 95991
+ },
+ {
+  "month": "2022-06",
+  "app": "Wolt",
+  "downloads": 244079
+ },
+ {
+  "month": "2022-06",
+  "app": "Pango",
+  "downloads": 83272
+ },
+ {
+  "month": "2022-07",
+  "app": "Waze",
+  "downloads": 295139
+ },
+ {
+  "month": "2022-07",
+  "app": "Moovit",
+  "downloads": 162498
+ },
+ {
+  "month": "2022-07",
+  "app": "Gett",
+  "downloads": 76071
+ },
+ {
+  "month": "2022-07",
+  "app": "Wolt",
+  "downloads": 259627
+ },
+ {
+  "month": "2022-07",
+  "app": "Pango",
+  "downloads": 72556
+ },
+ {
+  "month": "2022-08",
+  "app": "Waze",
+  "downloads": 290488
+ },
+ {
+  "month": "2022-08",
+  "app": "Moovit",
+  "downloads": 160004
+ },
+ {
+  "month": "2022-08",
+  "app": "Gett",
+  "downloads": 104061
+ },
+ {
+  "month": "2022-08",
+  "app": "Wolt",
+  "downloads": 218090
+ },
+ {
+  "month": "2022-08",
+  "app": "Pango",
+  "downloads": 74520
+ },
+ {
+  "month": "2022-09",
+  "app": "Waze",
+  "downloads": 211636
+ },
+ {
+  "month": "2022-09",
+  "app": "Moovit",
+  "downloads": 170835
+ },
+ {
+  "month": "2022-09",
+  "app": "Gett",
+  "downloads": 93486
+ },
+ {
+  "month": "2022-09",
+  "app": "Wolt",
+  "downloads": 228450
+ },
+ {
+  "month": "2022-09",
+  "app": "Pango",
+  "downloads": 65154
+ },
+ {
+  "month": "2022-10",
+  "app": "Waze",
+  "downloads": 285903
+ },
+ {
+  "month": "2022-10",
+  "app": "Moovit",
+  "downloads": 204629
+ },
+ {
+  "month": "2022-10",
+  "app": "Gett",
+  "downloads": 108310
+ },
+ {
+  "month": "2022-10",
+  "app": "Wolt",
+  "downloads": 243091
+ },
+ {
+  "month": "2022-10",
+  "app": "Pango",
+  "downloads": 70677
+ },
+ {
+  "month": "2022-11",
+  "app": "Waze",
+  "downloads": 241444
+ },
+ {
+  "month": "2022-11",
+  "app": "Moovit",
+  "downloads": 183037
+ },
+ {
+  "month": "2022-11",
+  "app": "Gett",
+  "downloads": 84292
+ },
+ {
+  "month": "2022-11",
+  "app": "Wolt",
+  "downloads": 235702
+ },
+ {
+  "month": "2022-11",
+  "app": "Pango",
+  "downloads": 61233
+ },
+ {
+  "month": "2022-12",
+  "app": "Waze",
+  "downloads": 212974
+ },
+ {
+  "month": "2022-12",
+  "app": "Moovit",
+  "downloads": 221426
+ },
+ {
+  "month": "2022-12",
+  "app": "Gett",
+  "downloads": 100125
+ },
+ {
+  "month": "2022-12",
+  "app": "Wolt",
+  "downloads": 258980
+ },
+ {
+  "month": "2022-12",
+  "app": "Pango",
+  "downloads": 85492
+ },
+ {
+  "month": "2023-01",
+  "app": "Waze",
+  "downloads": 213308
+ },
+ {
+  "month": "2023-01",
+  "app": "Moovit",
+  "downloads": 211473
+ },
+ {
+  "month": "2023-01",
+  "app": "Gett",
+  "downloads": 107615
+ },
+ {
+  "month": "2023-01",
+  "app": "Wolt",
+  "downloads": 278318
+ },
+ {
+  "month": "2023-01",
+  "app": "Pango",
+  "downloads": 85378
+ },
+ {
+  "month": "2023-02",
+  "app": "Waze",
+  "downloads": 287588
+ },
+ {
+  "month": "2023-02",
+  "app": "Moovit",
+  "downloads": 213684
+ },
+ {
+  "month": "2023-02",
+  "app": "Gett",
+  "downloads": 80591
+ },
+ {
+  "month": "2023-02",
+  "app": "Wolt",
+  "downloads": 258201
+ },
+ {
+  "month": "2023-02",
+  "app": "Pango",
+  "downloads": 65571
+ },
+ {
+  "month": "2023-03",
+  "app": "Waze",
+  "downloads": 234736
+ },
+ {
+  "month": "2023-03",
+  "app": "Moovit",
+  "downloads": 207537
+ },
+ {
+  "month": "2023-03",
+  "app": "Gett",
+  "downloads": 93125
+ },
+ {
+  "month": "2023-03",
+  "app": "Wolt",
+  "downloads": 196493
+ },
+ {
+  "month": "2023-03",
+  "app": "Pango",
+  "downloads": 88097
+ },
+ {
+  "month": "2023-04",
+  "app": "Waze",
+  "downloads": 255783
+ },
+ {
+  "month": "2023-04",
+  "app": "Moovit",
+  "downloads": 162981
+ },
+ {
+  "month": "2023-04",
+  "app": "Gett",
+  "downloads": 102627
+ },
+ {
+  "month": "2023-04",
+  "app": "Wolt",
+  "downloads": 279567
+ },
+ {
+  "month": "2023-04",
+  "app": "Pango",
+  "downloads": 78527
+ },
+ {
+  "month": "2023-05",
+  "app": "Waze",
+  "downloads": 232087
+ },
+ {
+  "month": "2023-05",
+  "app": "Moovit",
+  "downloads": 215439
+ },
+ {
+  "month": "2023-05",
+  "app": "Gett",
+  "downloads": 112791
+ },
+ {
+  "month": "2023-05",
+  "app": "Wolt",
+  "downloads": 208370
+ },
+ {
+  "month": "2023-05",
+  "app": "Pango",
+  "downloads": 91810
+ },
+ {
+  "month": "2023-06",
+  "app": "Waze",
+  "downloads": 219187
+ },
+ {
+  "month": "2023-06",
+  "app": "Moovit",
+  "downloads": 195328
+ },
+ {
+  "month": "2023-06",
+  "app": "Gett",
+  "downloads": 104274
+ },
+ {
+  "month": "2023-06",
+  "app": "Wolt",
+  "downloads": 204586
+ },
+ {
+  "month": "2023-06",
+  "app": "Pango",
+  "downloads": 73261
+ }
+]

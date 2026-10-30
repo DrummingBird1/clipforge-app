@@ -1,0 +1,19 @@
+{
+  "files": {
+    "tourism_revenue.csv": "series",
+    "hotel_nights.csv": "series"
+  },
+  "series_files": [
+    "hotel_nights.csv",
+    "tourism_revenue.csv"
+  ],
+  "first_file": "tourism_revenue.csv",
+  "time": "year",
+  "period": "year",
+  "entity": "region",
+  "value": "revenue_nis_million",
+  "unit": "₪ (מיליון)",
+  "kind": "amount",
+  "chart": "scatter_race",
+  "notes": "Same regions, two measures in different units: both files are series; the headline (first) source is revenue (a judgment call); two measures per entity -> scatter_race."
+}

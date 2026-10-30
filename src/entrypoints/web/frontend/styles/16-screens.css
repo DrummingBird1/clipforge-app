@@ -1,0 +1,102 @@
+  /* ==========================================================================
+     גל 19 - שאר המסכים בעיצוב החדש: עבודות, תוצאות, גלריה, אישור קליפים,
+     טפסי הגדרות, סטטיסטיקות ודיאלוגים (כולל bottom-sheet במובייל).
+     ========================================================================== */
+  @layer shell {
+    /* --- אריחי מספרים (תוצאות, סטטיסטיקות) --- */
+    .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: var(--sp-2); margin-bottom: var(--sp-3); }
+    .stat-tiles:empty { display: none; }
+    .stat-tile {
+      display: flex; flex-direction: column; gap: 2px; padding: 10px 12px;
+      background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--r-md);
+    }
+    .stat-tile-value { font-size: var(--fs-xl); font-weight: var(--fw-bold); line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--color-text); }
+    .stat-tile-label { font-size: var(--fs-2xs); color: var(--color-text-3); font-weight: var(--fw-medium); }
+    .stat-tile[data-tone="ok"] .stat-tile-value { color: var(--color-success); }
+    .stat-tile[data-tone="bad"] .stat-tile-value { color: var(--color-danger); }
+    .stat-tile[data-tone="warn"] .stat-tile-value { color: var(--color-warning); }
+    .stat-tile[data-tone="accent"] .stat-tile-value { color: var(--color-accent); }
+
+    /* --- מסך העבודות: רשת כרטיסים עם תמונה ממוזערת וסינון --- */
+    .ve-jobs-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
+    .ve-jobs-filters input[type=search] { flex: 1 1 220px; max-width: 320px; }
+    .ve-jobs-list { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--sp-3); }
+    .ve-job-card { padding: 0; gap: 0; overflow: hidden; }
+    .ve-job-card[hidden] { display: none; }
+    .ve-job-thumb { position: relative; aspect-ratio: 16 / 9; background: var(--media-bg); overflow: hidden; }
+    .ve-job-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform var(--dur-3) var(--ease-out); }
+    .ve-job-card:hover .ve-job-thumb img { transform: scale(1.03); }
+    .ve-job-thumb-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--media-text-2); }
+    .ve-job-thumb-empty .ei { width: 32px; height: 32px; }
+    .ve-job-thumb .status-pill { position: absolute; top: 8px; inset-inline-start: 8px; box-shadow: var(--shadow-1); background: var(--color-surface-1); }
+    .ve-job-body { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 12px; }
+    .ve-job-title { font-size: var(--fs-md); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ve-job-meta { font-size: var(--fs-2xs); line-height: 1.5; }
+    .ve-job-actions { margin-top: 2px; }
+    .ve-job-actions .ve-job-del { margin-inline-start: auto; }
+
+    /* --- תוצאות הריצה --- */
+    .ve-fix-box { border: 1px solid var(--color-danger); border-inline-start-width: 3px; background: var(--color-danger-soft); border-radius: var(--r-md); padding: 8px 10px; }
+    .ve-fix-actions button { background: var(--color-surface-1); }
+
+    /* --- גלריה: תצוגה מקדימה בריחוף --- */
+    .gallery-card { position: relative; }
+    .gallery-card .gallery-hover-video { position: absolute; inset: 0 0 auto 0; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--media-bg); pointer-events: none; opacity: 0; transition: opacity var(--dur-2) var(--ease-out); }
+    .gallery-card.previewing .gallery-hover-video { opacity: 1; }
+    .gallery-card:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+    /* --- אישור קליפים: כרטיס פעיל + קיצורי מקלדת --- */
+    .approval-card { transition: border-color var(--dur-2), box-shadow var(--dur-2); }
+    .approval-card.active { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent), var(--shadow-2); }
+    .approval-card:focus { outline: none; }
+    .approval-keys { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; font-size: var(--fs-xs); color: var(--color-text-2); margin-bottom: var(--sp-3); }
+    .dataviz-card img { max-height: 200px; object-fit: contain; }
+    .dataviz-sheet { white-space: pre-wrap; }
+    .approval-card.leaving { opacity: 0; transform: translateX(-12px); transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out); }
+
+    /* --- טפסים: שדה עם תווית קבועה, עזרה ושגיאה --- */
+    .form-field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 220px; min-width: 0; }
+    .form-label { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--color-text-2); }
+    .form-field > input, .form-field > select { width: 100%; }
+    .form-error { font-size: var(--fs-2xs); color: var(--color-danger); min-height: 0; }
+    .form-error:empty { display: none; }
+    .form-field.is-invalid > input, .form-field.is-invalid > select { border-color: var(--color-danger); box-shadow: 0 0 0 3px var(--color-danger-soft); }
+    .form-field.is-valid > input { border-color: var(--color-success); }
+    .tc-row > label.u-flex-0 { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--color-text-2); min-width: 150px; }
+    .tc-section > label { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+    .tc-section > br { display: none; }
+
+    /* --- סטטיסטיקות --- */
+    #statsList .stats-row { position: relative; align-items: center; }
+    /* גל 22: שורות שנבנות ב-DOM (בלי style="..." ו-onclick עם נתונים) */
+    .credential-row { flex-direction: column; align-items: stretch; gap: var(--sp-1); }
+    .credential-row .meta.is-stale { color: var(--color-danger); }
+    .credential-actions { display: flex; gap: 6px; }
+    .credential-actions input { flex: 1; min-width: 0; }
+    .backup-row { display: flex; align-items: center; gap: var(--sp-2); padding: 6px 0; border-bottom: 1px solid var(--color-border); }
+    .backup-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .backup-size { white-space: nowrap; }
+    .prompt-message { display: block; font-size: var(--fs-md); line-height: var(--lh-normal); margin-bottom: var(--sp-2); white-space: pre-line; }
+    .prompt-input { width: 100%; margin-bottom: var(--sp-3); }
+    #statsList .stats-bar { position: absolute; inset-block: 4px; inset-inline-start: 0; background: var(--color-accent-soft); border-radius: var(--r-xs); z-index: 0; }
+    #statsList .stats-row > span { position: relative; z-index: 1; }
+    .chart-legend { display: flex; gap: var(--sp-3); flex-wrap: wrap; font-size: var(--fs-2xs); color: var(--color-text-2); margin-bottom: 4px; }
+    .chart-legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-inline-end: 5px; vertical-align: 3px; }
+    #hwHistoryCanvas, #clipsHistoryCanvas { background: var(--color-sunken); border: 1px solid var(--color-border); }
+
+    /* --- דיאלוגים: כפתור סגירה בכותרת + bottom-sheet במובייל --- */
+    .modal { position: relative; }
+    .modal-close {
+      position: absolute; top: 12px; inset-inline-end: 12px; padding: 4px 6px;
+      background: transparent; border-color: transparent; color: var(--color-text-3);
+    }
+    .modal-close:hover:not(:disabled) { background: var(--color-surface-3); color: var(--color-text); border-color: transparent; }
+    .modal > .modal-close + :is(h3, h2) { padding-inline-end: 36px; }
+    .modal .actions { position: sticky; bottom: 0; z-index: 2; margin: var(--sp-3) calc(-1 * var(--sp-5)) calc(-1 * var(--sp-5)); padding: var(--sp-3) var(--sp-5); background: var(--color-surface-1); border-top: 1px solid var(--color-border); }
+    @media (max-width: 700px) {
+      .modal-bg { align-items: flex-end; padding: 0; }
+      .modal-bg > .modal { width: 100% !important; max-width: 100%; max-height: 90vh; border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom: none; }
+      .modal-bg.show > .modal { animation: ui-sheet-in var(--dur-3) var(--ease-out); }
+    }
+    @keyframes ui-sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  }

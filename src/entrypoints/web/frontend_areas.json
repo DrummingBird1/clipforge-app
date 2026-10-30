@@ -1,0 +1,13 @@
+{
+ "_comment": "Wave 37: which area of the screen each JS part belongs to (tests/web/test_web_frontend_areas.py checks every part is in exactly one area). Code in one area reaches another through veApi (js/81-editor-api.js) or uiBus events, not by reaching into its internals.",
+ "areas": {
+  "core": ["js/05-ui-icon-map.js", "js/06-ui-core.js", "js/07-ui-flow.js", "js/08-ui-frame.js", "js/68-ui-polish.js", "js/69-ui-prefs.js", "js/81-editor-api.js", "js/90-init.js"],
+  "shell": ["js/20-app-shell.js", "js/34-notification-center.js", "js/35-ui-frame.js", "js/65-ui-shell.js", "js/66-ui-studio.js", "js/67-ui-screens.js", "js/89-studio-more.js"],
+  "screens": ["js/30-bot-settings-scheduler.js", "js/31-global-settings.js", "js/33-outputs-screen.js", "js/36-phone-screen.js", "js/40-gallery-publishing.js", "js/41-dataviz-packages.js", "js/42-dataviz-screen.js", "js/43-dataviz-studio.js", "js/44-dataviz-editor.js", "js/47-dataviz-engine.js", "js/49-dataviz-queue-stats.js", "js/82-dataviz-story.js", "js/83-dataviz-look.js", "js/84-dataviz-data.js", "js/85-dataviz-plus.js", "js/86-dataviz-publish.js", "js/87-dataviz-shell.js", "js/88-dataviz-simple.js"],
+  "editor-fields": ["js/10-editor-core.js", "js/51-editor-inputs.js", "js/53-editor-profiles.js", "js/54-editor-editing.js", "js/57-editor-quality.js", "js/60-editor-workspace.js", "js/70-editor-grade.js"],
+  "inspector": ["js/50-editor-organization.js", "js/58-editor-layout.js", "js/72-editor-inspector.js", "js/74-editor-simple.js", "js/76-editor-comfort.js", "js/77-editor-inspector-tools.js", "js/78-editor-modes.js"],
+  "player-timeline": ["js/52-editor-preview-feedback.js", "js/59-editor-live-preview.js", "js/61-editor-live-player.js", "js/62-editor-studio.js", "js/63-editor-pro-timeline.js", "js/71-editor-chrome.js", "js/79-editor-queue-timeline.js"],
+  "layers": ["js/55-editor-layers-post.js", "js/73-editor-surface.js"],
+  "runs": ["js/56-editor-runs-automation.js", "js/64-editor-pro-runs.js", "js/75-editor-run.js", "js/80-editor-layers-runs.js"]
+ }
+}

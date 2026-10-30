@@ -1,0 +1,199 @@
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" onclick="event.preventDefault(); goHome()" title="מסך הבית">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <rect class="bm-bg" x="1" y="1" width="30" height="30" rx="8"/>
+        <path class="bm-play" d="M12.5 9.6v12.8l10.2-6.4z"/>
+        <path class="bm-spark" d="M24 5.2l.95 2.1 2.1.95-2.1.95-.95 2.1-.95-2.1-2.1-.95 2.1-.95z"/>
+      </svg>
+      <h1 class="brand-name">ClipForge <span class="brand-tag">Web</span></h1>
+    </a>
+    <button id="paletteBtn" class="topbar-search" onclick="openCommandPalette()" title="חיפוש מהיר: סקריפטים, מסכים, פרויקטים, הגדרות ופעולות (Ctrl+K)">🔍 <span class="topbar-search-text">חיפוש סקריפט, מסך, פרויקט או פעולה…</span><span class="kbd-combo" dir="ltr"><kbd>Ctrl</kbd><kbd>K</kbd></span></button>
+    <div class="topbar-status">
+      <span class="status-chip" id="lockStatus" title="השרת רץ מקומית על המחשב הזה בלבד - הרינדור עצמו קורה כאן, לא בענן">🔒 מקומי · 127.0.0.1</span>
+      <span class="status-chip" id="queueStatus" hidden></span>
+    </div>
+    <div class="topbar-actions" role="toolbar" aria-label="פעולות מערכת">
+      <button id="recentBtn" class="btn-ghost icon-only" onclick="toggleRecentMenu()" aria-haspopup="dialog" aria-expanded="false" title="נפתחו לאחרונה: התיקיות והפרויקטים שפתחת לאחרונה">🕘 נפתחו לאחרונה</button>
+      <button id="statsBtn" class="btn-ghost icon-only" onclick="openStats()" title="סטטיסטיקות: זמן רינדור ממוצע לכל סקריפט">📊 סטטיסטיקות</button>
+      <button id="diagnosticsBtn" class="btn-ghost icon-only" onclick="openDiagnostics()" title="אבחון: בדיקת תקינות FFmpeg/Python/DB/workspace/מנעול רינדור">🩺 אבחון</button>
+      <button id="notifCenterBtn" class="btn-ghost icon-only notif-btn" onclick="toggleNotificationCenter()" aria-haspopup="dialog" aria-expanded="false" title="מרכז ההתראות: ריצות שהסתיימו, נעצרו או נכשלו, ובעיות שכדאי לראות">📥 מרכז ההתראות<span id="notifBadge" class="badge bad notif-count" hidden></span></button>
+      <button id="notifyBtn" class="btn-ghost icon-only" onclick="toggleNotifications()" title="קבל התראת דפדפן כשריצה מסתיימת, גם אם עברת לטאב אחר">🔔 הפעל התראות</button>
+      <button id="settingsBtn" class="btn-ghost icon-only" onclick="openSettingsModal()" title="הגדרות: ייצוא/ייבוא קובץ ההגדרות (config.json) וגיבויים">⚙️ הגדרות</button>
+      <button id="rotateTokenBtn" class="btn-ghost icon-only" onclick="rotateToken()" title="החלף טוקן: מבטל מיידית את קישור הגישה הנוכחי ומנפיק חדש - שימושי אם הקישור דלף">🔑 החלף טוקן</button>
+      <button id="densityBtn" class="btn-ghost icon-only" onclick="toggleUiDensity()" aria-pressed="false" title="צפיפות: נוחה/צפופה">📏 צפיפות</button>
+      <button id="themeToggle" class="btn-ghost icon-only" onclick="toggleUiPrefsMenu()" aria-haspopup="dialog" aria-expanded="false" aria-controls="uiPrefsMenu" title="ערכת נושא, צבע הדגשה ושפה">🌙</button>
+    </div>
+    <!-- גל 21: ערכת נושא (כולל ניגודיות גבוהה ומעקב אחרי המערכת), צבע הדגשה ושפת ממשק -->
+    <div id="uiPrefsMenu" class="prefs-menu" role="dialog" aria-label="ערכת נושא, צבע הדגשה ושפה" hidden>
+      <div class="prefs-group">
+        <div class="prefs-title" id="uiThemeTitle">🎨 ערכת נושא</div>
+        <div class="prefs-options" role="radiogroup" aria-labelledby="uiThemeTitle">
+          <button type="button" role="radio" data-theme-opt="auto" onclick="setUiTheme('auto')">🖥️ אוטומטי (לפי המערכת)</button>
+          <button type="button" role="radio" data-theme-opt="dark" onclick="setUiTheme('dark')">🌙 כהה</button>
+          <button type="button" role="radio" data-theme-opt="light" onclick="setUiTheme('light')">☀️ בהירה</button>
+          <button type="button" role="radio" data-theme-opt="contrast" onclick="setUiTheme('contrast')">🌓 ניגודיות גבוהה</button>
+        </div>
+      </div>
+      <div class="prefs-group">
+        <div class="prefs-title" id="uiAccentTitle">צבע הדגשה</div>
+        <div class="prefs-swatches" role="radiogroup" aria-labelledby="uiAccentTitle">
+          <button type="button" role="radio" class="accent-swatch" data-accent-opt="cyan" onclick="setUiAccent('cyan')" title="טורקיז" aria-label="טורקיז"></button>
+          <button type="button" role="radio" class="accent-swatch" data-accent-opt="emerald" onclick="setUiAccent('emerald')" title="אזמרגד" aria-label="אזמרגד"></button>
+          <button type="button" role="radio" class="accent-swatch" data-accent-opt="violet" onclick="setUiAccent('violet')" title="סגול" aria-label="סגול"></button>
+          <button type="button" role="radio" class="accent-swatch" data-accent-opt="amber" onclick="setUiAccent('amber')" title="ענבר" aria-label="ענבר"></button>
+          <button type="button" role="radio" class="accent-swatch" data-accent-opt="rose" onclick="setUiAccent('rose')" title="ורד" aria-label="ורד"></button>
+        </div>
+      </div>
+      <div class="prefs-group">
+        <div class="prefs-title" id="uiLangTitle">🌐 שפה</div>
+        <div class="prefs-options prefs-langs" role="radiogroup" aria-labelledby="uiLangTitle">
+          <button type="button" role="radio" data-lang-opt="he" onclick="setUiLanguage('he')" lang="he" data-no-i18n>עברית</button>
+          <button type="button" role="radio" data-lang-opt="en" onclick="setUiLanguage('en')" lang="en" dir="ltr">English</button>
+        </div>
+      </div>
+    </div>
+    <!-- lazy-html:notifications -->
+    <div id="notifCenter" class="prefs-menu notif-center" role="dialog" aria-labelledby="notifCenterTitle" hidden>
+      <div class="prefs-title" id="notifCenterTitle">📥 מרכז ההתראות</div>
+      <div id="notifList" class="notif-list"></div>
+    </div>
+    <!-- /lazy-html:notifications -->
+  </header>
+  <div id="shutdownBanner" class="app-banner app-banner-danger" hidden>
+    <span id="shutdownBannerText"></span>
+    <button class="btn-sm" onclick="cancelShutdown()">🛑 בטל כיבוי</button>
+  </div>
+  <div id="updateBanner" class="app-banner app-banner-accent" hidden>
+    <span id="updateBannerText"></span>
+    <button class="btn-sm" id="updateApplyBtn" onclick="applyUpdate()">⬇️ עדכן עכשיו (git pull + uv sync)</button>
+    <button class="btn-sm btn-outline" id="updateBannerOpenBtn">🔗 פתח את עמוד ההורדה</button>
+    <span id="updateApplyStatus"></span>
+    <button class="btn-sm btn-ghost" onclick="document.getElementById('updateBanner').hidden = true" aria-label="סגור">✕</button>
+  </div>
+  <nav class="tab-bar nav-rail" aria-label="ניווט ראשי">
+    <button class="tab-btn rail-studio" data-rail="studio" onclick="openStudio()" title="עורך-העל במסך מלא">🎬 סטודיו</button>
+    <button class="tab-btn active" data-tab="scripts" onclick="openScripts()">🎮 סקריפטים</button>
+    <span class="rail-sep" aria-hidden="true"></span>
+    <button class="tab-btn" data-tab="outputs" onclick="switchTab('outputs')">📦 תוצרים</button>
+    <button class="tab-btn" data-tab="gallery" onclick="switchTab('gallery')">🖼️ גלריה</button>
+    <button class="tab-btn" data-tab="approvals" onclick="switchTab('approvals')">✅ אישור קליפים</button>
+    <button class="tab-btn" data-tab="dataviz" onclick="switchTab('dataviz')">📊 סרטוני נתונים</button>
+    <button class="tab-btn" data-tab="rocket" onclick="switchTab('rocket')">🚀 Shorts</button>
+    <span class="rail-sep" aria-hidden="true"></span>
+    <button class="tab-btn" data-tab="scheduler" onclick="switchTab('scheduler')">⏰ תזמון</button>
+    <button class="tab-btn" data-tab="bot" onclick="switchTab('bot')">🤖 בוט</button>
+    <button class="tab-btn" data-tab="soundboard" onclick="switchTab('soundboard')">🔊 סאונדבורד</button>
+    <button class="tab-btn" data-tab="archive" onclick="switchTab('archive')">🗄️ ארכיון</button>
+    <button class="tab-btn" data-tab="phone" onclick="switchTab('phone')" title="מה שצריך מהטלפון: מה רץ, התור, אישור קליפים והרצה חוזרת">📱 בטלפון</button>
+    <span class="rail-spacer" aria-hidden="true"></span>
+    <button class="tab-btn" data-tab="globalsettings" onclick="switchTab('globalsettings')">🌐 הגדרות כלליות</button>
+  </nav>
+  <div class="layout" data-tab-panel="scripts">
+    <aside class="sidebar" aria-label="סקריפטים">
+      <input type="search" id="search" placeholder="חיפוש סקריפט..." aria-label="חיפוש סקריפט" oninput="renderScripts()">
+      <div id="scriptList"></div>
+      <div class="hw-panel">
+        <div class="hw-row"><span>CPU</span><span id="hwCpuText">-</span></div>
+        <div class="hw-bar"><div class="hw-bar-fill" id="hwCpuBar"></div></div>
+        <div class="hw-row"><span>RAM</span><span id="hwRamText">-</span></div>
+        <div class="hw-bar"><div class="hw-bar-fill hw-bar-ram" id="hwRamBar"></div></div>
+        <div class="hw-row"><span>GPU</span><span id="hwGpuText">-</span></div>
+        <div class="hw-bar"><div class="hw-bar-fill" id="hwGpuBar"></div></div>
+        <div class="hw-row"><span>VRAM</span><span id="hwVramText">-</span></div>
+        <div class="hw-bar"><div class="hw-bar-fill hw-bar-ram" id="hwVramBar"></div></div>
+        <div class="hw-row" title="ניצולת ה-NVENC הייעודית - נפרדת מ-GPU למעלה (CUDA/shader כללי), ולכן יכולה להישאר גבוהה גם כשה-GPU נראה כמעט פנוי בזמן קידוד"><span>Encoder</span><span id="hwEncoderText">-</span></div>
+        <div class="hw-bar"><div class="hw-bar-fill" id="hwEncoderBar"></div></div>
+      </div>
+    </aside>
+    <div class="main">
+      <section class="home" id="homePanel" aria-label="מסך הבית">
+        <div class="home-hero">
+          <h2 class="home-title">מה נערוך היום?</h2>
+          <p class="home-sub">בחר פעולה, פתח פרויקט אחרון, או חפש כל דבר עם <span class="kbd-combo" dir="ltr"><kbd>Ctrl</kbd><kbd>K</kbd></span>.</p>
+        </div>
+        <div class="home-actions">
+          <button type="button" class="home-action" onclick="openStudio()"><span class="ha-ico">🎬</span><span class="ha-title">סטודיו</span><span class="ha-desc">עורך-העל במסך מלא</span></button>
+          <button type="button" class="home-action" onclick="openStudioJobs()"><span class="ha-ico">📋</span><span class="ha-title">פרויקטים</span><span class="ha-desc">כל הפרויקטים והתור</span></button>
+          <button type="button" class="home-action" onclick="switchTab('gallery')"><span class="ha-ico">🖼️</span><span class="ha-title">גלריה</span><span class="ha-desc">קליפים ואנליטיקס</span></button>
+          <button type="button" class="home-action" onclick="switchTab('approvals')"><span class="ha-ico">✅</span><span class="ha-title">אישור קליפים</span><span class="ha-desc">מה ממתין לפרסום</span></button>
+          <button type="button" class="home-action" onclick="switchTab('dataviz')"><span class="ha-ico">📊</span><span class="ha-title">סרטוני נתונים</span><span class="ha-desc">גרפים וסרטוני Data</span></button>
+          <button type="button" class="home-action" onclick="switchTab('rocket')"><span class="ha-ico">🚀</span><span class="ha-title">Shorts</span><span class="ha-desc">פרסום והגדרות</span></button>
+          <button type="button" class="home-action" onclick="switchTab('scheduler')"><span class="ha-ico">⏰</span><span class="ha-title">תזמון</span><span class="ha-desc">ריצות אוטומטיות</span></button>
+        </div>
+        <div class="home-grid">
+          <section class="home-card">
+            <div class="home-card-head"><span>📁 פרויקטים אחרונים</span><button type="button" class="btn-ghost btn-sm" onclick="openStudioJobs()">הכל</button></div>
+            <div id="homeProjects"></div>
+          </section>
+          <section class="home-card">
+            <div class="home-card-head"><span>🕘 ריצות אחרונות</span></div>
+            <div id="homeRuns"></div>
+          </section>
+        </div>
+      </section>
+      <div class="info-card">
+        <div id="selName">בחר סקריפט מהרשימה מימין</div>
+        <div class="desc" id="selDesc"></div>
+      </div>
+      <div class="row">
+        <input type="text" id="folderInput" placeholder="נתיב תיקייה..." onchange="onFolderTyped()">
+        <button onclick="openBrowser()">📂 עיון...</button>
+      </div>
+
+      <div class="options-card" id="storyCutterOptions" hidden>
+        <label>שיפוט קליפים באמצעות:</label>
+        <select id="aiProviderSelect">
+          <option value="gemini">☁️ Gemini (מדויק יותר, בתשלום/מכסה)</option>
+          <option value="local">💻 מקומי - Ollama (חינמי, פחות מדויק)</option>
+        </select>
+      </div>
+
+      <div class="options-card" id="superManagerOptions" hidden>
+        <div class="ve-row">
+          <label>פעולה:</label>
+          <select id="smMode" onchange="updateSuperManagerModeVisibility()">
+            <option value="scan">🔍 סריקת כונן (כפילויות/זבל/מדיה)</option>
+            <option value="report">📊 המרת דוח קיים ל-Excel</option>
+            <option value="clean">🧹 ניקוי כפילויות מדוח קיים</option>
+          </select>
+        </div>
+        <div id="smScanFields">
+          <div class="ve-row">
+            <label title="הכונן/תיקייה לסריקה - ברירת מחדל תיקיית הבית">תיקייה/כונן לסריקה:</label>
+            <input type="text" id="smTargetDir" placeholder="%USERPROFILE%" class="u-grow">
+          </div>
+          <div class="ve-row"><label title="יוצר גם קובץ Excel מעוצב (סיכום/כפילויות/זבל/מדיה), בנוסף ל-report.json"><input type="checkbox" id="smExportExcel" checked> יצירת Excel</label></div>
+          <div class="ve-row"><label title="יוצר גם עמוד HTML קליל לסיכום, בנוסף ל-report.json"><input type="checkbox" id="smExportHtml" checked> יצירת עמוד HTML</label></div>
+        </div>
+        <div id="smCleanFields" hidden>
+          <div class="ve-row">
+            <label title="איזה עותק מכל קבוצת-כפילויות להשאיר במקומו">איזה עותק לשמור:</label>
+            <select id="smKeepPolicy">
+              <option value="oldest">הישן ביותר</option>
+              <option value="newest">החדש ביותר</option>
+            </select>
+          </div>
+          <div class="ve-row"><label title="בלי הסימון - תצוגה מקדימה בלבד, שום קובץ לא זז"><input type="checkbox" id="smExecute"> בצע בפועל (מעביר לסל המיחזור, לא רק תצוגה מקדימה)</label></div>
+        </div>
+      </div>
+
+      <div class="options-card" id="superStreamerOptions" hidden>
+        <div class="ve-row">
+          <label>מקור לכידה:</label>
+          <select id="ssMode" onchange="updateSuperStreamerModeVisibility()">
+            <option value="folder">📁 מעקב תיקיית לכידה (Streamlabs/ShadowPlay/כל כלי אחר)</option>
+            <option value="obs">📼 מעקב OBS (Replay Buffer)</option>
+            <option value="twitch">🟣 ייבוא קליפים מ-Twitch</option>
+          </select>
+        </div>
+        <div class="hint u-block u-margin-4px-0">מעקב תיקייה/OBS הם מאזינים ארוכי-טווח - רצים ברקע עד "🛑 עצור". ייבוא Twitch הוא הרצה חד-פעמית. הגדרות תיקיית-מעקב/קיצור-מקלדת מוגדרות בטאב "🎬 Shorts".</div>
+        <div id="ssTwitchFields" hidden>
+          <div class="ve-row">
+            <label title="כמה קליפים אחרונים מהערוץ להוריד">כמה קליפים להוריד:</label>
+            <input type="number" id="ssTwitchLimit" value="10" min="1" class="u-width-80px">
+          </div>
+        </div>
+      </div>
+

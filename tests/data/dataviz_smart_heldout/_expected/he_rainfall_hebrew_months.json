@@ -1,0 +1,17 @@
+{
+  "files": {
+    "גשמים_לפי_תחנה.csv": "series"
+  },
+  "series_files": [
+    "גשמים_לפי_תחנה.csv"
+  ],
+  "first_file": "גשמים_לפי_תחנה.csv",
+  "time": "חודש",
+  "period": "month",
+  "entity": "תחנה",
+  "value": "משקעים_מ\"מ",
+  "unit": "מ\"מ",
+  "kind": "amount",
+  "chart": "bar_race",
+  "notes": "Hebrew month names ('ינואר 2022'); rainfall adds up -> amount; unit in the column name."
+}

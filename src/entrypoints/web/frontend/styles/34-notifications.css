@@ -1,0 +1,16 @@
+/* מרכז ההתראות (34-notification-center.js, LAZY_CSS["notifications"]): חלונית כמו תפריט ההעדפות (.prefs-menu), עם רשימה */
+  @layer components {
+    .notif-center { width: min(92vw, 380px); max-block-size: min(70vh, 520px); overflow-y: auto; gap: var(--sp-2); }
+    .notif-list { display: flex; flex-direction: column; gap: 2px; }
+    .notif-item {
+      display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 2px; text-align: start;
+      background: transparent; border-color: transparent; border-inline-start: 3px solid var(--color-border); font-weight: var(--fw-regular);
+    }
+    .notif-item:hover:not(:disabled) { background: var(--color-surface-3); }
+    .notif-item.unread { background: var(--color-accent-soft); }
+    .notif-item.unread .notif-title { font-weight: var(--fw-semibold); }
+    .notif-ok { border-inline-start-color: var(--color-success); }
+    .notif-bad { border-inline-start-color: var(--color-danger); }
+    .notif-warn { border-inline-start-color: var(--color-warning); }
+    .notif-meta { font-size: var(--fs-xs); }
+  }
