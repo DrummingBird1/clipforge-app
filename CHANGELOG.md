@@ -2,6 +2,15 @@
 
 What changed in each ClipForge release, by topic. Dates are release dates (YYYY-MM-DD).
 
+## 1.1.1 - 2026-10-30
+
+### Security
+- filelock 4.2.4 (from 4.1.0) and setuptools 84.2.1 (from 84.0.0) for open security advisories; the portable zip now
+  ships filelock 4.2.4.
+
+### Public release
+- The public repository no longer gets a Dependabot configuration; dependency updates come with each release.
+
 ## 1.1.0 - 2026-10-30
 
 ### Public release

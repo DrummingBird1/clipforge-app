@@ -2,7 +2,7 @@
 name = "clipforge"
 # שמור בסנכרון ידני עם utils/shared/version.py's APP_VERSION - ראו שם למה זה לא
 # נקרא משם בזמן ריצה (ראו שם).
-version = "1.1.0"
+version = "1.1.1"
 description = "Discord bot + desktop control center for video automation and stream monitoring"
 # 3.11 ומעלה מ-21.10.2026: Pillow 13 (תיקוני האבטחה) לא תומך ב-3.10, שסיים את חייו באוקטובר 2026.
 requires-python = ">=3.11"
