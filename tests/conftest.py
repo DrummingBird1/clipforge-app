@@ -379,6 +379,8 @@ def editor_page(editor_server, edge_browser):
         context.add_init_script("try { if (localStorage.getItem('veLayout') === null) localStorage.setItem('veLayout', JSON.stringify('accordion')); } catch (e) {}")
         # גל 28: תתי-אזורים מתקפלים כברירת מחדל; הטסטים הקיימים ממלאים שדות בכל תת-אזור, אז פתוחים (טסטי גל 28 מקפלים)
         context.add_init_script("try { if (localStorage.getItem('veCollapseSubcats') === null) localStorage.setItem('veCollapseSubcats', 'false'); } catch (e) {}")
+        # 31.10.2026: שרת הבדיקה הוא התקנה בעברית - נשמר מראש, כדי שהדף לא יוסתר עד ש-/api/settings/style עונה (00-head.html)
+        context.add_init_script("try { if (localStorage.getItem('uiLang') === null) localStorage.setItem('uiLang', 'he'); } catch (e) {}")
         page = context.new_page()
         page.goto(f"{editor_server['base_url']}/?token={editor_server['web_app'].ACCESS_TOKEN}")
         # state מוגדר ב-let ברמה העליונה (לא window.state) - נגיש בשם ישיר בלבד.

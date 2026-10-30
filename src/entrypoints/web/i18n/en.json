@@ -2720,6 +2720,10 @@
   "תמלל לעריכה": "Transcribe for editing",
   "תצוגה חיה (מקורבת) -": "Live view (approximate) -",
   "תצוגה חיה (מקורבת)": "Live view (approximate)",
+  "טיקטוק/שורטס מהיר": "Quick TikTok/Shorts",
+  "טיימלאפס שקט": "Silent timelapse",
+  "יוטיוב איכות מלאה": "YouTube full quality",
+  "תאימות מקסימלית (CPU)": "Maximum compatibility (CPU)",
   "הגדרות Shorts נשמרו.": "Shorts settings saved.",
   "הגדרות נתיבים, מונה ופרופילים עבור Shorts": "Paths, counter, and quality profiles for Shorts",
   "הפלטים של הריצה (רק הם) נשלחים ל'פרסום Shorts'": "The run's outputs (only them) are sent to 'Shorts publishing'",
@@ -6334,6 +6338,22 @@
     "Duration: $1"
   ],
   [
+    "^(\\d+) נכשלו$",
+    "$1 failed"
+  ],
+  [
+    "^(\\d+) תקינים$",
+    "$1 valid"
+  ],
+  [
+    "^(\\d+) לא תקינים$",
+    "$1 invalid"
+  ],
+  [
+    "^(\\d+) שמות שונו$",
+    "$1 renamed"
+  ],
+  [
     "^התוצרים נשמרים ב-workspace כי תיקיית הייצוא (.+) לא זמינה: (.+)$",
     "The outputs are saved in workspace because the export folder $1 is not available: $2"
   ],
@@ -6348,6 +6368,22 @@
   [
    "^התבנית \"(.+)\" נשמרה$",
    "The template \"$1\" was saved"
+  ],
+  [
+   "(\\d+)שנ׳",
+   "$1s"
+  ],
+  [
+   "(\\d+)י(?= |$)",
+   "$1d"
+  ],
+  [
+   "(\\d+)ש(?= |$)",
+   "$1h"
+  ],
+  [
+   "(\\d+)ד(?= |$)",
+   "$1m"
   ]
  ]
 }

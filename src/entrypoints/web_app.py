@@ -1038,7 +1038,8 @@ for _routes_module in ROUTE_MODULES:
 
 # 24.10.2026: עליית השרת (פורט, מגש המערכת, כתובת LAN) - ב-web/server_startup.py; השמות נשארים גם כאן (__main__ למטה, טסטים)
 from entrypoints.web.server_startup import (  # noqa: E402,F401 - אחרי המצב המשותף, כמו ה-routes
-    DEFAULT_PORT, PORT_IN_USE_EXIT_CODE, _bind_server_socket, _bind_server_sockets, _get_lan_ip, _run_tray_icon,
+    DEFAULT_PORT, PORT_IN_USE_EXIT_CODE, TRAY_LABELS, tray_labels, _bind_server_socket, _bind_server_sockets, _get_lan_ip,
+    _run_tray_icon,
 )
 # 24.10.2026: בדיקות הנתיבים (מה מותר להגיש, לפתוח, לפרסם ולשחזר) - ב-web/path_checks.py; השמות נשארים גם כאן
 from entrypoints.web.path_checks import (  # noqa: E402,F401 - אחרי המצב המשותף, כמו ה-routes
@@ -1085,6 +1086,10 @@ from entrypoints.web.run_lifecycle import (  # noqa: E402,F401 - אחרי המצ
     _on_task_finished,
     _record_run_end,
     _on_publisher_finished,
+    RUN_COUNTS,
+    _clock,
+    _size,
+    _run_notification_body,
     _notify_run_finished,
     _mirror_export_dirs,
     _work_still_queued,

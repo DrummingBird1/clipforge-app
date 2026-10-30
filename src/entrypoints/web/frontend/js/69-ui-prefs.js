@@ -319,11 +319,13 @@ uiPaletteProviders.push(() => {
 setUiTheme(_uiPrefGet("web_app_theme", "dark"));
 if (_uiPrefGet("uiAccent", "")) setUiAccent(_uiPrefGet("uiAccent", "cyan"));
 
+function _uiLangReady() { document.documentElement.classList.add("ui-lang-ready"); }
+
 function _uiInitPrefs() {
   const saved = _uiPrefGet("uiLang", "");
-  if (saved) { if (saved === "en") setUiLanguage("en"); else _uiSyncPrefsMenu(); return; }
+  if (saved) { if (saved === "en") setUiLanguage("en").finally(_uiLangReady); else { _uiSyncPrefsMenu(); _uiLangReady(); } return; }
   // 30.10.2026: בדפדפן עוד אין בחירה - השפה של ההתקנה (אנגלית בחדשה, עברית נשמרת בקיימת - utils/shared/ui_language.py)
   _uiSyncPrefsMenu();
   fetch("/api/settings/style").then(r => r.json()).then(s => s.language === "he" ? _uiPrefSet("uiLang", "he") : setUiLanguage("en"))
-    .catch(() => setUiLanguage("en"));
+    .catch(() => setUiLanguage("en")).finally(_uiLangReady);
 }

@@ -119,9 +119,20 @@ def seed(tmp, ffmpeg):
 
     from dataviz.web.episodes import create_episode
     from utils.shared import data_paths
-    create_episode(data_paths.dataviz_root(os.environ["CLIPFORGE_DATA_DIR"]), {
+    root = data_paths.dataviz_root(os.environ["CLIPFORGE_DATA_DIR"])
+    create_episode(root, {
         "name": "fruit_harvest", "title": "Fruit harvest", "subtitle": "Tons per quarter (demo data)", "chart": "bar_race",
         "theme": "dark", "time_column": "date", "value_column": "tons", "group_column": "fruit", "period": "day", "csv_text": _fruit_csv()})
+    # 31.10.2026: התוויות של הפרק באנגלית - ברירות המחדל של dataviz/config.py בעברית, והן מופיעות בשדות של העורך
+    import yaml
+    config_path = os.path.join(root, "dataviz_episodes", "fruit_harvest", "config.yaml")
+    with open(config_path, encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    config.update({"labels": {"date_format": "%b %d, %Y", "record": "New record: {entity}", "others": "Others"},
+                   "outro": {"places": ["1st place", "2nd place", "3rd place"]},
+                   "scatter": {"x_label": "Total", "y_label": "In the last 30 days"}})
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(config, f, allow_unicode=True, sort_keys=False)
 
     approval = os.path.join(workspace, "clips", "match_03.mp4")   # תור האישור (CLIPS_DIR) - הנגן בטלפון מנגן ממנו
     os.makedirs(os.path.dirname(approval))

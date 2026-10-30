@@ -2,6 +2,19 @@
 
 What changed in each ClipForge release, by topic. Dates are release dates (YYYY-MM-DD).
 
+## 1.1.3 - 2026-10-30
+
+### Fixes
+- English UI: no flash of Hebrew before the language is applied on load.
+- English UI: the time left in a run, the built-in style names and the data-video editor's default labels are translated.
+- Run notifications show a readable summary (created, failed, time, size) in the install's language, with no file paths.
+- Marking notifications as read no longer stalls the server while the database is busy.
+
+### Public release
+- Install with Scoop (`scoop bucket add clipforge https://github.com/DrummingBird1/scoop-clipforge`).
+- A documentation site (goes live with GitHub Pages), a roadmap, and a script for the demo video.
+- CI, CodeQL and Scorecard workflows, and SHA-pinned actions, ready for the public repository.
+
 ## 1.1.2 - 2026-10-30
 
 ### Public release

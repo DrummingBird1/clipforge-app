@@ -65,6 +65,52 @@ def _on_publisher_finished(outcome):
     W._on_task_finished(outcome, os.path.basename(W.PUBLISHER_SCRIPT_PATH))
 
 
+# 30.10.2026: גוף ההתראה של ריצה - ספירות, משך וגודל התוצרים. היה הסיכום הגולמי של RESULT ("key: value | ..."), ובסטודיו
+# גם manifest_path עם הנתיב המלא. כל חלק בין " · " מתורגם בדף (i18n/en.json), והמשך והגודל בלי מילים. מפתח שלא כאן לא
+# מוצג - התוצאה המלאה נשארת בהיסטוריית הריצות ובלוג.
+RUN_COUNTS = (("files_created", "{} נוצרו"), ("valid", "{} תקינים"), ("invalid", "{} לא תקינים"), ("skipped", "{} דולגו"),
+              ("errors", "{} נכשלו"), ("cancelled", "{} בוטלו"), ("files_moved", "{} הועברו"), ("renamed", "{} שמות שונו"),
+              ("clips_published", "{} פורסמו"))
+
+
+def _clock(seconds):
+    """משך כמו בנגן: 0:17, ‏12:05, ‏1:02:09."""
+    seconds = max(0, int(round(seconds)))
+    hours, rest = divmod(seconds, 3600)
+    return f"{hours}:{rest // 60:02d}:{rest % 60:02d}" if hours else f"{rest // 60}:{rest % 60:02d}"
+
+
+def _size(num_bytes):
+    for unit, scale in (("GB", 1e9), ("MB", 1e6), ("KB", 1e3)):
+        if num_bytes >= scale:
+            return f"{num_bytes / scale:.1f} {unit}"
+    return f"{num_bytes} B"
+
+
+def _run_notification_body(result, started_at):
+    """"3 נוצרו · 1 נכשלו · 0:17 · 4.9 MB": ספירה שגדולה מאפס, המשך, והגודל של התוצרים מה-run manifest (סטודיו)."""
+    result = result if isinstance(result, dict) else {}
+
+    def count(key):
+        value = result.get(key)
+        return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+    parts = [label.format(count(key)) for key, label in W.RUN_COUNTS if count(key) > 0]
+    if not parts and "files_created" in result:
+        parts.append(W.RUN_COUNTS[0][1].format(0))   # ריצה שלא יצרה כלום - "0 נוצרו", לא גוף ריק
+    if started_at:
+        parts.append(W._clock(time.time() - started_at))
+    size = 0
+    for path in W._manifest_created_outputs(result.get("manifest_path")):
+        try:
+            size += os.path.getsize(path)
+        except OSError:
+            pass
+    if size:
+        parts.append(W._size(size))
+    return " · ".join(parts)
+
+
 def _notify_run_finished(script_name, outcome, export_note, started_at):
     """מרכז ההתראות: הריצה נרשמת כאן, בסופה - לא בלולאת ה-/ws, שרצה רק כשטאב מחובר. התראה שלא נשמרה לא עוצרת סיום ריצה."""
     name = script_name or "ריצה"
@@ -72,15 +118,9 @@ def _notify_run_finished(script_name, outcome, export_note, started_at):
     stopped = not success and W._current_run.get("stop_requested")
     title, level, target = (f"✅ הסתיים: {name}", "ok", "outputs") if success else (
         (f"⏹️ נעצר: {name}", "info", "scripts") if stopped else (f"❌ נכשל: {name}", "bad", "scripts"))
-    details = []
-    if started_at:
-        seconds = time.time() - started_at
-        details.append(f"משך: {seconds:.0f} שניות" if seconds < 60 else f"משך: {seconds / 60:.1f} דקות")
-    summary = W.job_history.format_result_summary((outcome or {}).get("result"))
-    if summary:
-        details.append(summary)
     try:
-        W.notification_log.add("run", title, body=" · ".join(details), level=level, target=target)
+        W.notification_log.add("run", title, body=W._run_notification_body((outcome or {}).get("result"), started_at),
+                               level=level, target=target)
         if export_note:
             W.notification_log.add("export", export_note, level="warn", target="globalsettings")
     except Exception as e:

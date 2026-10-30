@@ -14,7 +14,7 @@ TRAY_LABELS = {"en": ("Open ClipForge", "Stop server"), "he": ("פתח בדפד�
 
 
 def tray_labels(language):
-    return TRAY_LABELS.get(language, TRAY_LABELS["en"])
+    return W.TRAY_LABELS.get(language, W.TRAY_LABELS["en"])
 
 DEFAULT_PORT = 8878
 # שרת אחר כבר מחזיק את הפורט (בדרך כלל עותק קודם של עצמנו) - יוצאים בלי לגעת בקובץ הטוקן
@@ -49,7 +49,7 @@ def _run_tray_icon(server, url):
         server.should_exit = True
 
     from utils.shared import ui_language
-    open_label, stop_label = tray_labels(ui_language.current(W.CONFIG_FILE))
+    open_label, stop_label = W.tray_labels(ui_language.current(W.CONFIG_FILE))
     menu = pystray.Menu(
         pystray.MenuItem(open_label, _open_browser, default=True),
         pystray.MenuItem(stop_label, _quit),

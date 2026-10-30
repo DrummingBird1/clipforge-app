@@ -33,3 +33,5 @@
       *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
     }
   }
+html:not(.ui-lang-ready) body:not(.styleguide) { visibility: hidden; animation: ui-lang-fallback 0s linear 4s forwards; }
+@keyframes ui-lang-fallback { to { visibility: visible; } }
