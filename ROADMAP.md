@@ -32,7 +32,7 @@ What we'd like ClipForge to do next, by area. Nothing here is a promise or has a
 
 - Public CI and CodeQL code scanning.
 - Releases built and attested by CI from a tag.
-- Installing with Scoop or winget.
+- Installing with winget (Scoop works already, see the README).
 - A documentation site.
 
 ## Get involved

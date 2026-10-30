@@ -40,6 +40,17 @@
 
 אין תוכנת התקנה ולא צריך הרשאות מנהל. הכל נשאר באותה תיקייה, ולכן כדי להסיר את ClipForge פשוט מוחקים אותה.
 
+### או עם Scoop
+
+מי שמשתמש ב-[Scoop](https://scoop.sh):
+
+```powershell
+scoop bucket add clipforge https://github.com/DrummingBird1/scoop-clipforge
+scoop install clipforge
+```
+
+אחר כך מפעילים את ClipForge מתפריט התחל. ‏`scoop update clipforge` מתקין גרסה חדשה, וההגדרות והסרטונים (`data` ו-`workspace`) נשמרים בין עדכונים.
+
 ### דרישות
 
 - ‏Windows 10 או 11, ‏64 ביט.

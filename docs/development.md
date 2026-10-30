@@ -401,6 +401,13 @@ its history never needs a force-push:
    `.github/workflows/release.yml`, which checks that the tag matches the version, builds the portable zip with the
    pinned FFmpeg (`dev/build_portable.py`), and creates the GitHub Release with the zip, `SHA256SUMS.txt` and the
    `CHANGELOG.md` section, with the zip's SHA-256 in the notes.
+5. Update the Scoop bucket, [DrummingBird1/scoop-clipforge](https://github.com/DrummingBird1/scoop-clipforge): in
+   `bucket/clipforge.json`, set `version`, change the version in `url` and `extract_dir`, and set `hash` to the zip's
+   line in the Release's `SHA256SUMS.txt`. Commit and push. With Scoop installed,
+   `checkver.ps1 -App clipforge -Dir bucket -Update` (in Scoop's `apps\scoop\current\bin`) does all of this from the
+   manifest's `autoupdate`. To check it, run `scoop update` (it fetches the bucket), then `scoop update clipforge`.
+   Once GitHub Actions runs again (from November 1), an Excavator workflow in the bucket can do this step on a
+   schedule.
 
 `dev/build_portable.py` writes `dist/SHA256SUMS.txt` next to the zip (`sha256sum -c SHA256SUMS.txt` checks it). For a
 Release made by hand, upload `SHA256SUMS.txt` together with the zip.

@@ -58,3 +58,18 @@ def test_the_roadmap_is_there_points_to_the_public_repository_and_the_readmes_li
     for readme in ("README.md", "README.he.md"):
         with open(os.path.join(PROJECT_ROOT, readme), encoding="utf-8") as f:
             assert "[ROADMAP.md](ROADMAP.md)" in f.read(), readme
+
+
+def test_the_readmes_install_from_the_scoop_bucket_and_releasing_updates_it():
+    """30.10.2026: התקנה עם Scoop מה-bucket הציבורי DrummingBird1/scoop-clipforge, ו-Releasing כולל את עדכון ה-manifest."""
+    bucket = "https://github.com/DrummingBird1/scoop-clipforge"
+    for readme in ("README.md", "README.he.md"):
+        with open(os.path.join(PROJECT_ROOT, readme), encoding="utf-8") as f:
+            text = f.read()
+        install = text[text.index("```powershell", text.index("Scoop")):]
+        assert install.startswith(f"```powershell\nscoop bucket add clipforge {bucket}\nscoop install clipforge\n```"), readme
+        assert "`data`" in text and "`workspace`" in text, readme
+    with open(os.path.join(PROJECT_ROOT, "docs", "development.md"), encoding="utf-8") as f:
+        development = f.read()
+    releasing = development[development.index("### Releasing a new version"):development.index("### CI and security workflows")]
+    assert f"({bucket})" in releasing and "bucket/clipforge.json" in releasing and "SHA256SUMS.txt" in releasing

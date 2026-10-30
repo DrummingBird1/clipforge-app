@@ -38,6 +38,17 @@ A video studio for gameplay clips and data videos that runs on your own Windows 
 
 There's no installer and no admin rights are needed. Everything stays in that folder, so removing ClipForge means deleting the folder.
 
+### Or with Scoop
+
+If you use [Scoop](https://scoop.sh):
+
+```powershell
+scoop bucket add clipforge https://github.com/DrummingBird1/scoop-clipforge
+scoop install clipforge
+```
+
+Then start ClipForge from the Start menu. `scoop update clipforge` installs a new version, and your settings and videos (`data` and `workspace`) are kept between updates.
+
 ### Requirements
 
 - Windows 10 or 11, 64-bit.
