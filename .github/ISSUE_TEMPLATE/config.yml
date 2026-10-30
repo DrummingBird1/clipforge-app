@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Questions and ideas
+    url: https://github.com/DrummingBird1/clipforge-app/discussions
+    about: Ask a question or share an idea in Discussions. Issues are for bugs and concrete feature requests.
   - name: Report a security problem
     url: https://github.com/DrummingBird1/clipforge-app/security/advisories/new
     about: Please report vulnerabilities privately, not in a public issue.

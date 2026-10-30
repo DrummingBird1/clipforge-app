@@ -99,6 +99,6 @@
 
 ## למפתחים
 
-הרצה מקוד המקור, טסטים ומבנה הקוד: [docs/development.md](docs/development.md).
+הרצה מקוד המקור, טסטים ומבנה הקוד: [docs/development.md](docs/development.md). מה מתוכנן בהמשך: [ROADMAP.md](ROADMAP.md) (באנגלית).
 
 </div>
