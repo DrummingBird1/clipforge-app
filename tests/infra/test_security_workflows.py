@@ -24,7 +24,7 @@ def _triggers(wf):
 
 def test_every_action_in_every_workflow_is_pinned_to_a_full_sha_with_its_version():
     names = sorted(n for n in os.listdir(WORKFLOWS) if n.endswith(".yml"))
-    assert {"ci.yml", "release.yml", "codeql.yml", "scorecard.yml"} <= set(names)
+    assert {"ci.yml", "release.yml", "codeql.yml", "scorecard.yml", "pages.yml"} <= set(names)
     unpinned = []
     for name in names:
         _load(name)   # YAML תקין
@@ -71,3 +71,21 @@ def test_the_release_attests_the_zip_and_its_checksums():
     release = next(s for s in steps if "gh release create" in s.get("run", ""))
     assert "gh attestation verify" in release["run"] and "GITHUB_REPOSITORY" in release["run"]
     assert steps.index(attest) < steps.index(release)
+
+
+def test_the_docs_site_builds_strictly_and_deploys_to_pages_only_from_the_public_repository():
+    wf = _load("pages.yml")
+    triggers = _triggers(wf)
+    assert set(triggers) == {"push", "workflow_dispatch"}
+    assert triggers["push"]["branches"] == ["main"]
+    assert {"docs/**", "mkdocs.yml", "README.md", "dev/mkdocs_hooks.py"} <= set(triggers["push"]["paths"])
+    assert wf["permissions"] == {"contents": "read"}
+    build, deploy = wf["jobs"]["build"], wf["jobs"]["deploy"]
+    assert build["if"] == deploy["if"] == PUBLIC_ONLY
+    assert build["permissions"] == {"contents": "read"}
+    assert deploy["permissions"] == {"pages": "write", "id-token": "write"}
+    assert deploy["needs"] == "build" and deploy["environment"]["name"] == "github-pages"
+    assert any("mkdocs build --strict" in s.get("run", "") for s in build["steps"])
+    upload = next(s for s in build["steps"] if s.get("uses", "").startswith("actions/upload-pages-artifact@"))
+    assert upload["with"]["path"] == "site"
+    assert any(s.get("uses", "").startswith("actions/deploy-pages@") for s in deploy["steps"])

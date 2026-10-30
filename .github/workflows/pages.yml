@@ -1,0 +1,64 @@
+name: Docs site
+
+# 30.10.2026 (אתר התיעוד): בונה את האתר מ-mkdocs.yml (docs/, ו-README, ‏CHANGELOG ו-ROADMAP מהשורש דרך dev/mkdocs_hooks.py)
+# ומפרסם אותו ב-GitHub Pages. רץ רק בריפו הציבורי (github.event.repository.private == false) - בריפו הפרטי ה-jobs מדלגים.
+# ‏--strict: קישור שבור לעמוד או לכותרת מפיל את הבנייה, ואז האתר הקודם נשאר. כל action מוצמד ל-SHA מלא.
+# בריפו הציבורי: Settings > Pages > Source = "GitHub Actions" (פעם אחת, אחרי ש-Actions פתוח).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "README.md"
+      - "CHANGELOG.md"
+      - "ROADMAP.md"
+      - "dev/mkdocs_hooks.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# פרסום אחד בכל פעם; פרסום שכבר התחיל לא מתבטל באמצע
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Install mkdocs-material (the dev group in uv.lock)
+        run: uv sync --frozen --only-dev
+
+      - name: Build the site
+        run: uv run --no-sync mkdocs build --strict
+        env:
+          NO_MKDOCS_2_WARNING: "1"
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write      # הפרסום ל-Pages
+      id-token: write   # אימות מול Pages (OIDC)
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -41,7 +41,7 @@ An internal automation toolkit for video processing, social media content genera
   - [Annual "Wrapped" Video (`my_scripts/video/wrapped_generator.py`)](#annual-wrapped-video-my_scriptsvideowrapped_generatorpy)
   - [Data Videos (`my_scripts/video/dataviz_maker.py`, engine in `src/dataviz/`)](#data-videos-my_scriptsvideodataviz_makerpy-engine-in-srcdataviz)
   - [Script Integration Conventions](#script-integration-conventions)
-  - [Scheduling (⏰ Scheduler tab)](#scheduling-⏰-scheduler-tab)
+  - [Scheduling (⏰ Scheduler tab)](#scheduling--scheduler-tab)
   - [Build Executable](#build-executable)
   - [Run Tests](#run-tests)
   - [Lint](#lint)
@@ -419,6 +419,7 @@ download was built by this repository's workflow from its tag.
 | `release.yml` | a `v*` tag | builds the portable zip, attests it, and creates the Release |
 | `codeql.yml` | PRs, pushes to `main`, weekly | CodeQL for Python and JavaScript - public repository only |
 | `scorecard.yml` | pushes to `main`, branch-protection changes, weekly | OpenSSF Scorecard, published and uploaded to code scanning - public repository only |
+| `pages.yml` | pushes to `main` that touch `docs/`, `mkdocs.yml`, `README.md`, `CHANGELOG.md` or `ROADMAP.md`; `workflow_dispatch` | builds the documentation site with `mkdocs build --strict` and deploys it to GitHub Pages - public repository only |
 
 Every action is pinned to a full commit SHA, with its version in a comment; update the SHA and the comment together.
 CodeQL and Scorecard skip a private repository (`github.event.repository.private`), where code scanning needs a paid
@@ -426,6 +427,12 @@ plan.
 
 To turn them on in the public repository: enable Actions; leave code scanning's "Default setup" off, because `codeql.yml`
 is the advanced setup; and protect `main` with a rule that requires the `lint` and `unit` checks to pass.
+
+The documentation site (from November 1, once Actions runs again): in the public repository, set Settings > Pages >
+Source to "GitHub Actions", then run `pages.yml` once by hand. `mkdocs.yml` builds the site from `docs/`, and
+`dev/mkdocs_hooks.py` adds `README.md`, `CHANGELOG.md` and `ROADMAP.md` from the repository root and points their links
+at the site's pages. Preview it locally with `uv run mkdocs serve`; `uv run mkdocs build --strict` fails on a broken
+link to a page or a heading, as the workflow does.
 
 ### Pre-push hooks (optional)
 `.pre-commit-config.yaml` now has pre-push hooks for `mypy`, a fast Tk/GUI test subset (~10s) and `pip-audit`, next to the full pytest hook. Not enabled automatically: `pip install pre-commit && pre-commit install --hook-type pre-push`. Offline push: `SKIP=pip-audit git push`.

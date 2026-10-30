@@ -66,6 +66,9 @@ build/
 dist/
 *.spec
 
+# The documentation site (regenerate with: uv run mkdocs build)
+/site/
+
 # Bundled ffmpeg binaries (large, downloaded separately)
 ffmpeg/
 ffmpeg_progress.tmp
