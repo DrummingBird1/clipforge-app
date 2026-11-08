@@ -2,6 +2,29 @@
 
 What changed in each ClipForge release, by topic. Dates are release dates (YYYY-MM-DD).
 
+## 1.2.0 - 2026-11-08
+
+### New in the studio
+- A corner radius for the frame effect (`--frame-radius`): the video sits in a frame with rounded inner corners. 0 keeps
+  the straight frame.
+- A file name layer burns the name of the source file being rendered onto the output, next to the timestamp layer. Quotes,
+  spaces and `%` in a file name are safe.
+- A caption line length (`--caption-max-chars`): burned captions wrap at the last space before the limit, never inside a
+  word, and Hebrew niqqud isn't counted. The SRT and VTT files you export stay unwrapped. It is saved with styles and brand
+  kits.
+
+### Fixes
+- English UI: the live player's sample caption stays English when it wraps, the file name layer has its own label in the
+  layers list, and a layer without an end time shows "End" instead of Hebrew.
+
+### Security
+- oauthlib 4.0.1 (CVE-2026-49272 is in the OAuth device-code server flow, which ClipForge doesn't use) and pyasn1 0.6.5
+  (four advisories about slow decoding of crafted input).
+
+### Docs
+- A redesigned README in English and Hebrew, with new screenshots (Simple mode, branding) and demo GIF, a "Your first video
+  in 5 minutes" guide on the docs site, and a SUPPORT.md.
+
 ## 1.1.3 - 2026-10-30
 
 ### Fixes
