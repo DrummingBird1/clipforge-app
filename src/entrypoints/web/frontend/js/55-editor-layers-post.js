@@ -79,7 +79,7 @@ _veBuildSummaryChips = function (o) {
 };
 
 // --- item 79/80: עורך שכבות מתוזמנות ---
-const VE_LAYER_KIND_ICONS = {text: "🔤", image: "🖼️", timer: "⏱️", timestamp: "🕒", video: "🎞️"};
+const VE_LAYER_KIND_ICONS = {text: "🔤", image: "🖼️", timer: "⏱️", timestamp: "🕒", video: "🎞️", filename: "📄"};
 // גל 26: שכבת וידאו (B-roll) - איך הקליפ ממלא את הפריים, ומה קורה לשמע שלו
 const VE_BROLL_FITS = {fill: "מסך מלא", fit: "מותאם (שוליים)", pip: "חלון (PiP)"};
 const VE_BROLL_AUDIO = {mute: "בלי השמע שלו", mix: "מעורבב עם הראשי", replace: "במקום השמע הראשי"};
@@ -102,7 +102,7 @@ function _veWriteLayers(layers) {
 
 function addVeLayer(kind) {
   const layers = _veLayersValue();
-  const base = {type: kind, start: 0, end: null, position: kind === "timestamp" ? "bottom-right" : "bottom-center", opacity: 1};
+  const base = {type: kind, start: 0, end: null, position: {timestamp: "bottom-right", filename: "bottom-left"}[kind] || "bottom-center", opacity: 1};
   if (kind === "image") Object.assign(base, {path: "", scale: 0.2, position: "top-left"});
   else if (kind === "video") Object.assign(base, {path: "", source_in: 0, fit: "fill", scale: 0.35, position: "top-right", audio: "mute", volume: 1});
   else Object.assign(base, {text: kind === "text" ? "" : "", font_size: kind === "text" ? 48 : 36, color: "#FFFFFF", box: kind !== "text", animation: kind === "text" ? "fade" : "none"});
@@ -145,7 +145,7 @@ function _veLayerRowEl(layer, index, total) {
   row.dataset.type = layer.type;
   const kind = document.createElement("span");
   kind.className = "ve-layer-kind"; kind.textContent = VE_LAYER_KIND_ICONS[layer.type] || "?";
-  kind.title = {text: "טקסט", image: "תמונה/מדבקה", timer: "טיימר", timestamp: "חותמת-זמן", video: "וידאו (B-roll)"}[layer.type] || "";
+  kind.title = {text: "טקסט", image: "תמונה/מדבקה", timer: "טיימר", timestamp: "חותמת-זמן", video: "וידאו (B-roll)", filename: "שם הקובץ"}[layer.type] || "";
   row.appendChild(kind);
   const inputs = {};
   if (layer.type === "text") {
@@ -185,7 +185,7 @@ function _veLayerRowEl(layer, index, total) {
   inputs.end = _veLayerInput("text", layer.end === null || layer.end === undefined ? "" : _veFormatTime(layer.end), "ve-layer-time", "מסתיים ב- (ריק = עד הסוף)", {placeholder: "סוף", "aria-label": "סיום"});
   row.append(inputs.position, inputs.start, inputs.end);
   if (layer.type !== "image" && layer.type !== "video") {
-    if (layer.type !== "timestamp") {
+    if (layer.type !== "timestamp" && layer.type !== "filename") {
       inputs.animation = _veLayerSelect(VE_LAYER_ANIMATIONS, layer.animation || "none", "הנפשה");
       row.append(inputs.animation);
     }

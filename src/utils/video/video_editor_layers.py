@@ -18,7 +18,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-LAYER_TYPES: Tuple[str, ...] = ("text", "image", "timer", "timestamp", "video")
+LAYER_TYPES: Tuple[str, ...] = ("text", "image", "timer", "timestamp", "video", "filename")
 # גל 26: שכבת וידאו (B-roll) - קליפ שני בטווח-זמן בתוך הפלט: מסך מלא (חיתוך למילוי),
 # מותאם (שוליים) או חלון (PiP), מנקודת-התחלה בקליפ, ושמע מושתק/מעורבב/במקום הראשי.
 VIDEO_LAYER_FITS: Tuple[str, ...] = ("fill", "fit", "pip")
@@ -241,6 +241,16 @@ def timestamp_expansion(layer: Dict[str, Any]) -> str:
     return f"%{{pts:localtime:{epoch}:%Y-%m-%d %H\\:%M\\:%S}}"
 
 
+def fill_filename_layers(layers: Sequence[Dict[str, Any]], source_path: str) -> None:
+    """שכבות "שם הקובץ": הטקסט הוא שם קובץ המקור (בלי נתיב) של הקובץ שמרונדר עכשיו. משנה את השכבות במקום
+    (הקורא מעתיק אותן לכל קובץ). הטקסט נכתב לקובץ-טקסט עם expansion=none, ולכן גרשיים, רווחים ו-% בשם
+    נשארים תווים רגילים - בלי escaping של ה-filtergraph."""
+    name = os.path.basename(str(source_path))[:MAX_TEXT_CHARS]
+    for layer in layers:
+        if layer.get("type") == "filename":
+            layer["text"] = name
+
+
 def layer_text_contents(layer: Dict[str, Any], output_duration: Optional[float]) -> List[str]:
     """התוכן לכל קובץ-טקסט שהשכבה צריכה: אחד לרוב, כמה (קידומות הולכות וגדלות)
     ל-typewriter. שכבות תמונה - רשימה ריקה."""
@@ -249,6 +259,8 @@ def layer_text_contents(layer: Dict[str, Any], output_duration: Optional[float])
         return [timer_expansion(layer, output_duration)]
     if kind == "timestamp":
         return [timestamp_expansion(layer)]
+    if kind == "filename":
+        return [layer["text"]] if layer.get("text") else []
     if kind != "text":
         return []
     text = layer["text"]
