@@ -241,6 +241,7 @@ def build_parser():
     parser.add_argument("--caption-font-size", type=int, default=16, help="גודל הגופן לכתוביות (--captions). ברירת מחדל: 16.")
     parser.add_argument("--caption-color", type=str, default="#FFFFFF", help="צבע הכתוביות כ-hex (--captions). ברירת מחדל: #FFFFFF (לבן).")
     parser.add_argument("--caption-position", type=str, default="bottom", choices=["bottom", "top", "center"], help="מיקום הכתוביות (--captions). ברירת מחדל: bottom.")
+    parser.add_argument("--caption-max-chars", type=int, default=0, help="מספר תווים מרבי בשורה של כתובית שנשרפת (--captions): ארוך מזה עובר לשורה חדשה ברווח האחרון לפני הגבול. 0 = בלי שבירה (ברירת מחדל).")
     parser.add_argument(
         "--blur-background", action="store_true",
         help="ממלא את כל הפריים ברקע מטושטש-ממורכז-מוגדל של אותו קלט, סביב התוכן המוקטן-שמור-יחס "

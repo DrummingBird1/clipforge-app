@@ -31,7 +31,7 @@ WAVE7B_FIELDS = (
     "layers", "timestamp_overlay", "progress_bar", "progress_bar_color", "progress_bar_position", "progress_bar_height",
     "frame_thickness", "frame_color", "frame_radius", "vignette", "ken_burns", "watermark_move_seconds", "pip_audio", "pip_duck",
     "intro_path", "outro_path", "boomerang", "loop_count", "meta_title", "meta_comment", "chapters",
-    "export_gif", "gif_width", "gif_fps", "export_audio",
+    "export_gif", "gif_width", "gif_fps", "export_audio", "caption_max_chars",
 )
 
 
@@ -143,7 +143,7 @@ def test_wave7b_fields_registered_in_profiles_help_and_page():
         assert len(FIELD_HELP[field].term) <= 30
     for element_id in ("veLayers", "veLayersRows", "veTimestampOverlay", "veProgressBar", "veFrameThickness", "veFrameRadius", "veVignette", "veKenBurns",
                        "veWatermarkMoveSeconds", "vePipAudio", "vePipDuck", "veIntroPath", "veOutroPath", "veBoomerang", "veLoopCount",
-                       "veMetaTitle", "veChapters", "veExportGif", "veGifWidth", "veExportAudio", "veHighlightThreshold"):
+                       "veMetaTitle", "veChapters", "veExportGif", "veGifWidth", "veExportAudio", "veHighlightThreshold", "veCaptionMaxChars"):
         assert f'id="{element_id}"' in html, element_id
 
 

@@ -496,6 +496,7 @@ CAPTION_FONT = args.caption_font
 CAPTION_FONT_SIZE = args.caption_font_size
 CAPTION_COLOR = args.caption_color
 CAPTION_POSITION = args.caption_position
+CAPTION_MAX_CHARS = max(0, min(80, args.caption_max_chars))
 
 FADE_IN_SECONDS = max(0.0, args.fade_in_seconds)
 FADE_OUT_SECONDS = max(0.0, args.fade_out_seconds)
@@ -856,6 +857,7 @@ def maybe_burn_captions(video_output_path, hdr_output_args=None, nvenc_preset=No
             style=CAPTION_STYLE, language=CAPTIONS_LANGUAGE, model_size=CAPTIONS_MODEL,
             export_formats=CAPTIONS_EXPORT, burn=not CAPTIONS_NO_BURN,
             srt_override_path=edited if (edited and os.path.exists(edited)) else None,
+            max_chars=CAPTION_MAX_CHARS,
         )
         if edited and os.path.exists(edited):
             print(f"  📝 שימוש בתמלול ערוך: {os.path.basename(edited)}")
@@ -1385,7 +1387,7 @@ def persist_final_counter_value():
 # בייט-בבייט ל-48 צירופי דגלים, מה שמבטיח סרטונים זהים - בלי לרנדר.
 RENDER_CONFIG_NAMES = (
     "AUDIO_FX_FILTERS", "AUDIO_TRACK", "AUTO_LEVELS", "BLUR_BACKGROUND", "CAPTIONS", "CAPTION_COLOR",
-    "CAPTION_FONT", "CAPTION_FONT_SIZE", "CAPTION_POSITION", "CHROMAKEY", "CHROMAKEY_BG_COLOR", "CHROMAKEY_BLEND",
+    "CAPTION_FONT", "CAPTION_FONT_SIZE", "CAPTION_MAX_CHARS", "CAPTION_POSITION", "CHROMAKEY", "CHROMAKEY_BG_COLOR", "CHROMAKEY_BLEND",
     "CHROMAKEY_COLOR", "CHROMAKEY_SIMILARITY", "CODEC", "CODEC_QUALITY", "CONTAINER", "DEINTERLACE", "DENOISE",
     "DENOISE_FILTER_OVERRIDE", "EFFECTIVE_OUTPUT_TEMPLATE", "EFFORT", "EQ_FILTER", "FADE_IN_SECONDS",
     "FADE_OUT_SECONDS", "FFMPEG_EXE", "FIT", "FORCE", "FRAME_BORDER", "FRAME_RADIUS", "GPU_HYBRID", "HWACCEL_DECODE", "KEEP_AUDIO",
@@ -1834,10 +1836,10 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
     preview_subtitle_filter = None
     preview_srt_path = None
     if preview_mode and cfg.CAPTIONS:
-        from utils.media.captions import build_caption_force_style, escape_subtitles_path, write_sample_srt
+        from utils.media.captions import build_caption_force_style, escape_subtitles_path, wrap_caption_text, write_sample_srt
         srt_fd, preview_srt_path = tempfile.mkstemp(suffix=".srt", prefix="ve_preview_caption_")
         os.close(srt_fd)
-        write_sample_srt(preview_srt_path, "כתובית לדוגמה\nSample caption", output_seconds + 5)
+        write_sample_srt(preview_srt_path, wrap_caption_text("כתובית לדוגמה\nSample caption", cfg.CAPTION_MAX_CHARS), output_seconds + 5)
         style = build_caption_force_style(cfg.CAPTION_FONT, cfg.CAPTION_FONT_SIZE, cfg.CAPTION_COLOR, cfg.CAPTION_POSITION)
         preview_subtitle_filter = f"subtitles='{escape_subtitles_path(preview_srt_path)}':force_style='{style}'"
 

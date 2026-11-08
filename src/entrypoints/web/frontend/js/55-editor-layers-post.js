@@ -3,6 +3,7 @@
 // ============================================================================
 
 const VE_WAVE7B_FIELDS = {
+  caption_max_chars: {id: "veCaptionMaxChars", kind: "int", label: "אורך שורה בכתוביות"},
   timestamp_overlay: {id: "veTimestampOverlay", kind: "str", label: "חותמת-זמן"},
   progress_bar: {id: "veProgressBar", kind: "bool", label: "סרגל התקדמות"},
   progress_bar_color: {id: "veProgressBarColor", kind: "str", label: "צבע הסרגל"},

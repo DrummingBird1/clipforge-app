@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import unicodedata
 
 WHISPER_MODEL_SIZE = "small"
 # item 71/72 (102-ההצעות, גל 7): סגנונות כתוביות - classic (הקיים), bold (סגנון
@@ -94,6 +95,38 @@ def write_srt(segments, srt_path):
             index += 1
 
 
+def _text_width(text):
+    """אורך תצוגה במספר תווים: סימני ניקוד/שילוב (למשל ניקוד עברי) לא תופסים מקום בשורה, אז לא נספרים."""
+    return sum(1 for char in text if not unicodedata.combining(char))
+
+
+def wrap_caption_text(text, max_chars):
+    """item (שבירת שורות בכתוביות): שובר כל שורה של כתובית לשורות של עד max_chars תווים - בכל פעם ברווח האחרון
+    שלפני הגבול. לעולם לא באמצע מילה: מילה ארוכה מהגבול נשארת לבדה בשורה שלה. שורות שכבר קיימות
+    בטקסט (תמלול ערוך) נשברות כל אחת לחוד. max_chars <= 0 = כבוי, הטקסט חוזר כמו שהוא."""
+    try:
+        limit = int(max_chars or 0)
+    except (TypeError, ValueError):
+        return text
+    if limit <= 0:
+        return text
+    lines = []
+    for line in str(text).split("\n"):
+        words = line.split()
+        if _text_width(line) <= limit or len(words) < 2:
+            lines.append(line)
+            continue
+        current = words[0]
+        for word in words[1:]:
+            if _text_width(current) + 1 + _text_width(word) <= limit:
+                current += " " + word
+            else:
+                lines.append(current)
+                current = word
+        lines.append(current)
+    return "\n".join(lines)
+
+
 _SRT_TIME_RE = re.compile(r"(\d+):(\d{2}):(\d{2})[,.](\d{1,3})")
 
 
@@ -118,6 +151,14 @@ def parse_srt(text):
     return segments
 
 
+def wrap_srt_file(src_path, dst_path, max_chars):
+    """עותק של קובץ SRT עם כל כתובית שבורה לשורות של עד max_chars תווים (wrap_caption_text). נועד לשריפה
+    בלבד - קבצי SRT/VTT שמיוצאים לצד הסרטון נשארים בלי שבירה, כי נגני הווידאו עוטפים בעצמם."""
+    with open(src_path, encoding="utf-8") as src:
+        segments = parse_srt(src.read())
+    write_srt([{**seg, "text": wrap_caption_text(seg["text"], max_chars)} for seg in segments], dst_path)
+
+
 def srt_to_vtt(srt_text):
     """SRT -> WebVTT (item 69): כותרת WEBVTT, נקודה במקום פסיק בחותמות-הזמן, בלי מספרי-קיו."""
     out = ["WEBVTT", ""]
@@ -136,10 +177,11 @@ def _format_ass_timestamp(seconds):
     return f"{h}:{m:02d}:{s_:02d}.{cs:02d}"
 
 
-def write_karaoke_ass(segments, ass_path):
+def write_karaoke_ass(segments, ass_path, max_chars=0):
     """item 71 (karaoke): קובץ ASS שבו כל מילה מקבלת תג \\kf באורך המילה שלה
     (מחותמות-הזמן לכל מילה של Whisper), כך שהמילה "נצבעת" בדיוק כשהיא נאמרת.
-    הסגנון עצמו (גופן/צבע/מיקום) מגיע מ-force_style בזמן השריפה."""
+    הסגנון עצמו (גופן/צבע/מיקום) מגיע מ-force_style בזמן השריפה. max_chars > 0 שובר שורה (\\N) לפני
+    המילה שחורגת מהגבול, באותו כלל של wrap_caption_text."""
     lines = [
         "[Script Info]", "ScriptType: v4.00+", "PlayResX: 384", "PlayResY: 288", "",
         "[V4+ Styles]",
@@ -151,12 +193,20 @@ def write_karaoke_ass(segments, ass_path):
         words = seg.get("words") or []
         if words:
             parts = []
+            line_width = 0
             for word in words:
                 duration_cs = max(1, int(round((float(word["end"]) - float(word["start"])) * 100)))
-                parts.append(f"{{\\kf{duration_cs}}}{str(word['word']).strip()} ")
+                label = str(word["word"]).strip()
+                width = _text_width(label)
+                if parts and max_chars and line_width + 1 + width > max_chars:
+                    parts[-1] = parts[-1][:-1] + "\\N"  # במקום הרווח אחרי המילה הקודמת
+                    line_width = width
+                else:
+                    line_width += width + (1 if line_width else 0)
+                parts.append(f"{{\\kf{duration_cs}}}{label} ")
             text = "".join(parts).strip()
         else:
-            text = str(seg.get("text", "")).strip()
+            text = wrap_caption_text(str(seg.get("text", "")).strip(), max_chars).replace("\n", "\\N")
         if text:
             lines.append(f"Dialogue: 0,{_format_ass_timestamp(float(seg['start']))},{_format_ass_timestamp(float(seg['end']))},Default,,0,0,0,,{text}")
     with open(ass_path, "w", encoding="utf-8") as f:
@@ -222,8 +272,12 @@ def burn_captions(
     font_name="Arial", font_size=16, font_color="#FFFFFF", position="bottom",
     video_codec_args=None, hdr_output_args=None,
     style="classic", language=None, model_size=None, export_formats="", burn=True, srt_override_path=None,
+    max_chars=0,
 ):
     """
+    max_chars (שבירת שורות): > 0 שובר כל כתובית שנשרפת לשורות של עד כך וכך תווים, ברווח האחרון לפני
+    הגבול (wrap_caption_text); 0 = כבוי. קובצי SRT/VTT שמיוצאים (export_formats) נשארים בלי שבירה.
+
     style/language/model_size (גל 7, items 71-72): סגנון/שפה/גודל-מודל. export_formats
     ("srt"/"vtt"/"both", item 69) שומר קובץ כתוביות לצד הווידאו; burn=False = רק ייצוא.
     srt_override_path (item 70, עורך תמלול): תמלול ערוך שמחליף את התמלול האוטומטי
@@ -261,7 +315,7 @@ def burn_captions(
             segments = transcribe_segments(video_path, translate_to_english=translate_to_english, language=language, model_size=model_size, word_timestamps=True)
             write_srt(segments, srt_path)
             subtitle_path = os.path.join(tmp_dir, "captions.ass")
-            write_karaoke_ass(segments, subtitle_path)
+            write_karaoke_ass(segments, subtitle_path, max_chars=max_chars)
         else:
             # kwargs נוספים רק כשבאמת שונים מברירת המחדל - שומר תאימות לקוראים/fakes קיימים
             extra = {}
@@ -283,6 +337,10 @@ def burn_captions(
         if not burn:
             return video_path
 
+        if max_chars and subtitle_path == srt_path:  # karaoke כבר נשבר בתוך קובץ ה-ASS שלו
+            wrapped_path = os.path.join(tmp_dir, "captions_wrapped.srt")
+            wrap_srt_file(srt_path, wrapped_path, max_chars)
+            subtitle_path = wrapped_path
         escaped_srt = escape_subtitles_path(subtitle_path)
         # הפלט הזמני נכתב *ליד* הווידאו, לא ב-tmp_dir: os.replace לא יכול להעביר בין
         # כוננים (%TEMP% ב-C: ו-workspace ב-E: -> WinError 17, והכתוביות לא נשרפו

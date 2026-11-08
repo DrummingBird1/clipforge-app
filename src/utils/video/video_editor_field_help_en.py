@@ -47,6 +47,7 @@ FIELD_HELP_EN: Dict[str, Tuple[str, str]] = {
     "caption_font_size": ("Caption size", "Caption font size."),
     "caption_color": ("Caption color", "Caption text color (#RRGGBB)."),
     "caption_position": ("Caption position", "Bottom, top or center of the frame."),
+    "caption_max_chars": ("Caption line length", "Maximum characters per line of a burned caption. A longer caption wraps at the last space before the limit, never inside a word. 0 = no wrapping."),
     "fade_in_seconds": ("Fade-in", "Seconds of fade from black/silence at the start - 0 disables."),
     "fade_out_seconds": ("Fade-out", "Seconds of fade to black/silence at the end - 0 disables."),
     "text": ("Static text", "A fixed title/lower-third burned in for the whole video - empty means none."),

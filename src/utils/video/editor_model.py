@@ -52,7 +52,7 @@ for _area, _fields in {
                "frame_radius", "remove_watermark_position", "remove_watermark_width_fraction", "remove_watermark_height_fraction", "remove_watermark_region"),
     "sound": ("keep_audio", "replace_audio_path", "audio_track", "loudnorm", "loudnorm_target", "noise_gate", "pip_audio", "pip_duck",
               "captions", "captions_translate", "captions_language", "captions_model", "caption_style", "caption_font", "caption_font_size",
-              "caption_color", "caption_position", "captions_export", "captions_no_burn",
+              "caption_color", "caption_position", "caption_max_chars", "captions_export", "captions_no_burn",
               "audio_highpass", "audio_eq_low", "audio_eq_mid", "audio_eq_mid_freq", "audio_eq_high", "audio_compressor", "audio_denoise",
               "audio_denoise_model"),
     "export": ("codec", "crf", "nvenc_cq", "target_size_mb", "container", "fps", "smooth_fps", "thumbnail", "no_suffix", "output_template",
@@ -102,7 +102,7 @@ SECTIONS: Dict[str, Tuple[Tuple[str, str, bool, Tuple[str, ...]], ...]] = {
           "audio_denoise_model")),
         ("captions", "💬 כתוביות", False,
          ("captions", "caption_style", "captions_language", "captions_model", "captions_translate", "caption_font", "caption_font_size",
-          "caption_color", "caption_position", "captions_export", "captions_no_burn")),
+          "caption_color", "caption_position", "caption_max_chars", "captions_export", "captions_no_burn")),
     ),
     "export": (
         ("file", "📄 קובץ", True, ("codec", "target_size_mb", "crf", "nvenc_cq", "container", "fps", "smooth_fps")),
@@ -124,7 +124,7 @@ DEPENDS_ON: Dict[str, Tuple[str, str]] = {
     "audio_denoise_model": ("audio_denoise", "!off"),
     "captions_language": ("captions", "true"), "captions_model": ("captions", "true"), "caption_style": ("captions", "true"),
     "caption_font_size": ("captions", "true"), "caption_position": ("captions", "true"), "captions_export": ("captions", "true"),
-    "captions_no_burn": ("captions", "true"),
+    "captions_no_burn": ("captions", "true"), "caption_max_chars": ("captions", "true"),
     "watermark_position_vertical": ("watermark_path", "set"), "watermark_move_seconds": ("watermark_path", "set"),
     "progress_bar_color": ("progress_bar", "true"), "progress_bar_position": ("progress_bar", "true"),
     "progress_bar_height": ("progress_bar", "true"),
@@ -137,7 +137,7 @@ TARGET_FIELDS: Tuple[str, ...] = ("vertical", "aspect", "custom_width", "custom_
                                   "codec", "crf", "nvenc_cq", "target_size_mb", "container", "fps")
 BRAND_FIELDS: Tuple[str, ...] = ("watermark_path", "watermark_position", "watermark_opacity", "watermark_scale", "watermark_x",
                                  "watermark_y", "watermark_position_vertical", "watermark_move_seconds", "caption_style", "caption_font",
-                                 "caption_font_size", "caption_color", "caption_position", "intro_path", "outro_path", "frame_color",
+                                 "caption_font_size", "caption_color", "caption_position", "caption_max_chars", "intro_path", "outro_path", "frame_color",
                                  "frame_thickness", "frame_radius", "progress_bar_color")
 PROJECT_FIELDS: Tuple[str, ...] = ("folder", "queue_files", "include_subfolders")
 RUN_FIELDS: Tuple[str, ...] = ("force", "preview_only", "validate_only")

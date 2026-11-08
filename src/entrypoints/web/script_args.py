@@ -441,6 +441,9 @@ def _ve_args_captions(payload, args, batch_overrides_path=None, layers_path=None
             except (TypeError, ValueError):
                 caption_font_size = 16
             args += ["--caption-font-size", str(caption_font_size)]
+            max_chars = _int_in(payload.get("caption_max_chars"), 0, 80)
+            if max_chars:
+                args += ["--caption-max-chars", str(max_chars)]
 
 
 def _ve_args_fps_loudnorm_lut(payload, args, batch_overrides_path=None, layers_path=None):
