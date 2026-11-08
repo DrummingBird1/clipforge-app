@@ -10,6 +10,7 @@ const VE_WAVE7B_FIELDS = {
   progress_bar_height: {id: "veProgressBarHeight", kind: "int", label: "עובי הסרגל"},
   frame_thickness: {id: "veFrameThickness", kind: "int", label: "עובי מסגרת"},
   frame_color: {id: "veFrameColor", kind: "str", label: "צבע מסגרת"},
+  frame_radius: {id: "veFrameRadius", kind: "int", label: "עיגול פינות"},
   vignette: {id: "veVignette", kind: "str", label: "וינייטה"},
   ken_burns: {id: "veKenBurns", kind: "float", label: "Ken Burns"},
   watermark_move_seconds: {id: "veWatermarkMoveSeconds", kind: "float", label: "watermark נודד"},

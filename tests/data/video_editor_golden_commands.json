@@ -763,6 +763,26 @@
    "<TMP>\\out\\source_edited_horizontal.mp4.partial.mp4"
   ]
  ],
+ "frame_rounded": [
+  [
+   "<FFMPEG>",
+   "-y",
+   "-i",
+   "<TMP>\\source.mp4",
+   "-filter_complex",
+   "[0:v]fps=30/1[outv];color=c=black:s=1920x1080:r=30/1,format=gbrap,geq=r=255:g=140:b=0:a='st(0,abs(X+0.5-960)-908);st(1,abs(Y+0.5-540)-488);255*clip(hypot(max(ld(0),0),max(ld(1),0))+min(max(ld(0),ld(1)),0)-40+0.5,0,1)',trim=end_frame=1,loop=loop=-1:size=1:start=0,setpts=N/30/TB[__fr1];[outv][__fr1]overlay=x=0:y=0:shortest=1[__lay1]",
+   "-map",
+   "[__lay1]",
+   "-an",
+   "-c:v",
+   "libx264",
+   "-preset",
+   "medium",
+   "-crf",
+   "20",
+   "<TMP>\\out\\source_edited_horizontal.mp4.partial.mp4"
+  ]
+ ],
  "pip_audio": [
   [
    "<FFMPEG>",
