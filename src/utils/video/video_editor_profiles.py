@@ -79,7 +79,7 @@ PROFILE_FIELDS = (
     "caption_style", "captions_language", "captions_model", "captions_export", "captions_no_burn",
     # גל 7ב: שכבות, קישוטים ועיבוד-אחרי
     "layers", "timestamp_overlay", "progress_bar", "progress_bar_color", "progress_bar_position", "progress_bar_height",
-    "frame_thickness", "frame_color", "vignette", "ken_burns", "watermark_move_seconds", "pip_audio", "pip_duck",
+    "frame_thickness", "frame_color", "frame_radius", "vignette", "ken_burns", "watermark_move_seconds", "pip_audio", "pip_duck",
     "intro_path", "outro_path", "boomerang", "loop_count", "meta_title", "meta_comment", "chapters",
     "export_gif", "gif_width", "gif_fps", "export_audio",
     # גל 12: מודל v2 - יעדי הריצה וערכת המותג המקושרת (ראו utils/video/editor_model.py)

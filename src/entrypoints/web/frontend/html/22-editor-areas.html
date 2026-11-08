@@ -324,6 +324,7 @@
                     <button type="button" onclick="addVeLayer('video')" title="קליפ שני (B-roll) בטווח זמן בתוך הפלט - מסך מלא, מותאם או חלון">🎞️ B-roll</button>
                     <button type="button" onclick="addVeLayer('timer')">⏱️ טיימר</button>
                     <button type="button" onclick="addVeLayer('timestamp')">🕒 חותמת-זמן</button>
+                    <button type="button" onclick="addVeLayer('filename')">📄 שם הקובץ</button>
                     <button type="button" onclick="addVeLayerCard('pip')" data-clip-lock>📺 PiP</button>
                     <button type="button" onclick="addVeLayerCard('progress')" data-clip-lock>▬ סרגל התקדמות</button>
                     <button type="button" onclick="addVeLayerCard('frame')" data-clip-lock>🖼️ מסגרת</button>
@@ -429,6 +430,10 @@
                       <label title="מסגרת צבעונית סביב הפריים - עובי בפיקסלים, 0 = בלי.">עובי / צבע:</label>
                       <input type="number" id="veFrameThickness" value="0" min="0" max="200" step="1" class="u-width-60px">
                       <input type="text" id="veFrameColor" data-ve-color="hex" value="#FFFFFF" class="u-width-90px" title="צבע המסגרת.">
+                    </div>
+                    <div class="ve-row">
+                      <label title="רדיוס בפיקסלים, 0 = פינות ישרות.">עיגול פינות:</label>
+                      <input type="number" id="veFrameRadius" value="0" min="0" max="200" step="1" class="u-width-60px">
                     </div>
                   </div>
                   <div class="ve-subcat ve-layer-card" data-subcat="removal" data-card="removal">

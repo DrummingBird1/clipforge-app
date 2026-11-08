@@ -723,6 +723,26 @@
    "<TMP>\\out\\source_edited_horizontal.mp4.partial.mp4"
   ]
  ],
+ "layer_filename": [
+  [
+   "<FFMPEG>",
+   "-y",
+   "-i",
+   "<TMP>\\source.mp4",
+   "-filter_complex",
+   "[0:v]fps=30/1[outv];[outv]drawtext=textfile='<TEMP>/ve_layers_*/layer_0_0.txt':font=Arial:fontsize=28:fontcolor=0xFFFFFF:expansion=none:box=1:boxcolor=black@0.5:boxborderw=12:x='h*0.04':y='h-text_h-h*0.04':alpha='1':enable='gte(t,0)'[__lay1]",
+   "-map",
+   "[__lay1]",
+   "-an",
+   "-c:v",
+   "libx264",
+   "-preset",
+   "medium",
+   "-crf",
+   "20",
+   "<TMP>\\out\\source_edited_horizontal.mp4.partial.mp4"
+  ]
+ ],
  "progress_frame_vignette_kenburns": [
   [
    "<FFMPEG>",
@@ -733,6 +753,26 @@
    "[0:v]fps=30/1,vignette=angle=PI/5,zoompan=z='1+0.5*on/900':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=1920x1080:fps=30/1[outv];[outv]drawbox=x=0:y=0:w=iw:h=ih:color=0xFFFFFF:t=8[__lay1];color=c=0xFF0000:s=1920x8:r=30/1[__pb2];[__lay1][__pb2]overlay=x='-w+W*t/30':y=H-h:shortest=1[__lay2]",
    "-map",
    "[__lay2]",
+   "-an",
+   "-c:v",
+   "libx264",
+   "-preset",
+   "medium",
+   "-crf",
+   "20",
+   "<TMP>\\out\\source_edited_horizontal.mp4.partial.mp4"
+  ]
+ ],
+ "frame_rounded": [
+  [
+   "<FFMPEG>",
+   "-y",
+   "-i",
+   "<TMP>\\source.mp4",
+   "-filter_complex",
+   "[0:v]fps=30/1[outv];color=c=black:s=1920x1080:r=30/1,format=gbrap,geq=r=255:g=140:b=0:a='st(0,abs(X+0.5-960)-908);st(1,abs(Y+0.5-540)-488);255*clip(hypot(max(ld(0),0),max(ld(1),0))+min(max(ld(0),ld(1)),0)-40+0.5,0,1)',trim=end_frame=1,loop=loop=-1:size=1:start=0,setpts=N/30/TB[__fr1];[outv][__fr1]overlay=x=0:y=0:shortest=1[__lay1]",
+   "-map",
+   "[__lay1]",
    "-an",
    "-c:v",
    "libx264",

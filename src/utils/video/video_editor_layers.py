@@ -18,7 +18,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-LAYER_TYPES: Tuple[str, ...] = ("text", "image", "timer", "timestamp", "video")
+LAYER_TYPES: Tuple[str, ...] = ("text", "image", "timer", "timestamp", "video", "filename")
 # גל 26: שכבת וידאו (B-roll) - קליפ שני בטווח-זמן בתוך הפלט: מסך מלא (חיתוך למילוי),
 # מותאם (שוליים) או חלון (PiP), מנקודת-התחלה בקליפ, ושמע מושתק/מעורבב/במקום הראשי.
 VIDEO_LAYER_FITS: Tuple[str, ...] = ("fill", "fit", "pip")
@@ -241,6 +241,16 @@ def timestamp_expansion(layer: Dict[str, Any]) -> str:
     return f"%{{pts:localtime:{epoch}:%Y-%m-%d %H\\:%M\\:%S}}"
 
 
+def fill_filename_layers(layers: Sequence[Dict[str, Any]], source_path: str) -> None:
+    """שכבות "שם הקובץ": הטקסט הוא שם קובץ המקור (בלי נתיב) של הקובץ שמרונדר עכשיו. משנה את השכבות במקום
+    (הקורא מעתיק אותן לכל קובץ). הטקסט נכתב לקובץ-טקסט עם expansion=none, ולכן גרשיים, רווחים ו-% בשם
+    נשארים תווים רגילים - בלי escaping של ה-filtergraph."""
+    name = os.path.basename(str(source_path))[:MAX_TEXT_CHARS]
+    for layer in layers:
+        if layer.get("type") == "filename":
+            layer["text"] = name
+
+
 def layer_text_contents(layer: Dict[str, Any], output_duration: Optional[float]) -> List[str]:
     """התוכן לכל קובץ-טקסט שהשכבה צריכה: אחד לרוב, כמה (קידומות הולכות וגדלות)
     ל-typewriter. שכבות תמונה - רשימה ריקה."""
@@ -249,6 +259,8 @@ def layer_text_contents(layer: Dict[str, Any], output_duration: Optional[float])
         return [timer_expansion(layer, output_duration)]
     if kind == "timestamp":
         return [timestamp_expansion(layer)]
+    if kind == "filename":
+        return [layer["text"]] if layer.get("text") else []
     if kind != "text":
         return []
     text = layer["text"]
@@ -382,6 +394,39 @@ def build_broll_audio_parts(main_label: str, sources: Sequence[Dict[str, Any]], 
     return parts
 
 
+def build_rounded_frame_source(
+    color: str, thickness: int, radius: int, width: int, height: int, fps: Union[int, str, None],
+) -> Optional[str]:
+    """מקור-filtergraph (בלי תווית-פלט) של מסגרת עם פינות פנימיות מעוגלות: "טבעת" RGBA בגודל
+    הפלט שהשקופה בה היא רק חלון הווידאו המעוגל. הטבעת מחושבת ב-geq על פריים אחד בלבד
+    (trim + loop שומרים אותו), כך שאין עלות לכל פריים. המרחק לחלון הוא מרחק-מסומן של
+    מלבן מעוגל (בפיקסלים), והשקיפות מוחלקת על רוחב פיקסל אחד.
+
+    radius נחתך לחצי הצד הקצר של החלון. מחזיר None כשאין מה לעגל (רדיוס 0, חלון קטן מדי או צבע
+    לא תקין) - הקורא חוזר אז ל-drawbox הישר."""
+    thickness, radius = int(thickness), int(radius)
+    inner_width, inner_height = width - 2 * thickness, height - 2 * thickness
+    hex_color = color.lstrip("#")
+    if radius <= 0 or thickness <= 0 or inner_width < 2 or inner_height < 2 or not _HEX_COLOR_RE.match(hex_color):
+        return None
+    radius_value = min(float(radius), inner_width / 2, inner_height / 2)
+    red, green, blue = (int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+    half_width, half_height = width / 2, height / 2
+    reach_x, reach_y = half_width - thickness - radius_value, half_height - thickness - radius_value
+    alpha = (
+        f"st(0,abs(X+0.5-{_fmt(half_width)})-{_fmt(reach_x)});st(1,abs(Y+0.5-{_fmt(half_height)})-{_fmt(reach_y)});"
+        f"255*clip(hypot(max(ld(0),0),max(ld(1),0))+min(max(ld(0),ld(1)),0)-{_fmt(radius_value)}+0.5,0,1)"
+    )
+    try:
+        fps_value = eval_fps(fps or 30)
+    except (TypeError, ValueError, ZeroDivisionError):
+        fps_value = 30.0
+    return (
+        f"color=c=black:s={width}x{height}:r={fps or 30},format=gbrap,geq=r={red}:g={green}:b={blue}:a='{alpha}',"
+        f"trim=end_frame=1,loop=loop=-1:size=1:start=0,setpts=N/{_fmt(fps_value)}/TB"
+    )
+
+
 def build_layer_parts(
     in_label: str,
     layers: Sequence[Dict[str, Any]],
@@ -393,10 +438,12 @@ def build_layer_parts(
     progress_bar: Optional[Dict[str, Any]] = None,
     frame_border: Optional[Tuple[str, int]] = None,
     output_height: Optional[int] = None,
+    frame_radius: int = 0,
 ) -> Tuple[List[str], str]:
     """חלקי filtergraph שמרכיבים את כל השכבות על in_label, לפי הסדר (שכבה מאוחרת
     מעל מוקדמת) -> (parts, תווית-הפלט). image_inputs: {index-שכבה: אינדקס -i} (תמונות
-    ושכבות וידאו). סרגל-התקדמות ומסגרת תמיד עליונים (אחרונים)."""
+    ושכבות וידאו). סרגל-התקדמות ומסגרת תמיד עליונים (אחרונים). frame_radius > 0 מעגל את
+    הפינות הפנימיות של המסגרת (דורש גודל פלט ידוע; אחרת המסגרת נשארת ישרה)."""
     parts: List[str] = []
     current = in_label
     chain: List[str] = []
@@ -464,7 +511,19 @@ def build_layer_parts(
             chain += build_text_layer_filters(layer, text_files.get(index, []))
     if frame_border and frame_border[1] > 0:
         color, thickness = frame_border
-        chain.append(f"drawbox=x=0:y=0:w=iw:h=ih:color=0x{color.lstrip('#')}:t={int(thickness)}")
+        rounded = (
+            build_rounded_frame_source(color, thickness, frame_radius, int(output_width), int(output_height), output_fps)
+            if frame_radius > 0 and output_width and output_height else None
+        )
+        if rounded:
+            flush()
+            counter += 1
+            label = f"__lay{counter}"
+            parts.append(f"{rounded}[__fr{counter}]")
+            parts.append(f"[{current}][__fr{counter}]overlay=x=0:y=0:shortest=1[{label}]")
+            current = label
+        else:
+            chain.append(f"drawbox=x=0:y=0:w=iw:h=ih:color=0x{color.lstrip('#')}:t={int(thickness)}")
     flush()
     if progress_bar and output_width and output_duration and output_duration > 0:
         height = int(progress_bar.get("height") or 8)

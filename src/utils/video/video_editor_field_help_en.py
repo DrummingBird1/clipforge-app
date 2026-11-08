@@ -144,6 +144,7 @@ FIELD_HELP_EN: Dict[str, Tuple[str, str]] = {
     "progress_bar_height": ("Bar thickness", "Progress bar thickness in pixels."),
     "frame_thickness": ("Frame thickness", "A colored frame around the picture - thickness in pixels, 0 = none."),
     "frame_color": ("Frame color", "Frame color (#RRGGBB)."),
+    "frame_radius": ("Corner radius", "Rounds the inner corners of the frame - radius in pixels, 0 = square corners. Works only when the frame thickness is above 0."),
     "vignette": ("Vignette", "Gently darkens the frame edges to focus attention on the center."),
     "ken_burns": ("Ken Burns (slow zoom)", "A slow, continuous zoom-in across the whole video."),
     "watermark_move_seconds": ("Moving watermark", "Moves the watermark between the four corners every N seconds (0 = fixed)."),

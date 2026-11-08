@@ -5,10 +5,12 @@
 # (87, 88), עיבוד-אחרי: bumper/loop/boomerang/פרקים/GIF/WebP/אודיו (81, 89),
 # וזיהוי הייליטס (85).
 import os
+import subprocess
 
 
 import pytest
 
+from tests.media_support import needs_ffmpeg
 from utils.video import highlight_detect as hd
 from utils.video import video_editor_layers as vel
 from utils.video import video_editor_post as vep_post
@@ -126,6 +128,117 @@ def test_build_layer_parts_progress_bar_and_frame():
     assert parts[1] == "color=c=0x00FF00:s=1080x10:r=30[__pb2]"
     assert parts[2] == f"[__lay1][__pb2]overlay=x='-w+W*t/12.5':y=0:shortest=1[{out}]"
     assert vel.build_layer_parts("outv", [], {}, {}, 1080, "30", None, progress_bar={"height": 8}) == ([], "outv")
+
+
+# --- שכבת "שם הקובץ" (type=filename) ---
+
+TRICKY_NAME = "Tom's \"best\" clip 100% {fast} #1.mp4"
+
+
+def test_filename_layer_survives_sanitize_without_any_text():
+    assert "filename" in vel.LAYER_TYPES
+    [layer] = vel.sanitize_layers([{"type": "filename", "position": "top-left", "font_size": 28, "box": True, "animation": "slide"}])
+    assert layer["type"] == "filename" and layer["text"] == "" and layer["position"] == "top-left"
+    assert layer["font_size"] == 28 and layer["box"] is True
+
+
+def test_fill_filename_layers_uses_the_source_name_without_the_folder_and_only_for_filename_layers():
+    layers = vel.sanitize_layers([{"type": "filename"}, {"type": "text", "text": "hi"}, {"type": "timestamp"}])
+    vel.fill_filename_layers(layers, os.path.join("D:", os.sep, "Clips 2026", "match 01.mp4"))
+    assert [layer["text"] for layer in layers] == ["match 01.mp4", "hi", ""]
+    # process_video ממלא עותק של השכבות לכל קובץ - שם של קובץ אחד לא דולף למתכון ולא לקובץ שאחריו
+    recipe = vel.sanitize_layers([{"type": "filename"}])
+    first, second = [dict(layer) for layer in recipe], [dict(layer) for layer in recipe]
+    vel.fill_filename_layers(first, "a.mp4")
+    vel.fill_filename_layers(second, "b.mp4")
+    assert (first[0]["text"], second[0]["text"], recipe[0]["text"]) == ("a.mp4", "b.mp4", "")
+
+
+def test_filename_layer_text_file_keeps_quotes_percent_braces_and_spaces_literal(tmp_path):
+    [layer] = vel.sanitize_layers([{"type": "filename", "position": "bottom-left"}])
+    vel.fill_filename_layers([layer], os.path.join("D:", os.sep, "x", TRICKY_NAME))
+    files = vel.write_layer_text_files([layer], str(tmp_path), 10.0)
+    with open(files[0][0], encoding="utf-8") as handle:
+        assert handle.read() == TRICKY_NAME
+    [drawtext] = vel.build_text_layer_filters(layer, files[0])
+    # הטקסט נקרא מקובץ ו-expansion=none: אף תו מהשם לא נכנס לפילטר ולא מתפרש (%{...}, גרשיים)
+    assert drawtext.startswith("drawtext=textfile='") and ":expansion=none:" in drawtext
+    assert "Tom" not in drawtext and "100%" not in drawtext
+
+
+def test_filename_layer_without_a_name_draws_nothing(tmp_path):
+    [layer] = vel.sanitize_layers([{"type": "filename"}])
+    assert vel.layer_text_contents(layer, 10.0) == []
+    assert vel.write_layer_text_files([layer], str(tmp_path), 10.0) == {}
+    assert vel.build_text_layer_filters(layer, []) == []
+
+
+# --- מסגרת עם פינות מעוגלות (--frame-radius) ---
+
+def test_build_layer_parts_rounded_frame_overlays_a_one_frame_alpha_ring():
+    parts, out = vel.build_layer_parts("outv", [], {}, {}, 1080, "30", None, frame_border=("#FF8C00", 24),
+                                       output_height=1920, frame_radius=60)
+    source, overlay = parts
+    assert source.startswith("color=c=black:s=1080x1920:r=30,format=gbrap,geq=r=255:g=140:b=0:a='") and source.endswith("[__fr1]")
+    assert "-60+0.5" in source  # הרדיוס בנוסחת המרחק
+    assert ",trim=end_frame=1,loop=loop=-1:size=1:start=0,setpts=N/30/TB[" in source  # geq רץ על פריים אחד, לא על כל פריים
+    assert overlay == f"[outv][__fr1]overlay=x=0:y=0:shortest=1[{out}]"
+    assert not any("drawbox" in part for part in parts)
+
+
+def test_build_layer_parts_rounded_frame_sits_above_the_text_layers():
+    text = {"type": "text", "text": "hi", "start": 0.0, "end": None, "position": "top-center", "font": "Arial", "font_size": 24,
+            "color": "#FFFFFF", "animation": "none", "opacity": 1.0}
+    parts, out = vel.build_layer_parts("outv", [text], {0: ["t0.txt"]}, {}, 640, "30", None, frame_border=("#112233", 10),
+                                       output_height=360, frame_radius=20)
+    assert parts[0].startswith("[outv]drawtext=") and parts[0].endswith("[__lay1]")
+    assert parts[1].endswith("[__fr2]")
+    assert parts[2] == f"[__lay1][__fr2]overlay=x=0:y=0:shortest=1[{out}]"
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"frame_radius": 0},                      # ברירת המחדל: פינות ישרות כמו תמיד
+    {"frame_radius": 30, "output_height": None},   # בלי גודל פלט ידוע אי אפשר לחשב את הטבעת
+    {"frame_radius": 30, "output_height": 1920, "frame_border": ("#FFFFFF", 600)},  # העובי אוכל את כל הפריים
+    {"frame_radius": 30, "output_height": 1920, "frame_border": ("red", 12)},       # צבע לא תקין
+])
+def test_build_layer_parts_frame_falls_back_to_the_straight_drawbox(kwargs):
+    kwargs = {"frame_border": ("#FFFFFF", 12), "output_height": 1920, **kwargs}
+    parts, _ = vel.build_layer_parts("outv", [], {}, {}, 1080, "30", None, **kwargs)
+    assert len(parts) == 1 and parts[0].startswith("[outv]drawbox=x=0:y=0:w=iw:h=ih:color=0x")
+
+
+def test_rounded_frame_source_clamps_the_radius_to_the_window_and_handles_fractional_fps():
+    source = vel.build_rounded_frame_source("#FFFFFF", 10, 5000, 200, 100, "30000/1001")
+    assert "-40+0.5" in source  # חצי הצד הקצר של החלון הפנימי (180x80)
+    assert source.startswith("color=c=black:s=200x100:r=30000/1001,") and source.endswith(",setpts=N/29.97/TB")
+    assert vel.build_rounded_frame_source("#FFFFFF", 10, 0, 200, 100, "30") is None
+    assert vel.build_rounded_frame_source("#FFFFFF", 0, 20, 200, 100, "30") is None
+
+
+@needs_ffmpeg
+def test_rounded_frame_renders_square_outside_and_round_inside_with_real_ffmpeg(tmp_path):
+    from PIL import Image
+    from utils.shared.ffmpeg_locator import get_ffmpeg_exe
+    from utils.shared.subprocess_flags import NO_WINDOW_FLAGS
+    frame_color, video_color = (255, 140, 0), (0, 0, 255)
+    source = vel.build_rounded_frame_source("#FF8C00", 20, 50, 320, 240, "10")
+    out = tmp_path / "frame.png"
+    result = subprocess.run([get_ffmpeg_exe(), "-y", "-f", "lavfi", "-i", "color=c=0x0000FF:s=320x240:r=10:d=1",
+                             "-filter_complex", f"{source}[ring];[0:v][ring]overlay=x=0:y=0:shortest=1[o]", "-map", "[o]",
+                             "-frames:v", "1", str(out)],
+                            capture_output=True, text=True, timeout=60, creationflags=NO_WINDOW_FLAGS, cwd=str(tmp_path))
+    assert result.returncode == 0, result.stderr[-800:]
+    picture = Image.open(out).convert("RGB")
+
+    def close(point, expected):
+        return all(abs(a - b) <= 12 for a, b in zip(picture.getpixel(point), expected))
+    assert close((0, 0), frame_color)       # הפינה החיצונית נשארת ישרה, בצבע המסגרת
+    assert close((10, 120), frame_color)    # רצועת המסגרת בצד
+    assert close((23, 23), frame_color)     # בתוך המסגרת אבל מחוץ לפינה המעוגלת של חלון הווידאו
+    assert close((22, 120), video_color)    # הקצה הישר של החלון - כבר וידאו
+    assert close((70, 70), video_color)     # מרכז הקשת - וידאו
+    assert close((160, 120), video_color)
 
 
 def test_image_layer_without_input_is_skipped():

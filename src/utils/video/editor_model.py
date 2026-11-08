@@ -49,7 +49,7 @@ for _area, _fields in {
                "watermark_position_vertical", "watermark_move_seconds", "pip_path", "pip_position", "pip_scale", "pip_opacity",
                "pip_x", "pip_y", "layers", "text", "text_position", "text_font", "text_font_size", "text_color", "timestamp_overlay",
                "progress_bar", "progress_bar_color", "progress_bar_position", "progress_bar_height", "frame_thickness", "frame_color",
-               "remove_watermark_position", "remove_watermark_width_fraction", "remove_watermark_height_fraction", "remove_watermark_region"),
+               "frame_radius", "remove_watermark_position", "remove_watermark_width_fraction", "remove_watermark_height_fraction", "remove_watermark_region"),
     "sound": ("keep_audio", "replace_audio_path", "audio_track", "loudnorm", "loudnorm_target", "noise_gate", "pip_audio", "pip_duck",
               "captions", "captions_translate", "captions_language", "captions_model", "caption_style", "caption_font", "caption_font_size",
               "caption_color", "caption_position", "caption_max_chars", "captions_export", "captions_no_burn",
@@ -92,7 +92,7 @@ SECTIONS: Dict[str, Tuple[Tuple[str, str, bool, Tuple[str, ...]], ...]] = {
         ("pip", "📺 PiP (תמונה-בתוך-תמונה)", True, ("pip_path", "pip_position", "pip_x", "pip_y", "pip_scale", "pip_opacity")),
         ("timed-layers", "📚 טקסט, תמונות וטיימרים", True, ("layers",)),
         ("decor", "▬ סרגל התקדמות", True, ("progress_bar", "progress_bar_color", "progress_bar_position", "progress_bar_height")),
-        ("frame", "🖼️ מסגרת", True, ("frame_thickness", "frame_color")),
+        ("frame", "🖼️ מסגרת", True, ("frame_thickness", "frame_color", "frame_radius")),
         ("removal", "🧽 מחיקת לוגו ישן", True, ("remove_watermark_region", "remove_watermark_position",
                                                   "remove_watermark_width_fraction", "remove_watermark_height_fraction")),
     ),
@@ -138,7 +138,7 @@ TARGET_FIELDS: Tuple[str, ...] = ("vertical", "aspect", "custom_width", "custom_
 BRAND_FIELDS: Tuple[str, ...] = ("watermark_path", "watermark_position", "watermark_opacity", "watermark_scale", "watermark_x",
                                  "watermark_y", "watermark_position_vertical", "watermark_move_seconds", "caption_style", "caption_font",
                                  "caption_font_size", "caption_color", "caption_position", "caption_max_chars", "intro_path", "outro_path", "frame_color",
-                                 "frame_thickness", "progress_bar_color")
+                                 "frame_thickness", "frame_radius", "progress_bar_color")
 PROJECT_FIELDS: Tuple[str, ...] = ("folder", "queue_files", "include_subfolders")
 RUN_FIELDS: Tuple[str, ...] = ("force", "preview_only", "validate_only")
 UI_FIELDS: Tuple[str, ...] = ("favorite_fields",)

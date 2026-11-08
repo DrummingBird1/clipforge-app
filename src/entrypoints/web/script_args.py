@@ -236,6 +236,9 @@ def _build_wave7b_args(payload, layers_path=None):
         color = _hex_or_none(payload.get("frame_color"), "#FFFFFF")
         if color:
             args += ["--frame-color", color]
+        radius = _int_in(payload.get("frame_radius"), 0, 200)
+        if radius:
+            args += ["--frame-radius", str(radius)]
     if payload.get("vignette") in ("light", "medium", "strong"):
         args += ["--vignette", payload["vignette"]]
     ken_burns = _clamped_float(payload.get("ken_burns"), 0.0, 0.5)

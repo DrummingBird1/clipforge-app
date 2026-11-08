@@ -103,7 +103,7 @@ from utils.video.video_editor_report import write_csv_report, write_xlsx_report
 from utils.video import video_editor_post as post_steps
 from utils.video.video_editor_layers import (
     build_broll_audio_sources, build_ken_burns_filter, build_video_layer_input_args, build_vignette_filter,
-    sanitize_layers, video_layer_end, write_layer_text_files,
+    fill_filename_layers, sanitize_layers, video_layer_end, write_layer_text_files,
 )
 from utils.video.video_editor_counter import get_next_number, save_number
 from utils.shared.hardware import get_gpu_stats, get_system_stats
@@ -452,6 +452,7 @@ PROGRESS_BAR = {
     "color": args.progress_bar_color, "position": args.progress_bar_position, "height": max(2, min(80, args.progress_bar_height)),
 } if args.progress_bar else None
 FRAME_BORDER = (args.frame_color, max(0, min(200, args.frame_thickness))) if args.frame_thickness > 0 else None
+FRAME_RADIUS = max(0, min(200, args.frame_radius)) if FRAME_BORDER else 0
 VIGNETTE_FILTER = build_vignette_filter(args.vignette)
 KEN_BURNS = max(0.0, min(0.5, args.ken_burns or 0.0))
 WATERMARK_MOVE_SECONDS = max(0.0, args.watermark_move_seconds or 0.0)
@@ -1389,7 +1390,7 @@ RENDER_CONFIG_NAMES = (
     "CAPTION_FONT", "CAPTION_FONT_SIZE", "CAPTION_MAX_CHARS", "CAPTION_POSITION", "CHROMAKEY", "CHROMAKEY_BG_COLOR", "CHROMAKEY_BLEND",
     "CHROMAKEY_COLOR", "CHROMAKEY_SIMILARITY", "CODEC", "CODEC_QUALITY", "CONTAINER", "DEINTERLACE", "DENOISE",
     "DENOISE_FILTER_OVERRIDE", "EFFECTIVE_OUTPUT_TEMPLATE", "EFFORT", "EQ_FILTER", "FADE_IN_SECONDS",
-    "FADE_OUT_SECONDS", "FFMPEG_EXE", "FIT", "FORCE", "FRAME_BORDER", "GPU_HYBRID", "HWACCEL_DECODE", "KEEP_AUDIO",
+    "FADE_OUT_SECONDS", "FFMPEG_EXE", "FIT", "FORCE", "FRAME_BORDER", "FRAME_RADIUS", "GPU_HYBRID", "HWACCEL_DECODE", "KEEP_AUDIO",
     "KEN_BURNS", "LAYERS", "LOUDNORM", "LOUDNORM_FILTER_OVERRIDE", "LUT_INTENSITY", "LUT_PATH", "NOISE_GATE",
     "NO_SUFFIX", "NUMBER_VIDEOS", "NVENC_SEMAPHORE", "ORIENTATION_FILTERS", "OUTPUT_FPS_OVERRIDE", "PAD_COLOR",
     "PIP_AUDIO", "PIP_DUCK", "PIP_OPACITY", "PIP_PATH", "PRESERVE_RESOLUTION", "PREVIEW_CLIP_SECONDS",
@@ -1785,6 +1786,7 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
     layer_image_inputs = {}
     layer_input_args = []  # גל 26: לכל שכבת תמונה/וידאו - הארגומנטים של ה--i שלה, לפי הסדר
     if file_layers:
+        fill_filename_layers(file_layers, video_path)
         for layer in file_layers:
             if layer["type"] == "timestamp" and layer.get("epoch") is None:
                 try:
@@ -1874,7 +1876,8 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
         eq_filter=cfg.EQ_FILTER, lut_intensity=cfg.LUT_INTENSITY, audio_stream_index=cfg.AUDIO_TRACK, audio_fx_filters=cfg.AUDIO_FX_FILTERS,
         layers=file_layers, layer_text_files=layer_text_files, layer_image_inputs=layer_image_inputs,
         broll_audio_sources=build_broll_audio_sources(file_layers, layer_image_inputs) if cfg.KEEP_AUDIO else None,
-        progress_bar=cfg.PROGRESS_BAR, frame_border=cfg.FRAME_BORDER, vignette_filter=cfg.VIGNETTE_FILTER, ken_burns_filter=ken_burns_filter,
+        progress_bar=cfg.PROGRESS_BAR, frame_border=cfg.FRAME_BORDER, frame_radius=cfg.FRAME_RADIUS,
+        vignette_filter=cfg.VIGNETTE_FILTER, ken_burns_filter=ken_burns_filter,
         watermark_cycle_positions=watermark_cycle_positions, watermark_cycle_seconds=cfg.WATERMARK_MOVE_SECONDS,
         pip_audio_input_index=pip_audio_input_index, pip_duck=cfg.PIP_DUCK,
     )

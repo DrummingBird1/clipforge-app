@@ -298,8 +298,11 @@ function _veRebuildLive() {
   video.playbackRate = _veLive.timeline ? Math.max(0.0625, Math.min(16, _veLive.timeline.speed)) : 1;
   const vignette = {light: 0.35, medium: 0.5, strong: 0.7}[opts.vignette] || 0;
   _veEl("veLiveVignette").style.background = vignette ? `radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,${vignette}) 100%)` : "none";
-  const frame = Number(opts.frame_thickness) || 0;
-  _veEl("veLiveFrame").style.boxShadow = frame > 0 ? `inset 0 0 0 ${Math.max(1, frame * scale)}px ${opts.frame_color || "#FFFFFF"}` : "none";
+  const frame = Number(opts.frame_thickness) || 0, radius = frame > 0 ? Number(opts.frame_radius) || 0 : 0;
+  const framePx = `${Math.max(1, frame * scale)}px`, frameColor = opts.frame_color || "#FFFFFF";
+  Object.assign(_veEl("veLiveFrame").style, radius > 0
+    ? {inset: framePx, borderRadius: `${radius * scale}px`, boxShadow: `0 0 0 100vmax ${frameColor}`}
+    : {inset: "", borderRadius: "", boxShadow: frame > 0 ? `inset 0 0 0 ${framePx} ${frameColor}` : "none"});
   _veLiveBuildOverlays(opts, out, stageSize, scale);
   // מה שהנגן לא מדמה - שיידעו שצריך "בדיקה מדויקת"
   const skipped = [];
@@ -473,6 +476,8 @@ function _veLiveTick() {
     } else if (layer.type === "timer") {
       const total = Number(layer.timer_seconds) > 0 ? Number(layer.timer_seconds) : (Number.isFinite(end) ? end - start : Math.max(0, outDuration - start));
       item.el.textContent = _veLiveFormat(layer.timer_mode === "elapsed" ? since : Math.max(0, total - since));
+    } else if (layer.type === "filename") {
+      item.el.textContent = String(_veLive.file || "").split(/[\\/]/).pop();
     } else if (layer.type === "timestamp") {
       item.el.textContent = new Date(Date.now() - (outDuration - o) * 1000).toLocaleTimeString("he-IL");
     }
