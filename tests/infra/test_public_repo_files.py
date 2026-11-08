@@ -11,7 +11,7 @@ from PIL import Image
 
 from tests import PROJECT_ROOT
 
-ROOT_FILES = ("CONTRIBUTING.md", "SECURITY.md", "CODE_OF_CONDUCT.md", ".github/pull_request_template.md")
+ROOT_FILES = ("CONTRIBUTING.md", "SECURITY.md", "SUPPORT.md", "CODE_OF_CONDUCT.md", ".github/pull_request_template.md")
 TEMPLATES = os.path.join(PROJECT_ROOT, ".github", "ISSUE_TEMPLATE")
 
 

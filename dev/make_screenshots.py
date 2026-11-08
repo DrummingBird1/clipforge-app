@@ -221,7 +221,7 @@ BRANDING = """() => {
     el.dispatchEvent(new Event('input', {bubbles: true}));
     el.dispatchEvent(new Event('change', {bubbles: true}));
   };
-  set('veKeepAudio', true); set('veCaptions', true); set('veCaptionStyle', 'box'); set('veCaptionFontSize', 20); set('veCaptionMaxChars', 16);
+  set('veKeepAudio', true); set('veCaptions', true); set('veCaptionStyle', 'box'); set('veCaptionFontSize', 28); set('veCaptionMaxChars', 8);
   addVeLayerCard('frame'); set('veFrameThickness', 14); set('veFrameColor', '#FF8A4C'); set('veFrameRadius', 46);
   addVeLayer('filename');
 }"""
@@ -277,6 +277,11 @@ def shoot(browser, url, lang, demo, out_dir):
     context = _context(browser, lang, DESKTOP, mode="simple")   # המצב הפשוט של הסטודיו - הממשק למי שרק רוצה סרטון
     page = context.new_page()
     _ready(page, url)
+    if lang == "en":   # מסך הפתיחה של הסטודיו לפני שבוחרים תיקייה - למדריך docs/getting_started.md (באנגלית בלבד)
+        page.evaluate("() => selectScript(state.scripts.find(s => s.id.endsWith('video_editor.py')).id)")
+        page.wait_for_selector("text=Choose a folder with videos", timeout=30000)
+        page.wait_for_load_state("networkidle")
+        shot(page, "start")
     open_studio(page, clips)
     shot(page, "simple")
     context.close()
@@ -288,11 +293,16 @@ def shoot(browser, url, lang, demo, out_dir):
     shot(page, "studio")
 
     # מראה המותג של 1.2: מסגרת עם פינות מעוגלות, שם הקובץ על הפלט וכתובית שנשברת בשורות - הכול בנגן החי
+    page.set_viewport_size({"width": 1440, "height": 1060})   # גבוה יותר: שדה עיגול הפינות והסרגל התחתון נכנסים בלי להיחתך
     page.evaluate(BRANDING)
     page.wait_for_function("() => !!document.querySelector('#veLiveOverlays .ve-live-caption') && !!document.querySelector('#veLiveOverlays .ve-live-item')", timeout=30000)
-    page.evaluate("() => document.querySelector('#videoEditorOptions details.ve-category[data-cat=\"layers\"]')?.scrollIntoView({block: 'start'})")
+    # גוללים את אזור ההגדרות עד סופו, ומחכים ששדה עיגול הפינות של המסגרת באמת בתוך החלון - אחרת נעצרים ולא שומרים תמונה גרועה
+    page.evaluate("""() => { for (let el = document.getElementById('veFrameRadius').parentElement; el; el = el.parentElement) {
+      if (el.scrollHeight > el.clientHeight + 4 && getComputedStyle(el).overflowY !== 'visible') { el.scrollTop = el.scrollHeight; break; } } }""")
+    page.wait_for_function("() => { const r = document.getElementById('veFrameRadius').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }", timeout=10000)
     page.wait_for_load_state("networkidle")
     shot(page, "branding")
+    page.set_viewport_size(DESKTOP)
 
     page.evaluate("() => { closeVeEditor(); switchTab('dataviz'); }")
     page.wait_for_function("() => typeof dvzState !== 'undefined' && dvzState.selected === 'fruit_harvest'", timeout=30000)

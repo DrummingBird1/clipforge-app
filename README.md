@@ -1,5 +1,9 @@
 # ClipForge
 
+**A video studio for gameplay clips and data videos, running on your own Windows PC.** Edit, brand and export Shorts, TikToks and YouTube videos from your browser, with nothing uploaded anywhere unless you ask for it.
+
+[Download](https://github.com/DrummingBird1/clipforge-app/releases/latest) · [Install with Scoop](#or-with-scoop) · [Your first video](docs/getting_started.md) · [Roadmap](ROADMAP.md) · [עברית](README.he.md)
+
 [![Latest release](https://img.shields.io/github/v/release/DrummingBird1/clipforge-app)](https://github.com/DrummingBird1/clipforge-app/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/DrummingBird1/clipforge-app/total)](https://github.com/DrummingBird1/clipforge-app/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -8,23 +12,31 @@
 
 ![A clip loads into the studio, a style is picked, Run, and the Short is in outputs](docs/images/demo.gif)
 
-A video studio for gameplay clips and data videos that runs on your own Windows PC. Edit, brand and export Shorts, TikToks and YouTube videos from your browser, with nothing uploaded anywhere unless you ask for it.
+## Why ClipForge
 
-[עברית](README.he.md)
-
-![The studio: the clip queue, the live player and the timeline](docs/images/studio.png)
+- 🔒 **Local first.** Your clips never leave your PC. The studio, the data videos and the outputs screen need no account and no key.
+- 🎯 **One run, every target.** Shorts, TikTok, Instagram and YouTube versions come out of a single run, each in its own format.
+- ⚡ **Fast with an NVIDIA card, fine without.** Exports use the GPU encoder (NVENC) when there is one, and the CPU when there isn't.
+- 🧰 **Nothing to install.** Unzip it, double-click `ClipForge.vbs`, and it opens in your browser. Delete the folder to remove it.
+- 🆓 **Free and open source.** MIT license.
 
 ## What it does
 
-- **Studio.** A video editor in the browser. Trim, crop to vertical, add text and image layers, a logo or watermark, captions and loudness normalizing, then export to several targets (Shorts, TikTok, Instagram, YouTube) in one run. The live player shows the result as you edit. Every folder keeps its own project, and you can save your look as a style or a template.
+- **Studio.** A video editor in the browser. A **Simple** mode takes you from a folder to finished videos in four steps (a folder, where the videos go, a look, Run), and **Normal** and **Expert** open every setting. Trim, crop to vertical, add layers (text, images, a logo or watermark, a frame, the file name), captions and loudness normalizing, then export to several targets (Shorts, TikTok, Instagram, YouTube) in one run. The live player shows the result as you edit. Every folder keeps its own project, and you can save your look as a style or a template.
 - **Data videos.** Turn a table into an animated chart video (bar races, lines, maps) with titles, narration and captions.
 - **Outputs.** Every video you made, in one place, with a player and quick actions.
 - **Phone screen.** See what's running, approve clips and run things again from your phone.
 - **Notification center.** Finished runs, failures and anything that needs you.
 - **Optional automation.** Clip detection, AI titles and descriptions, YouTube upload, a Discord bot, Twitch clip import and an OBS replay watcher. Each one is off until you set it up (see [Optional features](#optional-features)).
 
+## A look inside
+
+![The studio: the clip queue, the live player and the timeline](docs/images/studio.png)
+
 | | |
 |---|---|
+| ![Simple mode: a folder, targets, a look and Run](docs/images/simple.png) | ![A frame with rounded corners, the file name and wrapped captions in the live player](docs/images/branding.png) |
+| Simple mode: a folder, where the videos go, a look, and Run | Branding, live in the player: a frame with rounded corners, the file name and captions that wrap |
 | ![The data videos editor](docs/images/dataviz.png) | ![Outputs](docs/images/outputs.png) |
 | Data videos editor | Outputs |
 | ![The phone screen](docs/images/phone.png) | ![The notification center](docs/images/notifications.png) |
@@ -54,6 +66,14 @@ Then start ClipForge from the Start menu. `scoop update clipforge` installs a ne
 - Windows 10 or 11, 64-bit.
 - An NVIDIA GPU is optional. With one, exports use the GPU encoder (NVENC) and finish much faster. Without one, ClipForge encodes on the CPU.
 - Disk space for the app (about 1 GB) and for your videos.
+
+## Your first video
+
+1. Click **Studio** in the left sidebar, then **Choose folder**, and pick a folder with a few clips.
+2. Under **Where are the videos going?**, tap Shorts, TikTok or YouTube, and pick a **Look**.
+3. Press **Run**. Your videos appear in **Outputs**.
+
+The full walkthrough, with screenshots, is in [Your first video in 5 minutes](docs/getting_started.md).
 
 ## Optional features
 

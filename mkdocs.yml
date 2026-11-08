@@ -67,6 +67,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Your first video: getting_started.md
   - Studio: video_editor.md
   - Data videos: dataviz.md
   - Web UI: web_ui.md
