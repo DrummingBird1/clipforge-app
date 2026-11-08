@@ -43,3 +43,13 @@ def test_the_live_sample_caption_is_in_english_also_when_it_wraps(editor_page):
     page.evaluate("() => setUiLanguage('he')")
     page.wait_for_function("() => _uiLang === 'he'")
     assert page.evaluate(SAMPLE_CAPTION, 14) == "כתובית לדוגמה\n· Sample\ncaption"
+
+
+# 8.11.2026: שכבת "שם הקובץ" (type=filename) הוצגה ברשימת השכבות כ"חותמת-זמן" - השם הברירת-מחדל נפל לענף האחרון
+def test_the_file_name_layer_has_its_own_row_label(editor_page):
+    page = editor_page
+    assert page.evaluate("() => _veLayerDefaultName({type: 'filename'})") == "שם הקובץ"
+    assert page.evaluate("() => _veLayerDefaultName({type: 'timestamp'})") == "חותמת-זמן"
+    page.evaluate("() => setUiLanguage('en')")
+    page.wait_for_function("() => _uiLang === 'en' && !!_uiDict")
+    assert page.evaluate("() => uiTranslate(_veLayerDefaultName({type: 'filename'}))") == "File name"
