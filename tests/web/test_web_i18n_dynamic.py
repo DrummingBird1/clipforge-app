@@ -197,6 +197,14 @@ def test_the_translator_mirrors_the_runtime_logic():
     assert t.translate("לא ידוע") is None
 
 
+def test_the_open_end_of_a_layer_time_range_is_translated():
+    # 8.11.2026: שורת שכבה בלי זמן סיום מציגה "0:00–סוף" - טקסט מורכב שאין לו מפתח, והעברית נשארה בממשק האנגלי
+    t = _translator()
+    assert t.translate("0:00–סוף") == "0:00–End"
+    assert t.translate("0:02.5–סוף") == "0:02.5–End"
+    assert t.translate("0:02–0:04.5") is None   # טווח סגור - אין בו עברית בכלל
+
+
 def test_every_hebrew_string_in_the_js_translates_to_english():
     translator = _translator()
     missing = []

@@ -246,7 +246,7 @@ const VE_FIXED_OBJECTS = [
 function _veLayerDefaultName(layer) {
   if (layer.type === "image" || layer.type === "video") return String(layer.path || "").split(/[\\/]/).pop() || (layer.type === "video" ? "B-roll" : "תמונה");
   if (layer.type === "text") return String(layer.text || "").trim().slice(0, 24) || "טקסט";
-  return layer.type === "timer" ? "טיימר" : "חותמת-זמן";
+  return layer.type === "timer" ? "טיימר" : layer.type === "filename" ? "שם הקובץ" : "חותמת-זמן";
 }
 
 function _veLayerRow(layer, index, count) {
