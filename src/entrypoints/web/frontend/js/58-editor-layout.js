@@ -319,7 +319,7 @@ const VE_LAYER_CARDS = {
   logo: {active: () => _veHasText("veWatermarkPath"), focus: "veWatermarkPath", fields: ["veWatermarkPath", "veWatermarkPosition", "veWatermarkPositionVertical", "veWatermarkMoveSeconds", "veWatermarkOpacity", "veWatermarkScale"]},
   pip: {active: () => _veHasText("vePipPath"), focus: "vePipPath", fields: ["vePipPath", "vePipPosition", "vePipScale", "vePipOpacity", "vePipAudio", "vePipDuck", "vePipX", "vePipY"]},
   progress: {active: () => _veIsChecked("veProgressBar"), focus: "veProgressBarColor", fields: ["veProgressBar", "veProgressBarColor", "veProgressBarPosition", "veProgressBarHeight"], onAdd: {veProgressBar: true}},
-  frame: {active: () => (parseInt(_veValue("veFrameThickness"), 10) || 0) > 0, focus: "veFrameThickness", fields: ["veFrameThickness", "veFrameColor"], onAdd: {veFrameThickness: "8"}},
+  frame: {active: () => (parseInt(_veValue("veFrameThickness"), 10) || 0) > 0, focus: "veFrameThickness", fields: ["veFrameThickness", "veFrameColor", "veFrameRadius"], onAdd: {veFrameThickness: "8"}},
   removal: {active: () => _veHasText("veRemoveWatermarkRegion") || _veHasText("veRemoveWatermarkPosition"), focus: "veRemovalCorner", fields: ["veRemoveWatermarkRegion", "veRemoveWatermarkPosition", "veRemoveWatermarkWidthFraction", "veRemoveWatermarkHeightFraction"]},
 };
 const _veCardsOpened = new Set();

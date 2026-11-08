@@ -29,7 +29,7 @@ SCRIPT = os.path.join(BASE_DIR, "my_scripts", "video", "video_editor.py")
 
 WAVE7B_FIELDS = (
     "layers", "timestamp_overlay", "progress_bar", "progress_bar_color", "progress_bar_position", "progress_bar_height",
-    "frame_thickness", "frame_color", "vignette", "ken_burns", "watermark_move_seconds", "pip_audio", "pip_duck",
+    "frame_thickness", "frame_color", "frame_radius", "vignette", "ken_burns", "watermark_move_seconds", "pip_audio", "pip_duck",
     "intro_path", "outro_path", "boomerang", "loop_count", "meta_title", "meta_comment", "chapters",
     "export_gif", "gif_width", "gif_fps", "export_audio",
 )
@@ -125,6 +125,10 @@ def test_wave7b_conditional_flags():
     assert "--pip-duck" not in _args({"pip_path": "C:/p.mp4", "pip_audio": False, "pip_duck": True, "keep_audio": True})
     assert "--progress-bar-color" not in _args({"progress_bar": False, "progress_bar_color": "#00FF00"})
     assert "--frame-color" not in _args({"frame_thickness": 0, "frame_color": "#00FF00"})
+    assert "--frame-radius" not in _args({"frame_thickness": 0, "frame_radius": 20})  # בלי מסגרת אין מה לעגל
+    assert "--frame-radius" not in _args({"frame_thickness": 6, "frame_radius": 0})
+    assert "--frame-radius 20" in " ".join(_args({"frame_thickness": 6, "frame_radius": 20}))
+    assert "--frame-radius 200" in " ".join(_args({"frame_thickness": 6, "frame_radius": 999}))  # מוגבל ל-200
     assert "--timestamp-overlay" not in _args({"timestamp_overlay": "middle"})
     assert "--loop-count" not in _args({"loop_count": "abc"})
     assert "--loop-count 10" in " ".join(_args({"loop_count": 99}))
@@ -137,7 +141,7 @@ def test_wave7b_fields_registered_in_profiles_help_and_page():
         assert field in vep.PROFILE_FIELDS, field
         assert field in FIELD_HELP, field
         assert len(FIELD_HELP[field].term) <= 30
-    for element_id in ("veLayers", "veLayersRows", "veTimestampOverlay", "veProgressBar", "veFrameThickness", "veVignette", "veKenBurns",
+    for element_id in ("veLayers", "veLayersRows", "veTimestampOverlay", "veProgressBar", "veFrameThickness", "veFrameRadius", "veVignette", "veKenBurns",
                        "veWatermarkMoveSeconds", "vePipAudio", "vePipDuck", "veIntroPath", "veOutroPath", "veBoomerang", "veLoopCount",
                        "veMetaTitle", "veChapters", "veExportGif", "veGifWidth", "veExportAudio", "veHighlightThreshold"):
         assert f'id="{element_id}"' in html, element_id

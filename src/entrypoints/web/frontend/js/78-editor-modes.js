@@ -16,7 +16,7 @@ const VE_RARE_FIELDS = new Set([
   "concat_transition_duration", "silence_threshold_db", "silence_min_duration", "custom_width", "custom_height",
   "pad_color", "scale_algo", "tonemap", "deinterlace", "audio_track", "captions_model", "captions_no_burn",
   "timestamp_overlay", "progress_bar_height", "watermark_move_seconds", "meta_comment", "gif_width", "gif_fps",
-  "audio_eq_mid_freq", "audio_denoise_model", "eq_gamma", "lut_intensity", "frame_thickness", "include_subfolders",
+  "audio_eq_mid_freq", "audio_denoise_model", "eq_gamma", "lut_intensity", "frame_thickness", "frame_radius", "include_subfolders",
 ]);
 
 function _veMarkRareRows() {

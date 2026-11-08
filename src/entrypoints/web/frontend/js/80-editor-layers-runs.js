@@ -363,7 +363,7 @@ async function deleteVeExportTemplate() {
 // --- יחידות עקביות, וגרירה על היחידה משנה את המספר ---
 const VE_FIELD_UNITS = {
   veSilenceMinDuration: "שנ'", veHighlightBefore: "שנ'", veHighlightAfter: "שנ'", veWatermarkMoveSeconds: "שנ'",
-  veProgressBarHeight: "px", veFrameThickness: "px", veCaptionFontSize: "px", veCustomWidth: "px", veCustomHeight: "px",
+  veProgressBarHeight: "px", veFrameThickness: "px", veFrameRadius: "px", veCaptionFontSize: "px", veCustomWidth: "px", veCustomHeight: "px",
   veGifWidth: "px", veGifFps: "fps", veLoudnormTarget: "LUFS",
 };
 
