@@ -470,6 +470,8 @@ function _veLiveTick() {
     } else if (layer.type === "timer") {
       const total = Number(layer.timer_seconds) > 0 ? Number(layer.timer_seconds) : (Number.isFinite(end) ? end - start : Math.max(0, outDuration - start));
       item.el.textContent = _veLiveFormat(layer.timer_mode === "elapsed" ? since : Math.max(0, total - since));
+    } else if (layer.type === "filename") {
+      item.el.textContent = String(_veLive.file || "").split(/[\\/]/).pop();
     } else if (layer.type === "timestamp") {
       item.el.textContent = new Date(Date.now() - (outDuration - o) * 1000).toLocaleTimeString("he-IL");
     }

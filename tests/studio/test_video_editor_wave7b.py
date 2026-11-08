@@ -130,6 +130,49 @@ def test_build_layer_parts_progress_bar_and_frame():
     assert vel.build_layer_parts("outv", [], {}, {}, 1080, "30", None, progress_bar={"height": 8}) == ([], "outv")
 
 
+# --- שכבת "שם הקובץ" (type=filename) ---
+
+TRICKY_NAME = "Tom's \"best\" clip 100% {fast} #1.mp4"
+
+
+def test_filename_layer_survives_sanitize_without_any_text():
+    assert "filename" in vel.LAYER_TYPES
+    [layer] = vel.sanitize_layers([{"type": "filename", "position": "top-left", "font_size": 28, "box": True, "animation": "slide"}])
+    assert layer["type"] == "filename" and layer["text"] == "" and layer["position"] == "top-left"
+    assert layer["font_size"] == 28 and layer["box"] is True
+
+
+def test_fill_filename_layers_uses_the_source_name_without_the_folder_and_only_for_filename_layers():
+    layers = vel.sanitize_layers([{"type": "filename"}, {"type": "text", "text": "hi"}, {"type": "timestamp"}])
+    vel.fill_filename_layers(layers, os.path.join("D:", os.sep, "Clips 2026", "match 01.mp4"))
+    assert [layer["text"] for layer in layers] == ["match 01.mp4", "hi", ""]
+    # process_video ממלא עותק של השכבות לכל קובץ - שם של קובץ אחד לא דולף למתכון ולא לקובץ שאחריו
+    recipe = vel.sanitize_layers([{"type": "filename"}])
+    first, second = [dict(layer) for layer in recipe], [dict(layer) for layer in recipe]
+    vel.fill_filename_layers(first, "a.mp4")
+    vel.fill_filename_layers(second, "b.mp4")
+    assert (first[0]["text"], second[0]["text"], recipe[0]["text"]) == ("a.mp4", "b.mp4", "")
+
+
+def test_filename_layer_text_file_keeps_quotes_percent_braces_and_spaces_literal(tmp_path):
+    [layer] = vel.sanitize_layers([{"type": "filename", "position": "bottom-left"}])
+    vel.fill_filename_layers([layer], os.path.join("D:", os.sep, "x", TRICKY_NAME))
+    files = vel.write_layer_text_files([layer], str(tmp_path), 10.0)
+    with open(files[0][0], encoding="utf-8") as handle:
+        assert handle.read() == TRICKY_NAME
+    [drawtext] = vel.build_text_layer_filters(layer, files[0])
+    # הטקסט נקרא מקובץ ו-expansion=none: אף תו מהשם לא נכנס לפילטר ולא מתפרש (%{...}, גרשיים)
+    assert drawtext.startswith("drawtext=textfile='") and ":expansion=none:" in drawtext
+    assert "Tom" not in drawtext and "100%" not in drawtext
+
+
+def test_filename_layer_without_a_name_draws_nothing(tmp_path):
+    [layer] = vel.sanitize_layers([{"type": "filename"}])
+    assert vel.layer_text_contents(layer, 10.0) == []
+    assert vel.write_layer_text_files([layer], str(tmp_path), 10.0) == {}
+    assert vel.build_text_layer_filters(layer, []) == []
+
+
 # --- מסגרת עם פינות מעוגלות (--frame-radius) ---
 
 def test_build_layer_parts_rounded_frame_overlays_a_one_frame_alpha_ring():

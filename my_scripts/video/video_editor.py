@@ -103,7 +103,7 @@ from utils.video.video_editor_report import write_csv_report, write_xlsx_report
 from utils.video import video_editor_post as post_steps
 from utils.video.video_editor_layers import (
     build_broll_audio_sources, build_ken_burns_filter, build_video_layer_input_args, build_vignette_filter,
-    sanitize_layers, video_layer_end, write_layer_text_files,
+    fill_filename_layers, sanitize_layers, video_layer_end, write_layer_text_files,
 )
 from utils.video.video_editor_counter import get_next_number, save_number
 from utils.shared.hardware import get_gpu_stats, get_system_stats
@@ -1784,6 +1784,7 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
     layer_image_inputs = {}
     layer_input_args = []  # גל 26: לכל שכבת תמונה/וידאו - הארגומנטים של ה--i שלה, לפי הסדר
     if file_layers:
+        fill_filename_layers(file_layers, video_path)
         for layer in file_layers:
             if layer["type"] == "timestamp" and layer.get("epoch") is None:
                 try:

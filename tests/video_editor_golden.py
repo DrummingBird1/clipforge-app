@@ -60,6 +60,7 @@ SCENARIOS: List[Dict[str, Any]] = [
     {"name": "blur_background", "flags": ["--vertical", "--blur-background"]},
     {"name": "text_fade", "flags": ["--text", "שלום: עולם", "--text-position", "top", "--fade-in-seconds", "1", "--fade-out-seconds", "2"]},
     {"name": "layers", "flags": ["--layers-json", "{tmp}/layers.json"]},
+    {"name": "layer_filename", "flags": ["--layers-json", "{tmp}/layers_filename.json"]},
     {"name": "progress_frame_vignette_kenburns", "flags": ["--progress-bar", "--frame-thickness", "8", "--vignette", "medium", "--ken-burns", "1.1"]},
     {"name": "frame_rounded", "flags": ["--frame-thickness", "12", "--frame-color", "#FF8C00", "--frame-radius", "40"]},
     {"name": "pip_audio", "flags": ["--pip", "{tmp}/pip.mp4", "--pip-position", "top-right", "--pip-scale", "0.3", "--pip-audio", "--pip-duck", "--keep-audio"]},
@@ -94,6 +95,8 @@ def _prepare_files(tmp: str) -> None:
             f.write(b"x")
     with open(os.path.join(tmp, "layers.json"), "w", encoding="utf-8") as f:
         json.dump([{k: (v.replace("{tmp}", tmp) if isinstance(v, str) else v) for k, v in layer.items()} for layer in _LAYERS], f, ensure_ascii=False)
+    with open(os.path.join(tmp, "layers_filename.json"), "w", encoding="utf-8") as f:
+        json.dump([{"type": "filename", "position": "bottom-left", "font_size": 28, "box": True}], f)
 
 
 def _load(tmp: str, flags: List[str], index: int) -> Any:
