@@ -22,3 +22,24 @@ def test_the_live_view_label_and_the_episode_card_are_in_english(editor_page):
     page.wait_for_function("() => _uiLang === 'en' && !!_uiDict")
     assert page.evaluate("() => uiTranslate('🎥 תצוגה חיה (מקורבת) - match_01.mp4')") == "🎥 Live view (approximate) - match_01.mp4"
     page.wait_for_function(f"async () => ({CARD})().then(text => text.includes('Bar race · Dark'))", timeout=10000)   # קודם: בעברית
+
+
+# 8.11.2026: הכתובית לדוגמה בנגן החי מתורגמת רק כשהטקסט זהה למפתח במילון; אחרי שבירת שורות (caption_max_chars) הטקסט כבר
+# לא היה זהה, והמשתמש באנגלית ראה עברית. עכשיו מתרגמים לפני השבירה.
+SAMPLE_CAPTION = """(maxChars) => {
+  _veLive = _veLive || {};
+  _veLiveBuildOverlays({captions: true, caption_max_chars: maxChars, _layers: []}, {w: 1920, h: 1080}, {w: 640, h: 360}, 1 / 3);
+  return document.querySelector('#veLiveOverlays .ve-live-caption').textContent;
+}"""
+
+
+def test_the_live_sample_caption_is_in_english_also_when_it_wraps(editor_page):
+    page = editor_page
+    page.evaluate("() => setUiLanguage('en')")
+    page.wait_for_function("() => _uiLang === 'en' && !!_uiDict")
+    assert page.evaluate(SAMPLE_CAPTION, 0) == "Sample caption"
+    wrapped = page.evaluate(SAMPLE_CAPTION, 8)
+    assert wrapped == "Sample\ncaption"
+    page.evaluate("() => setUiLanguage('he')")
+    page.wait_for_function("() => _uiLang === 'he'")
+    assert page.evaluate(SAMPLE_CAPTION, 14) == "כתובית לדוגמה\n· Sample\ncaption"

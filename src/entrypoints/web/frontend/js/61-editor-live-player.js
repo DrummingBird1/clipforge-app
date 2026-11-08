@@ -398,8 +398,8 @@ function _veLiveBuildOverlays(opts, out, stage, scale) {
   if (opts.captions) {
     const cap = document.createElement("div");
     cap.className = "ve-live-caption";
-    const maxChars = Number(opts.caption_max_chars) || 0;
-    cap.textContent = "כתובית לדוגמה · Sample caption".split(" ").reduce((lines, word) => {
+    const maxChars = Number(opts.caption_max_chars) || 0, sample = "כתובית לדוגמה · Sample caption";
+    cap.textContent = (_uiLang === "en" && uiTranslate(sample) || sample).split(" ").reduce((lines, word) => {
       if (maxChars && lines.length && lines[lines.length - 1].length + 1 + word.length <= maxChars) lines[lines.length - 1] += " " + word;
       else lines.push(word);
       return lines;
