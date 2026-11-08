@@ -2,10 +2,11 @@
 
 **A video studio for gameplay clips and data videos, running on your own Windows PC.** Edit, brand and export Shorts, TikToks and YouTube videos from your browser, with nothing uploaded anywhere unless you ask for it.
 
-[Download](https://github.com/DrummingBird1/clipforge-app/releases/latest) · [Install with Scoop](#or-with-scoop) · [Your first video](docs/getting_started.md) · [Roadmap](ROADMAP.md) · [עברית](README.he.md)
+[Download](https://github.com/DrummingBird1/clipforge-app/releases/latest) · [Install with Scoop](#or-with-scoop) · [Your first video](docs/getting_started.md) · [Docs site](https://drummingbird1.github.io/clipforge-app/) · [Roadmap](ROADMAP.md) · [עברית](README.he.md)
 
 [![Latest release](https://img.shields.io/github/v/release/DrummingBird1/clipforge-app)](https://github.com/DrummingBird1/clipforge-app/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/DrummingBird1/clipforge-app/total)](https://github.com/DrummingBird1/clipforge-app/releases)
+[![CI](https://github.com/DrummingBird1/clipforge-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DrummingBird1/clipforge-app/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)

@@ -4,10 +4,11 @@
 
 **סטודיו וידאו לקליפים ממשחקים ולסרטוני נתונים, שרץ על מחשב ה-Windows שלכם.** עורכים, ממתגים ומייצאים סרטונים ל-Shorts, ל-TikTok וליוטיוב מהדפדפן, ושום דבר לא עולה לשום מקום אם לא ביקשתם.
 
-[הורדה](https://github.com/DrummingBird1/clipforge-app/releases/latest) · [התקנה עם Scoop](#או-עם-scoop) · [הסרטון הראשון שלכם (באנגלית)](docs/getting_started.md) · [English](README.md)
+[הורדה](https://github.com/DrummingBird1/clipforge-app/releases/latest) · [התקנה עם Scoop](#או-עם-scoop) · [הסרטון הראשון שלכם (באנגלית)](docs/getting_started.md) · [אתר התיעוד (באנגלית)](https://drummingbird1.github.io/clipforge-app/) · [English](README.md)
 
 [![Latest release](https://img.shields.io/github/v/release/DrummingBird1/clipforge-app)](https://github.com/DrummingBird1/clipforge-app/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/DrummingBird1/clipforge-app/total)](https://github.com/DrummingBird1/clipforge-app/releases)
+[![CI](https://github.com/DrummingBird1/clipforge-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DrummingBird1/clipforge-app/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)

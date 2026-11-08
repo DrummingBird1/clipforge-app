@@ -30,7 +30,8 @@ def test_the_hebrew_readme_shows_the_hebrew_screenshots():
 
 
 # 30.10.2026 (הריפו הציבורי): בראש כל README שורת badges מ-shields.io ומתחתיה GIF ההדגמה (dev/make_demo_gif.py), כל אחד
-# בשפה שלו. ה-badges של הגרסה וההורדות מצביעים על DrummingBird1/clipforge-app, ואין badge של CI (‏Actions כבוי עד 1.11).
+# בשפה שלו. ה-badges של הגרסה וההורדות מצביעים על DrummingBird1/clipforge-app. ה-badge של CI בא מ-GitHub עצמו ולא מ-shields.io,
+# ולכן הוא לא נספר כאן ונבדק בטסט נפרד, בסוף הקובץ.
 def test_each_readme_opens_with_badges_and_its_demo_gif():
     for readme, gif in (("README.md", "docs/images/demo.gif"), ("README.he.md", "docs/images/he/demo.gif")):
         with open(os.path.join(PROJECT_ROOT, readme), encoding="utf-8") as f:
@@ -43,3 +44,18 @@ def test_each_readme_opens_with_badges_and_its_demo_gif():
         assert all("clipforge-app" in s for s in shields if "/github/" in s) and len(shields) == 5, readme
         assert not any("workflow" in s or "actions" in s for s in shields)
         assert top.index("img.shields.io") < top.index(gif)                               # ה-badges מעל ה-GIF
+
+
+# 8.11.2026 (1.2.0): ב-Actions של הריפו הציבורי פועלים, ואתר התיעוד מתפרסם ממנו (pages.yml). בראש כל README קישור לאתר
+# (הכתובת היא site_url ב-mkdocs.yml) ו-badge של ה-workflow "CI" על main, שמקשר לדף שלו. ה-badge חייב להצביע על workflow שקיים.
+def test_each_readme_links_the_docs_site_and_shows_the_ci_badge():
+    with open(os.path.join(PROJECT_ROOT, "mkdocs.yml"), encoding="utf-8") as f:
+        site_url = re.search(r"^site_url:\s*(\S+)", f.read(), re.MULTILINE).group(1)
+    with open(os.path.join(PROJECT_ROOT, ".github", "workflows", "ci.yml"), encoding="utf-8") as f:
+        assert f.read().startswith("name: CI\n")
+    workflow = "https://github.com/DrummingBird1/clipforge-app/actions/workflows/ci.yml"
+    for readme in ("README.md", "README.he.md"):
+        with open(os.path.join(PROJECT_ROOT, readme), encoding="utf-8") as f:
+            top = f.read().split("\n## ", 1)[0]
+        assert f"]({site_url})" in top, readme
+        assert f"[![CI]({workflow}/badge.svg?branch=main)]({workflow})" in top, readme
