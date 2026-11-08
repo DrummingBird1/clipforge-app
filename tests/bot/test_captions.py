@@ -1,4 +1,5 @@
 # tests/bot/test_captions.py
+import re
 import subprocess
 import sys
 import threading
@@ -282,3 +283,95 @@ def test_burn_captions_without_codec_args_keeps_old_behavior(monkeypatch, tmp_pa
     burn_captions(video_path)
 
     assert "-c:v" not in captured_cmd[0]
+
+
+# --- שבירת שורות בכתוביות (max_chars) ---
+
+def test_wrap_caption_text_breaks_at_the_last_space_before_the_limit():
+    text = "the quick brown fox jumps over the lazy dog"
+    assert captions.wrap_caption_text(text, 15) == "the quick brown\nfox jumps over\nthe lazy dog"
+    assert captions.wrap_caption_text("hello world", 11) == "hello world"   # בדיוק על הגבול - לא נשבר
+    assert captions.wrap_caption_text("hello world", 10) == "hello\nworld"
+
+
+def test_wrap_caption_text_is_off_by_default_and_for_zero():
+    text = "the quick brown fox jumps over the lazy dog"
+    assert captions.wrap_caption_text(text, 0) == text
+    assert captions.wrap_caption_text(text, None) == text
+    assert captions.wrap_caption_text(text, "abc") == text
+    assert captions.wrap_caption_text(text, -5) == text
+
+
+def test_wrap_caption_text_never_breaks_inside_a_word():
+    assert captions.wrap_caption_text("a extraordinarily b", 5) == "a\nextraordinarily\nb"
+    assert captions.wrap_caption_text("supercalifragilistic", 5) == "supercalifragilistic"
+
+
+def test_wrap_caption_text_hebrew_and_english():
+    assert captions.wrap_caption_text("זה משפט ארוך בעברית שצריך להישבר", 12) == "זה משפט ארוך\nבעברית שצריך\nלהישבר"
+    assert captions.wrap_caption_text("שלום world מה שלומך today", 11) == "שלום world\nמה שלומך\ntoday"
+
+
+def test_wrap_caption_text_ignores_hebrew_niqqud_when_measuring():
+    shalom, olam = "שָׁלוֹם", "עוֹלָם"  # שָׁלוֹם עוֹלָם: 4 אותיות כל אחת
+    assert len(f"{shalom} {olam}") > 9
+    assert captions.wrap_caption_text(f"{shalom} {olam}", 9) == f"{shalom} {olam}"
+    assert captions.wrap_caption_text(f"{shalom} {olam}", 8) == f"{shalom}\n{olam}"
+
+
+def test_wrap_caption_text_wraps_each_existing_line_separately_and_keeps_short_lines_as_they_are():
+    assert captions.wrap_caption_text("ab cd\nef gh ij", 5) == "ab cd\nef gh\nij"
+    assert captions.wrap_caption_text("a  b", 10) == "a  b"   # שורה שנכנסת - בלי נגיעה ברווחים
+
+
+def test_wrap_srt_file_keeps_timing_and_wraps_every_cue(tmp_path):
+    src, dst = tmp_path / "in.srt", tmp_path / "out.srt"
+    src.write_text("1\n00:00:00,000 --> 00:00:02,500\nthe quick brown fox\n\n2\n00:00:03,000 --> 00:01:04,000\nshort\n\n", encoding="utf-8")
+    captions.wrap_srt_file(str(src), str(dst), 10)
+    cues = captions.parse_srt(dst.read_text(encoding="utf-8"))
+    assert [(cue["start"], cue["end"], cue["text"]) for cue in cues] == [(0.0, 2.5, "the quick\nbrown fox"), (3.0, 64.0, "short")]
+
+
+def test_karaoke_ass_breaks_the_line_with_an_ass_newline_before_the_word_that_overflows(tmp_path):
+    words = [{"start": 0, "end": 0.4, "word": "hi"}, {"start": 0.4, "end": 1, "word": " there"}, {"start": 1, "end": 1.5, "word": "friend"}]
+    segment = {"start": 0, "end": 1.5, "text": "hi there friend", "words": words}
+    wrapped, plain, fallback = tmp_path / "w.ass", tmp_path / "p.ass", tmp_path / "f.ass"
+    captions.write_karaoke_ass([segment], str(wrapped), max_chars=8)
+    captions.write_karaoke_ass([segment], str(plain))
+    captions.write_karaoke_ass([{"start": 0, "end": 1, "text": "aaa bbb ccc"}], str(fallback), max_chars=7)  # בלי חותמות-זמן למילים
+    assert "{\\kf40}hi {\\kf60}there\\N{\\kf50}friend" in wrapped.read_text(encoding="utf-8")
+    plain_body = plain.read_text(encoding="utf-8")
+    assert "{\\kf40}hi {\\kf60}there {\\kf50}friend" in plain_body and "\\N" not in plain_body
+    assert ",aaa bbb\\Nccc" in fallback.read_text(encoding="utf-8")
+
+
+def _burn_and_capture_burned_srt(monkeypatch, tmp_path, **burn_kwargs):
+    seen = {}
+
+    def fake_transcribe(video_path, srt_path, translate_to_english=False):
+        with open(srt_path, "w", encoding="utf-8") as f:
+            f.write("1\n00:00:00,000 --> 00:00:02,000\nthe quick brown fox jumps over\n\n")
+
+    def fake_run(cmd, **kw):
+        vf = cmd[cmd.index("-vf") + 1]
+        subtitle_path = re.search(r"subtitles='(.*?)':force_style", vf).group(1).replace("\\:", ":")
+        with open(subtitle_path, encoding="utf-8") as f:
+            seen["burned"] = f.read()
+        return _fake_ffmpeg_run_that_creates_its_output(cmd, **kw)
+
+    monkeypatch.setattr(captions, "_transcribe_to_srt", fake_transcribe)
+    fake_subprocess_run(monkeypatch, captions, fake_run)
+    video_path = str(tmp_path / "clip.mp4")
+    open(video_path, "w").close()
+    burn_captions(video_path, **burn_kwargs)
+    return seen["burned"]
+
+
+def test_burn_captions_wraps_the_burned_captions_but_not_the_exported_srt(monkeypatch, tmp_path):
+    burned = _burn_and_capture_burned_srt(monkeypatch, tmp_path, max_chars=15, export_formats="srt")
+    assert "the quick brown\nfox jumps over" in burned
+    assert "the quick brown fox jumps over" in (tmp_path / "clip.srt").read_text(encoding="utf-8")  # הייצוא נשאר שלם
+
+
+def test_burn_captions_without_max_chars_burns_the_text_as_a_single_line(monkeypatch, tmp_path):
+    assert "the quick brown fox jumps over" in _burn_and_capture_burned_srt(monkeypatch, tmp_path)

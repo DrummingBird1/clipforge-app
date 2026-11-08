@@ -300,6 +300,16 @@ def test_wave7_caption_flags_only_with_captions_and_audio():
     assert "--captions-language" not in _args({"keep_audio": True, "captions": True, "captions_language": "hebrew!"})
 
 
+def test_caption_max_chars_flag_only_with_captions_and_audio_and_clamped():
+    on = {"keep_audio": True, "captions": True}
+    assert "--caption-max-chars" not in _args({"caption_max_chars": 20})                     # בלי כתוביות
+    assert "--caption-max-chars" not in _args({"captions": True, "caption_max_chars": 20})   # בלי שמע
+    assert "--caption-max-chars" not in _args({**on, "caption_max_chars": 0})                # 0 = כבוי, הברירת מחדל
+    assert "--caption-max-chars" not in _args({**on, "caption_max_chars": "abc"})
+    assert "--caption-max-chars 20" in " ".join(_args({**on, "caption_max_chars": 20}))
+    assert "--caption-max-chars 80" in " ".join(_args({**on, "caption_max_chars": 999}))     # מוגבל ל-80
+
+
 def test_wave7_fields_registered_in_profiles_help_and_page():
     html = fa.assemble_inline_page()
     for field in WAVE7_FIELDS:

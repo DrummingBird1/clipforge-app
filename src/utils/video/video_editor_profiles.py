@@ -55,7 +55,7 @@ PROFILE_FIELDS = (
     "thumbnail", "codec",
     "fps", "lut_path", "auto_levels", "noise_gate", "remove_mid_silence", "stabilize",
     "chromakey", "chromakey_color", "chromakey_bg_color",
-    "caption_font", "caption_font_size", "caption_color", "caption_position",
+    "caption_font", "caption_font_size", "caption_color", "caption_position", "caption_max_chars",
     "fade_in_seconds", "fade_out_seconds", "text", "text_position", "text_font", "text_font_size", "text_color",
     "replace_audio_path", "remove_ranges",
     "preserve_resolution", "no_suffix", "parallel", "max_concurrent_nvenc", "effort",
