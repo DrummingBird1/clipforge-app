@@ -17,17 +17,14 @@ import subprocess
 
 import requests
 
-# 30.10.2026: הגרסאות יוצאות בריפו הציבורי (dev/export_public.py מכין אותו, release.yml בונה בו את ה-zip). הריפו
-# הפרטי DrummingBird1/clipforge נשאר לפיתוח, ו-apply_update מושך מה-origin של העותק עצמו, לא מכאן
-REPO = "DrummingBird1/clipforge-app"
+# 8.11.2026: REPO, RELEASES_PAGE_URL ו-PORTABLE_MARKER עברו ל-release_info (בלי requests, כדי ש-dev/build_portable.py ירוץ בלי
+# ספריות הפרויקט); הם נשארים נגישים מכאן, כי web_app והטסטים קוראים אותם דרך update_checker
+from utils.shared.release_info import PORTABLE_MARKER, RELEASES_PAGE_URL, REPO  # noqa: F401
+
 _RELEASES_API_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
-RELEASES_PAGE_URL = f"https://github.com/{REPO}/releases/latest"
 
 _REQUEST_TIMEOUT_SECONDS = 5
 
-# 30.10.2026: החבילה הניידת (dev/build_portable.py) כותבת את הקובץ הזה בשורש שלה. שם אין git ואין uv - מעדכנים בהורדת
-# הגרסה החדשה מעמוד ה-Release, לא ב-apply_update.
-PORTABLE_MARKER = "portable.json"
 PORTABLE_UPDATE_REFUSAL = "בחבילה הניידת מעדכנים בהורדת הגרסה החדשה מעמוד ההורדה."
 
 

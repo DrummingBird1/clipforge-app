@@ -106,6 +106,55 @@ def test_the_version_comes_from_version_py():
     assert bp.read_version() == APP_VERSION
 
 
+def _imports_outside_the_standard_library(path, seen):
+    """כל מה ש-path מייבא (גם בתוך פונקציות), ומה שהמודולים של utils שהוא מייבא מייבאים בעצמם, שאינו מהספרייה הסטנדרטית."""
+    import ast
+    import sys
+    with open(path, encoding="utf-8") as f:
+        tree = ast.parse(f.read())
+    names = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module)
+            names.update(f"{node.module}.{alias.name}" for alias in node.names)   # "from utils.shared import x" - x עשוי להיות מודול
+    outside = set()
+    for name in sorted(names):
+        top = name.split(".")[0]
+        if top in sys.stdlib_module_names:
+            continue
+        if top != "utils":
+            outside.add(f"{os.path.relpath(path, PROJECT_ROOT)}: {name}")
+            continue
+        parts = name.split(".")
+        # ייבוא של utils.a.b מריץ גם את utils/__init__.py ו-utils/a/__init__.py, ואז את המודול עצמו
+        for end in range(1, len(parts) + 1):
+            base = os.path.join(PROJECT_ROOT, "src", *parts[:end])
+            for candidate in (base + ".py", os.path.join(base, "__init__.py")):
+                if os.path.isfile(candidate) and candidate not in seen:
+                    seen.add(candidate)
+                    outside |= _imports_outside_the_standard_library(candidate, seen)
+    return outside
+
+
+def test_the_build_script_needs_nothing_outside_the_standard_library():
+    # 8.11.2026: release.yml מריץ אותו עם הפייתון של ה-runner, בלי ספריות הפרויקט (test_release_workflow: בלי uv run). הוא ייבא
+    # את update_checker בשביל שני קבועים, שמייבא requests - וה-Release הראשון בריפו הציבורי נפל על ModuleNotFoundError.
+    outside = _imports_outside_the_standard_library(os.path.join(PROJECT_ROOT, "dev", "build_portable.py"), set())
+    assert outside == set(), f"dev/build_portable.py needs packages the CI runner doesn't have: {sorted(outside)}"
+
+
+def test_the_portable_marker_constants_live_in_a_module_without_dependencies():
+    from utils.shared import release_info, update_checker
+    assert (release_info.PORTABLE_MARKER, release_info.REPO) == ("portable.json", "DrummingBird1/clipforge-app")
+    assert release_info.RELEASES_PAGE_URL == "https://github.com/DrummingBird1/clipforge-app/releases/latest"
+    # הקוד הקיים (web_app, הטסטים) קורא אותם דרך update_checker - אותם ערכים בדיוק
+    assert update_checker.PORTABLE_MARKER == release_info.PORTABLE_MARKER
+    assert update_checker.RELEASES_PAGE_URL == release_info.RELEASES_PAGE_URL and update_checker.REPO == release_info.REPO
+    assert update_checker._RELEASES_API_URL == "https://api.github.com/repos/DrummingBird1/clipforge-app/releases/latest"
+
+
 def test_the_launcher_isolates_the_packages_python_from_the_users_settings():
     env = launcher.isolated_env({"PYTHONPATH": r"C:\mine", "PythonHome": r"C:\py", "PYTHONSTARTUP": "s.py", "PATH": r"C:\Windows"})
     assert env == {"PATH": r"C:\Windows", "PYTHONNOUSERSITE": "1", "PYTHONIOENCODING": "utf-8"}

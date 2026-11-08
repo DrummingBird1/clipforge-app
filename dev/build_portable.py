@@ -320,9 +320,9 @@ def main(argv=None):
     for launcher in ("ClipForge.vbs", "launcher.pyw"):
         shutil.copy2(os.path.join(PORTABLE_SRC, launcher), os.path.join(stage, launcher))
     sys.path.insert(0, os.path.join(ROOT, "src"))
-    from utils.shared import update_checker
-    with open(os.path.join(stage, update_checker.PORTABLE_MARKER), "w", encoding="utf-8") as f:
-        json.dump({"version": version, "built": datetime.date.today().isoformat(), "releases_url": update_checker.RELEASES_PAGE_URL},
+    from utils.shared import release_info   # לא update_checker: הוא מייבא requests, ופה רץ הפייתון של ה-runner בלי ספריות הפרויקט
+    with open(os.path.join(stage, release_info.PORTABLE_MARKER), "w", encoding="utf-8") as f:
+        json.dump({"version": version, "built": datetime.date.today().isoformat(), "releases_url": release_info.RELEASES_PAGE_URL},
                   f, indent=2)
     smoke_check(stage)
     print("[5/6] בדיקת ייבוא בפייתון של החבילה: עברה")
