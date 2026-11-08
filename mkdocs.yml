@@ -22,8 +22,9 @@ validation:
 
 theme:
   name: material
+  logo: images/logo.svg
+  favicon: images/logo.svg
   icon:
-    logo: material/movie-open-outline
     repo: fontawesome/brands/github
   palette:
     - media: "(prefers-color-scheme: dark)"
@@ -55,6 +56,8 @@ plugins:
 
 markdown_extensions:
   - admonition
+  # The README's centered header and its collapsible troubleshooting entries are HTML blocks with markdown="1"
+  - md_in_html
   - tables
   - toc:
       permalink: true

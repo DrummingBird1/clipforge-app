@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 512 512" role="img" aria-label="ClipForge logo">
+  <title>ClipForge</title>
+  <rect width="512" height="512" rx="113" fill="#e85d04"/>
+  <path d="M137 204H182V388H149A12 12 0 0 1 137 376Z" fill="#321b41"/>
+  <path d="M167 204H394V373A15 15 0 0 1 379 388H182A15 15 0 0 1 167 373Z" fill="#6b438b"/>
+  <rect x="167" y="204" width="227" height="42" fill="#635994"/>
+  <polygon points="184,246 214,204 263,204 233,246" fill="#a4aeeb"/>
+  <polygon points="298,246 328,204 377,204 347,246" fill="#a4aeeb"/>
+  <g transform="translate(127 153) rotate(-15)">
+    <rect width="257" height="40" fill="#635994"/>
+    <rect width="29" height="40" fill="#321b41"/>
+  </g>
+  <polygon points="174,140 220,128 258,160 212,172" fill="#a4aeeb"/>
+  <polygon points="284,111 330,99 369,130 321,142" fill="#a4aeeb"/>
+</svg>

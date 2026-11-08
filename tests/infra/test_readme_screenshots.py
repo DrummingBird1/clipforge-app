@@ -59,3 +59,27 @@ def test_each_readme_links_the_docs_site_and_shows_the_ci_badge():
             top = f.read().split("\n## ", 1)[0]
         assert f"]({site_url})" in top, readme
         assert f"[![CI]({workflow}/badge.svg?branch=main)]({workflow})" in top, readme
+
+
+# 8.11.2026: בראש כל README ממורכז סמל ClipForge (docs/images/logo.svg - אותו עיצוב כמו assets/app_icon.png, בווקטור), וגם
+# אתר התיעוד משתמש בו כלוגו וכ-favicon. ב-README האנגלי כל div ו-details נושאים markdown="1", כדי שאתר התיעוד (md_in_html)
+# יעבד אותם; ב-GitHub התכונה הזו נעלמת בלי נזק. ושני ה-README מציגים את אותם 7 קטעי "פתרון בעיות" מתקפלים.
+def test_each_readme_opens_with_the_logo_and_the_docs_site_uses_it():
+    import xml.etree.ElementTree as ET
+
+    logo = "docs/images/logo.svg"
+    root = ET.parse(os.path.join(PROJECT_ROOT, logo)).getroot()
+    assert root.get("viewBox") == "0 0 512 512" and root.get("width") == root.get("height")
+    texts = {}
+    for readme in ("README.md", "README.he.md"):
+        with open(os.path.join(PROJECT_ROOT, readme), encoding="utf-8") as f:
+            texts[readme] = f.read()
+        top = texts[readme].split("\n## ", 1)[0]
+        assert top.index(f"]({logo})") < top.index("\n# ClipForge\n"), readme
+        assert texts[readme].count("<details") == texts[readme].count("</details>") == 7, readme
+    english_blocks = re.findall(r"<(?:div|details)\b[^>]*>", texts["README.md"])
+    assert english_blocks and all('markdown="1"' in tag for tag in english_blocks)
+    with open(os.path.join(PROJECT_ROOT, "mkdocs.yml"), encoding="utf-8") as f:
+        mkdocs = f.read()
+    assert "\n  logo: images/logo.svg\n" in mkdocs and "\n  favicon: images/logo.svg\n" in mkdocs
+    assert "\n  - md_in_html\n" in mkdocs
