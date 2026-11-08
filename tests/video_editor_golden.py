@@ -61,6 +61,7 @@ SCENARIOS: List[Dict[str, Any]] = [
     {"name": "text_fade", "flags": ["--text", "שלום: עולם", "--text-position", "top", "--fade-in-seconds", "1", "--fade-out-seconds", "2"]},
     {"name": "layers", "flags": ["--layers-json", "{tmp}/layers.json"]},
     {"name": "progress_frame_vignette_kenburns", "flags": ["--progress-bar", "--frame-thickness", "8", "--vignette", "medium", "--ken-burns", "1.1"]},
+    {"name": "frame_rounded", "flags": ["--frame-thickness", "12", "--frame-color", "#FF8C00", "--frame-radius", "40"]},
     {"name": "pip_audio", "flags": ["--pip", "{tmp}/pip.mp4", "--pip-position", "top-right", "--pip-scale", "0.3", "--pip-audio", "--pip-duck", "--keep-audio"]},
     {"name": "replace_audio_loudnorm", "flags": ["--replace-audio", "{tmp}/music.mp3", "--loudnorm", "--loudnorm-target", "-16"]},
     {"name": "audio_fx", "flags": ["--keep-audio", "--audio-highpass", "80", "--audio-eq-low", "2", "--audio-compressor", "voice", "--noise-gate", "--audio-track", "1"]},

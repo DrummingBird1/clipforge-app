@@ -127,6 +127,7 @@ def build_edit_filter_complex(
     layer_image_inputs: Optional[Dict[int, int]] = None,
     progress_bar: Optional[Dict[str, Any]] = None,
     frame_border: Optional[Tuple[str, int]] = None,
+    frame_radius: int = 0,
     vignette_filter: str = "",
     ken_burns_filter: str = "",
     watermark_cycle_positions: Optional[List[Tuple[int, int]]] = None,
@@ -465,7 +466,7 @@ def build_edit_filter_complex(
         layer_parts, layers_label = build_layer_parts(
             "outv", layers or [], layer_text_files or {}, layer_image_inputs or {},
             output_width, output_fps, output_duration_seconds, progress_bar=progress_bar, frame_border=frame_border,
-            output_height=output_height,
+            output_height=output_height, frame_radius=frame_radius,
         )
         parts += layer_parts
     final_video_label = layers_label

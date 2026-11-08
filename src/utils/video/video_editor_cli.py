@@ -465,6 +465,7 @@ def build_parser():
     parser.add_argument("--progress-bar-height", type=int, default=8, help="עובי סרגל ההתקדמות בפיקסלים.")
     parser.add_argument("--frame-thickness", type=int, default=0, help="item: מסגרת סביב הפריים (עובי בפיקסלים, 0 = בלי).")
     parser.add_argument("--frame-color", type=str, default="#FFFFFF", help="צבע המסגרת (#RRGGBB).")
+    parser.add_argument("--frame-radius", type=int, default=0, help="עיגול הפינות הפנימיות של המסגרת בפיקסלים (0 = פינות ישרות; דורש --frame-thickness).")
     parser.add_argument("--vignette", type=str, default="none", choices=["none", "light", "medium", "strong"], help="item: וינייטה (החשכת שוליים).")
     parser.add_argument("--ken-burns", type=float, default=0.0, help="item: Ken Burns - זום-אין איטי לאורך הסרטון (0-0.5, למשל 0.1 = 10%%).")
     parser.add_argument("--watermark-move-seconds", type=float, default=0.0,
