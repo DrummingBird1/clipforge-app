@@ -1,13 +1,14 @@
 # tests/infra/test_readme_screenshots.py
 #
 # 30.10.2026 (ClipForge מתחיל באנגלית): README.md מציג את צילומי המסך באנגלית (docs/images/), ו-README.he.md את העבריים
-# (docs/images/he/). כל תמונה שמופיעה קיימת, ושני ה-README מציגים את אותם חמישה מסכים - dev/make_screenshots.py מייצר אותם.
+# (docs/images/he/). כל תמונה שמופיעה קיימת, ושני ה-README מציגים את אותם מסכים - dev/make_screenshots.py מייצר אותם.
+# 8.11.2026: שבעה מסכים - נוספו המצב הפשוט של הסטודיו ותמונת המיתוג (מסגרת מעוגלת, שם הקובץ וכתוביות שנשברות).
 import os
 import re
 
 from tests import PROJECT_ROOT
 
-SCREENS = {"studio", "dataviz", "outputs", "notifications", "phone"}
+SCREENS = {"studio", "simple", "branding", "dataviz", "outputs", "notifications", "phone"}
 IMAGE = re.compile(r"!\[[^\]]*\]\((docs/images/[^)]+\.png)\)")
 
 

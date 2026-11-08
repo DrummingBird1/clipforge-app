@@ -19,7 +19,7 @@ import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCREENS = ("studio", "dataviz", "outputs", "notifications", "phone")
+SCREENS = ("studio", "simple", "branding", "dataviz", "outputs", "notifications", "phone")
 DESKTOP = {"width": 1440, "height": 900}
 PHONE = {"width": 390, "height": 844}
 
@@ -56,10 +56,55 @@ def _ffmpeg():
     return get_ffmpeg_exe()
 
 
+# 8.11.2026: קליפי הדוגמה נראים כמו משחק (שמיים, קרקע, אויבים שזזים, HUD) במקום מעברי צבע חלקים. הכול מצויר ב-ffmpeg בלי
+# שום נכס חיצוני, ובלי טקסט (drawtext תלוי בגופן) - אז אין רישיון לבדוק ואין שם אישי בתמונה. (שמיים עליון, שמיים באופק)
+SKIES = (("0x1d2b53", "0xff8a4c"), ("0x0b3c49", "0x62d2a2"), ("0x2b1055", "0xf06aa0"),
+         ("0x1a2a1f", "0xd9b44a"), ("0x10253f", "0x7fb7ff"), ("0x331a2e", "0xff6b6b"))
+ENEMIES = ("0xe5484d", "0xf5a524", "0xb86bff", "0x4cc9f0", "0xff7ab6")
+
+
+def _game_scene_filter(width, height, seed):
+    """שרשרת drawbox לסצנה: קרקע ואופק, שלושה "אויבים" שנעים, וה-HUD - שורת חיים ומגן, מיני-מפה, כוונת ותחמושת."""
+    unit = min(width, height) / 720.0
+    horizon = round(height * 0.60)
+
+    def px(value):
+        return f"{value * unit:.1f}"
+
+    parts = [f"drawbox=y={horizon}:w=iw:h=ih-{horizon}:color=0x16241c:t=fill", f"drawbox=y={horizon}:w=iw:h={px(3)}:color=0x7be0a0@0.6:t=fill"]
+    for n in range(3):   # אויבים: מיקום אופקי נע לפי הזמן, נעמדים על האופק
+        color = ENEMIES[(seed + n) % len(ENEMIES)]
+        w_, h_ = (50 + 14 * ((seed + n) % 3)) * unit, (110 + 40 * ((seed + 2 * n) % 3)) * unit
+        base, amp = (0.18, 0.62, 0.45)[n] + 0.04 * (seed % 3), (0.08, 0.10, 0.05)[n]
+        speed, phase = (0.9, 0.6, 1.3)[n], (0.0, 1.0, 0.5)[n] + seed
+        parts.append(f"drawbox=x='iw*{base:.2f}+iw*{amp:.2f}*sin(t*{speed}+{phase})':y={horizon - h_:.1f}:w={w_:.1f}:h={h_:.1f}:color={color}:t=fill")
+    parts += [
+        f"drawbox=x={px(24)}:y={px(24)}:w={px(300)}:h={px(26)}:color=white@0.9:t={px(3)}",   # חיים
+        f"drawbox=x={px(30)}:y={px(30)}:w='{px(288)}*(0.55+0.4*sin(t*0.7)*sin(t*0.7))':h={px(14)}:color=0x30d158:t=fill",
+        f"drawbox=x={px(24)}:y={px(60)}:w={px(220)}:h={px(12)}:color=white@0.85:t={px(2)}",   # מגן
+        f"drawbox=x={px(28)}:y={px(64)}:w={px(150)}:h={px(4)}:color=0x4cc9f0:t=fill",
+        f"drawbox=x=iw-{px(196)}:y={px(24)}:w={px(172)}:h={px(172)}:color=white@0.85:t={px(3)}",   # מיני-מפה
+        f"drawbox=x=iw-{px(190)}:y={px(30)}:w={px(160)}:h={px(160)}:color=black@0.45:t=fill",
+        f"drawbox=x='iw-{px(110)}+{px(30)}*sin(t*1.1)':y='{px(110)}+{px(28)}*cos(t*0.8)':w={px(10)}:h={px(10)}:color=0xe5484d:t=fill",
+        f"drawbox=x=iw-{px(110)}:y={px(110)}:w={px(12)}:h={px(12)}:color=0x30d158:t=fill",
+    ]
+    for dx, dy, w_, h_ in ((-1, -20, 3, 14), (-1, 6, 3, 14), (-20, -1, 14, 3), (6, -1, 14, 3)):   # כוונת
+        parts.append(f"drawbox=x=iw/2+{px(dx)}:y=ih/2+{px(dy)}:w={px(w_)}:h={px(h_)}:color=white:t=fill")
+    parts.append(f"drawbox=x=iw/2-{px(70)}:y=ih-{px(70)}:w={px(140)}:h={px(34)}:color=black@0.5:t=fill")   # תחמושת
+    for pip in range(5):
+        parts.append(f"drawbox=x=iw/2-{px(60 - 24 * pip)}:y=ih-{px(60)}:w={px(16)}:h={px(14)}:color={'0xf5a524' if pip < 3 else '0x666666'}:t=fill")
+    parts.append("vignette=PI/5")
+    return ",".join(parts)
+
+
 def _make_clip(ffmpeg, path, size="1280x720", seconds=8, seed=0):
-    # מעברי צבע זזים (gradients) עם צליל - H.264 + AAC כדי שהנגן החי בדפדפן יפענח אותו. בלי drawtext (גופן) בכוונה
-    subprocess.run([ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i", f"gradients=s={size}:speed=0.04:seed={seed}:r=30",
+    # סצנת משחק מצוירת (שמיים בהדרגה + _game_scene_filter) עם צליל - H.264 + AAC כדי שהנגן החי בדפדפן יפענח אותו
+    width, height = (int(n) for n in size.split("x"))
+    top, bottom = SKIES[seed % len(SKIES)]
+    sky = f"gradients=s={size}:c0={top}:c1={bottom}:x0={width // 2}:y0=0:x1={width // 2}:y1={round(height * 0.6)}:nb_colors=2:speed=0.0001:r=30"
+    subprocess.run([ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i", sky,
                     "-f", "lavfi", "-i", f"sine=frequency={330 + 110 * seed}:sample_rate=44100",
+                    "-vf", _game_scene_filter(width, height, seed),
                     "-t", str(seconds), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(path)],
                    check=True, timeout=120)
 
@@ -160,12 +205,40 @@ def start_server():
     return server, f"http://127.0.0.1:{port}/?token={web_app.ACCESS_TOKEN}"
 
 
-def _context(browser, lang, viewport):
+def _context(browser, lang, viewport, mode="regular"):
     context = browser.new_context(viewport=viewport, locale="he-IL" if lang == "he" else "en-US", service_workers="block",
                                   device_scale_factor=1)
-    context.add_init_script(f"""try {{ localStorage.setItem('uiLang', '{lang}'); localStorage.setItem('veMode', JSON.stringify('regular'));
+    context.add_init_script(f"""try {{ localStorage.setItem('uiLang', '{lang}'); localStorage.setItem('veMode', JSON.stringify('{mode}'));
       localStorage.setItem('dvzMode', 'regular'); }} catch (e) {{}}""")
     return context
+
+
+# כתוביות עם שבירת שורות, מסגרת מעוגלת ושכבת שם הקובץ - מדמה את מה שמשתמש היה מגדיר בסטודיו (שדות + אירועי input/change)
+BRANDING = """() => {
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el.type === 'checkbox') el.checked = !!value; else el.value = value;
+    el.dispatchEvent(new Event('input', {bubbles: true}));
+    el.dispatchEvent(new Event('change', {bubbles: true}));
+  };
+  set('veKeepAudio', true); set('veCaptions', true); set('veCaptionStyle', 'box'); set('veCaptionFontSize', 28); set('veCaptionMaxChars', 8);
+  addVeLayerCard('frame'); set('veFrameThickness', 14); set('veFrameColor', '#FF8A4C'); set('veFrameRadius', 46);
+  addVeLayer('filename');
+}"""
+
+
+def open_studio(page, clips):
+    """פותח את הסטודיו על תיקיית הקליפים, עם הנגן החי על פריים אחד (בשני המצבים, הפשוט והרגיל)."""
+    page.evaluate("() => selectScript(state.scripts.find(s => s.id.endsWith('video_editor.py')).id)")
+    page.evaluate("() => setVeFocus(true)")
+    page.wait_for_function("() => document.body.classList.contains('ve-focus')")
+    page.evaluate("(f) => { document.getElementById('folderInput').value = f; onFolderTyped(); }", clips)
+    page.wait_for_selector("#veQueueList .ve-queue-row", state="attached", timeout=30000)   # במצב הפשוט התור מוסתר
+    page.wait_for_function("() => _veInLiveMode() && document.getElementById('veLiveVideo').readyState >= 2", timeout=30000)
+    page.evaluate("() => { const bar = document.getElementById('veStartFromBar'); if (bar) bar.hidden = true; }")   # שאלת "להתחיל מ:"
+    page.evaluate("() => { const v = document.getElementById('veLiveVideo'); v.currentTime = 2.5; }")
+    page.wait_for_function("() => !document.getElementById('veLiveVideo').seeking")
+    page.wait_for_load_state("networkidle")
 
 
 # נתיב התיקייה הזמנית (עם שם המשתמש ב-Windows) לא נכנס לתמונה: רגע לפני כל צילום, כל טקסט ושדה גלוי שמכילים אותו מקבלים
@@ -201,21 +274,35 @@ def shoot(browser, url, lang, demo, out_dir):
             raise RuntimeError(f"{name}: the page shows {leaks} - not saving this screenshot")
         page.screenshot(path=os.path.join(out_dir, f"{name}.png"))
 
+    context = _context(browser, lang, DESKTOP, mode="simple")   # המצב הפשוט של הסטודיו - הממשק למי שרק רוצה סרטון
+    page = context.new_page()
+    _ready(page, url)
+    if lang == "en":   # מסך הפתיחה של הסטודיו לפני שבוחרים תיקייה - למדריך docs/getting_started.md (באנגלית בלבד)
+        page.evaluate("() => selectScript(state.scripts.find(s => s.id.endsWith('video_editor.py')).id)")
+        page.wait_for_selector("text=Choose a folder with videos", timeout=30000)
+        page.wait_for_load_state("networkidle")
+        shot(page, "start")
+    open_studio(page, clips)
+    shot(page, "simple")
+    context.close()
+
     context = _context(browser, lang, DESKTOP)
     page = context.new_page()
     _ready(page, url)
-
-    page.evaluate("() => selectScript(state.scripts.find(s => s.id.endsWith('video_editor.py')).id)")
-    page.evaluate("() => setVeFocus(true)")
-    page.wait_for_function("() => document.body.classList.contains('ve-focus')")
-    page.evaluate("(f) => { document.getElementById('folderInput').value = f; onFolderTyped(); }", clips)
-    page.wait_for_selector("#veQueueList .ve-queue-row", timeout=30000)
-    page.wait_for_function("() => _veInLiveMode() && document.getElementById('veLiveVideo').readyState >= 2", timeout=30000)
-    page.evaluate("() => { const bar = document.getElementById('veStartFromBar'); if (bar) bar.hidden = true; }")   # שאלת "להתחיל מ:"
-    page.evaluate("() => { const v = document.getElementById('veLiveVideo'); v.currentTime = 2.5; }")
-    page.wait_for_function("() => !document.getElementById('veLiveVideo').seeking")
-    page.wait_for_load_state("networkidle")
+    open_studio(page, clips)
     shot(page, "studio")
+
+    # מראה המותג של 1.2: מסגרת עם פינות מעוגלות, שם הקובץ על הפלט וכתובית שנשברת בשורות - הכול בנגן החי
+    page.set_viewport_size({"width": 1440, "height": 1060})   # גבוה יותר: שדה עיגול הפינות והסרגל התחתון נכנסים בלי להיחתך
+    page.evaluate(BRANDING)
+    page.wait_for_function("() => !!document.querySelector('#veLiveOverlays .ve-live-caption') && !!document.querySelector('#veLiveOverlays .ve-live-item')", timeout=30000)
+    # גוללים את אזור ההגדרות עד סופו, ומחכים ששדה עיגול הפינות של המסגרת באמת בתוך החלון - אחרת נעצרים ולא שומרים תמונה גרועה
+    page.evaluate("""() => { for (let el = document.getElementById('veFrameRadius').parentElement; el; el = el.parentElement) {
+      if (el.scrollHeight > el.clientHeight + 4 && getComputedStyle(el).overflowY !== 'visible') { el.scrollTop = el.scrollHeight; break; } } }""")
+    page.wait_for_function("() => { const r = document.getElementById('veFrameRadius').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }", timeout=10000)
+    page.wait_for_load_state("networkidle")
+    shot(page, "branding")
+    page.set_viewport_size(DESKTOP)
 
     page.evaluate("() => { closeVeEditor(); switchTab('dataviz'); }")
     page.wait_for_function("() => typeof dvzState !== 'undefined' && dvzState.selected === 'fruit_harvest'", timeout=30000)
