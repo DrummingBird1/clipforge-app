@@ -142,8 +142,16 @@ def test_api_browse_invalid_path_returns_400():
     assert resp.status_code == 400
 
 
+def _tray_language(monkeypatch, language):
+    # 8.11.2026: תוויות המגש בשפת ההתקנה (ui_language.current). בלי config.json ההתקנה באנגלית - כמו ב-CI - ובמחשב של המפתח היא
+    # בעברית, ולכן הטסטים נועלים את השפה במקום לסמוך על הסביבה.
+    from utils.shared import ui_language
+    monkeypatch.setattr(ui_language, "current", lambda *args, **kwargs: language)
+
+
 def test_tray_icon_menu_open_browser_opens_the_given_url(monkeypatch):
     import pystray
+    _tray_language(monkeypatch, "he")
 
     captured = {}
 
@@ -170,6 +178,7 @@ def test_tray_icon_menu_open_browser_opens_the_given_url(monkeypatch):
 
 def test_tray_icon_menu_quit_stops_icon_and_sets_should_exit(monkeypatch):
     import pystray
+    _tray_language(monkeypatch, "he")
 
     captured = {}
 
@@ -195,6 +204,26 @@ def test_tray_icon_menu_quit_stops_icon_and_sets_should_exit(monkeypatch):
 
     assert fake_icon_instance.stopped is True
     assert fake_server.should_exit is True
+
+
+def test_tray_icon_menu_follows_the_install_language(monkeypatch):
+    import pystray
+
+    captured = {}
+
+    class _FakeIcon:
+        def __init__(self, name, image, title, menu):
+            captured["menu"] = menu
+
+        def run(self):
+            pass
+
+    monkeypatch.setattr(pystray, "Icon", _FakeIcon)
+    fake_server = type("FakeServer", (), {"should_exit": False})()
+    for language, labels in (("en", {"Open ClipForge", "Stop server"}), ("he", {"פתח בדפדפן", "כבה שרת"})):
+        _tray_language(monkeypatch, language)
+        web_app._run_tray_icon(fake_server, "http://127.0.0.1:8878/?token=abc")
+        assert {item.text for item in captured["menu"]} == labels
 
 
 def test_tray_icon_falls_back_gracefully_when_pystray_import_fails(monkeypatch, capsys):

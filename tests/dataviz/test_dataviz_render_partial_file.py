@@ -11,6 +11,7 @@ from dataviz.episode import load_episode
 from dataviz.plan import build_plan
 from dataviz.render import render_video
 from tests.dataviz_helpers import write_episode
+from tests.media_support import needs_ffmpeg
 from utils.ffmpeg_locator import get_ffmpeg_exe
 
 SMALL = {"video": {"width": 320, "height": 200, "fps": 10, "dpi": 20}}
@@ -30,6 +31,7 @@ def _setup(tmp_path):
     return episode, plan, out
 
 
+@needs_ffmpeg   # 8.11.2026: ה-runner של CI בלי ffmpeg - render_video מפעיל אותו באמת
 def test_an_interrupted_render_keeps_the_previous_video_and_leaves_no_partial_file(tmp_path):
     episode, plan, out = _setup(tmp_path)
     during = []
@@ -45,6 +47,7 @@ def test_an_interrupted_render_keeps_the_previous_video_and_leaves_no_partial_fi
     assert os.listdir(out.parent) == ["ep_test.mp4"]                            # בלי קובץ חלקי
 
 
+@needs_ffmpeg
 def test_a_finished_render_takes_the_name_and_leaves_nothing_else(tmp_path):
     episode, plan, out = _setup(tmp_path)
     result = render_video(episode, plan, str(out), ffmpeg=get_ffmpeg_exe(), workers=1)

@@ -181,6 +181,8 @@ def test_animation_asks_for_video_and_running_polls_the_gpu(editor_page, screen)
     page.evaluate("() => { dvzToggleAnimation(false); _dvzSetRunning(true); }")
     page.wait_for_function("() => window.__urls.some(u => u.includes('/api/dataviz/gpu'))")
     page.evaluate("() => _dvzSetRunning(false)")
+    # 8.11.2026: ה-video יוצא ב-dvz:preview-loaded, אחרי שטעינת התצוגה (fetch אסינכרוני) מסתיימת. ב-CI האיטי הבדיקה בדקה לפני כן.
+    page.wait_for_function("() => !document.getElementById('dvzPreviewVideo')")
     assert page.locator("#dvzPreviewVideo").count() == 0
 
 
