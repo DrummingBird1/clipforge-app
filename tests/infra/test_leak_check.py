@@ -91,7 +91,7 @@ def test_commit_messages_and_authors_are_scanned(tmp_path):
 
 def test_the_owners_local_patterns_are_used(tmp_path):
     repo = _repo(tmp_path)
-    _write(repo, "dev/export_public.local.json", json.dumps({"personal_patterns": {"owner-name": r"\bzorblax\b"}}))
+    _write(repo, "dev/leak_check.local.json", json.dumps({"personal_patterns": {"owner-name": r"\bzorblax\b"}}))
     _write(repo, "docs/guide.md", "written by Zorblax\n")
     findings = [f for f in leak.check(str(repo), "main") if f[1] == "docs/guide.md"]
     assert [(f[0], f[3], f[4]) for f in findings] == [("personal", "owner-name", "Zorblax")]

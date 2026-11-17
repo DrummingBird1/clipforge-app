@@ -5,7 +5,7 @@
 # דורש בלי uv run), והוא ייבא את utils.shared.update_checker רק בשביל שני קבועים. update_checker מייבא requests, וה-Release הראשון
 # בריפו הציבורי (v1.2.0) נפל על ModuleNotFoundError. update_checker מייבא מכאן, והשמות נשארים נגישים גם דרכו.
 
-# 30.10.2026: הגרסאות יוצאות בריפו הציבורי (dev/export_public.py מכין אותו, release.yml בונה בו את ה-zip). הריפו הפרטי
+# 30.10.2026: הגרסאות יוצאות בריפו הציבורי (עד 2.0.0 יוצא מריפו פיתוח נפרד; release.yml בונה בו את ה-zip). הריפו הפרטי
 # DrummingBird1/clipforge נשאר לפיתוח, ו-apply_update מושך מה-origin של העותק עצמו, לא מכאן
 REPO = "DrummingBird1/clipforge-app"
 RELEASES_PAGE_URL = f"https://github.com/{REPO}/releases/latest"
