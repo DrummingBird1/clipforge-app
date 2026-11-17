@@ -248,6 +248,30 @@ def test_a_screen_capture_that_fails_tries_the_plain_capture(tmp_path, monkeypat
     assert len(made["cmds"]) == 1
 
 
+def test_a_card_held_by_another_app_says_so(tmp_path, monkeypatch):
+    # 17.11.2026, על חומרה אמיתית: OBS היה פתוח עם הכרטיס, וההודעה הייתה שורת ffmpeg גולמית ("Error opening input: I/O error")
+    from utils.capture import engine as engine_module
+    monkeypatch.setattr(engine_module, "START_GRACE_SECONDS", 0.05)
+
+    class Busy(_FakeProcess):
+        def __init__(self, cmd):
+            super().__init__(cmd, dies=True)
+            self.tail = ["[in#0 @ 000001] Error opening input: I/O error", "Error opening input file video=Card:audio=Card Audio.",
+                         "Error opening input files: I/O error"]
+
+    card, _made = _fake_engine(tmp_path, Busy)
+    with pytest.raises(CaptureError, match="כרטיס הלכידה תפוס"):
+        card.start_record(CaptureSpec(fps=30, source="device", device_video="Card", device_audio="Card Audio"), "rec")
+    assert not card.status()["recording"]
+    screen, _made = _fake_engine(tmp_path, Busy)                 # אותה שורה בלכידת מסך אינה כרטיס תפוס
+    with pytest.raises(CaptureError) as error:
+        screen.start_record(CaptureSpec(fps=30), "rec")
+    assert "תפוס" not in str(error.value)
+    other, _made = _fake_engine(tmp_path, lambda cmd: _FakeProcess(cmd, dies=True))   # כשל אחר של הכרטיס נשאר כמו שהוא
+    with pytest.raises(CaptureError, match="cannot open the source"):
+        other.start_record(CaptureSpec(fps=30, source="device", device_video="Card"), "rec")
+
+
 def test_two_saves_in_one_second_get_two_names(tmp_path):
     from utils.capture.engine import free_path
     folder = tmp_path / "out"

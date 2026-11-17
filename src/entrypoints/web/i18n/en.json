@@ -1024,6 +1024,7 @@
   "בתחנת העגינה בלבד - במצב נייד אין יציאת HDMI.": "In the dock only - handheld mode has no HDMI output.",
   "מקליט בלי שמע המשחק: שמע המחשב לא נפתח": "Recording without the game audio: the computer's audio could not be opened",
   "לכידת המסך המהירה לא עלתה, ולכן ההקלטה בלכידה הרגילה (איטית יותר)": "The fast screen capture did not start, so the recording uses the plain capture (slower)",
+  "ההקלטה לא התחילה: כרטיס הלכידה תפוס. תוכנה אחרת משתמשת בו עכשיו (למשל OBS או אפליקציית המצלמה) - צריך לסגור אותה, או לכבות שם את המקור, ולנסות שוב": "The recording did not start: the capture card is in use. Another app is using it right now (OBS or the Camera app, for example) - close it, or turn the source off there, and try again",
   "ההמרה ל-MP4 לא הסתיימה, וההקלטה נשמרה כ-MKV": "The conversion to MP4 did not finish, and the recording was saved as MKV",
   "ה-replay מוקלט ב-HEVC, כי AV1 לא נתמך במקטעים של ה-replay": "The replay is recorded in HEVC, because AV1 is not supported in replay segments",
   "כבר מקליט": "Already recording",
@@ -4395,6 +4396,10 @@
   [
    "^(.+) נכנס, אבל לא נבחר סגנון$",
    "$1 came in, but no style is chosen"
+  ],
+  [
+   "^ההקלטה לא התחילה: (.+)$",
+   "The recording did not start: $1"
   ],
   [
    "^העריכה האוטומטית לא התחילה: (.+)$",

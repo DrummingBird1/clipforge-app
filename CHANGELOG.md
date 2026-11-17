@@ -87,6 +87,8 @@ was missing and fixes what a deep check of the new code found. If you are coming
 - Capture cards: a card that reports 60 frames and delivers 30 produced a 30-frame recording labelled 60, and its
   replay clips reported 240 frames a second, which the studio would have rendered at 240.
 - Recording: track names were lost when a recording became an MP4, so the microphone track was not found by itself.
+- Capture cards: when another app holds the card (OBS, the Camera app), the screen says so instead of showing a raw
+  FFmpeg error. A recording that did not start is now explained in English too.
 - Studio: a render that failed on the graphics card's encoder was marked as failed; it is now finished on the CPU.
 - Recording: a recorder left running after ClipForge was closed by force kept writing to the disk without limit.
 - Recording: a replay clip in AV1 was unreadable (the replay now records in HEVC), a replay saved during a full

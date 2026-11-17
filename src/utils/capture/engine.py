@@ -111,6 +111,16 @@ class CaptureError(RuntimeError):
     pass
 
 
+# 17.11.2026 (בדיקה על חומרה אמיתית): כש-OBS פתוח עם אותו כרטיס, ffmpeg נופל עם "Error opening input: I/O error" - שורה שלא
+# אומרת למשתמש מה לעשות. התקן וידאו של DirectShow נפתח רק לתוכנה אחת בכל רגע; השמע של הכרטיס נפתח גם אז.
+DEVICE_BUSY_TEXT = ("ההקלטה לא התחילה: כרטיס הלכידה תפוס. תוכנה אחרת משתמשת בו עכשיו (למשל OBS או אפליקציית המצלמה) - צריך לסגור אותה, או לכבות שם את המקור, ולנסות שוב")
+
+
+def busy_device(spec, detail: str) -> bool:
+    """ההקלטה מכרטיס לכידה נפלה כי התקן הווידאו שלו לא נפתח (I/O error על video=...) - כמעט תמיד תוכנה אחרת מחזיקה אותו."""
+    return getattr(spec, "source", "") == "device" and "I/O error" in detail and "video=" in detail
+
+
 class FfmpegEngine:
     name = "ffmpeg"
 
@@ -200,6 +210,8 @@ class FfmpegEngine:
                     return self._launch(spec, slot)
                 except CaptureError:
                     pass                          # גם gdigrab נפל: מדווחים על הכשל הראשון, הוא המועיל
+            if busy_device(spec, detail):
+                raise CaptureError(DEVICE_BUSY_TEXT)
             raise CaptureError("ההקלטה לא התחילה: " + detail)
         return process
 
