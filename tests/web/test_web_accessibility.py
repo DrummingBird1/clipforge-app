@@ -41,7 +41,7 @@ def _static_hebrew_strings():
     for part in fa.page_parts():
         if not part.endswith(".html"):
             continue
-        source = re.sub(r"<script.*?</script>|<style.*?</style>", "", fa.read_part(part), flags=re.S)
+        source = re.sub(r"<script.*?</script\s*>|<style.*?</style\s*>", "", fa.read_part(part), flags=re.S | re.I)
         for match in re.finditer(r">([^<>]+)<", source):
             for line in re.split(r"\n\s*", html.unescape(match.group(1))):
                 add(line)

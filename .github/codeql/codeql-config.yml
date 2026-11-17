@@ -1,0 +1,20 @@
+name: ClipForge CodeQL configuration
+
+# ClipForge is a local, single-user app: a web UI on 127.0.0.1 behind an access token, whose job is to open,
+# render and save the video files its owner points it at. Two CodeQL queries flag that job itself, in a few hundred
+# places, and bury everything else:
+#
+# - py/path-injection: "a path depends on a user-provided value". Every path here comes from the owner of the PC,
+#   through the UI or a settings file. What must not be reachable is checked where it matters, with tests:
+#   src/entrypoints/web/path_checks.py and src/utils/shared/path_safety.py (the data folder, secret files, Windows
+#   path aliases), tests/web/test_web_path_aliases.py.
+# - py/stack-trace-exposure: "error information flows to the user". The user is the owner; showing them why a render
+#   or an upload failed is the point. Nothing is served to other people.
+#
+# All other queries stay on, so a new finding of another kind is visible instead of being one of several hundred.
+# Review this file if ClipForge ever serves anyone other than its owner.
+query-filters:
+  - exclude:
+      id: py/path-injection
+  - exclude:
+      id: py/stack-trace-exposure

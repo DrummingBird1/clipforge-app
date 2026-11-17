@@ -22,7 +22,8 @@ def test_only_a_version_tag_runs_it():
     triggers = wf.get("on", wf.get(True))   # yaml קורא את המפתח on כ-True
     assert triggers == {"push": {"tags": ["v*"]}}
     # 30.10.2026: גם id-token ו-attestations, בשביל ה-attestation של מקור הבנייה
-    assert wf["permissions"] == {"contents": "write", "id-token": "write", "attestations": "write"}
+    assert wf["permissions"] == {"contents": "read"}       # 17.11.2026: כתיבה רק ל-job שמפרסם
+    assert wf["jobs"]["portable"]["permissions"] == {"contents": "write", "id-token": "write", "attestations": "write"}
     assert wf["concurrency"]["cancel-in-progress"] is False
 
 

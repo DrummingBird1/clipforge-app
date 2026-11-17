@@ -126,10 +126,7 @@ Install required Python packages with [uv](https://github.com/astral-sh/uv) (pre
 uv sync
 ```
 
-Or with plain pip (uses `dev/requirements.txt`'s looser `>=` version bounds, not the exact lockfile - fine for a quick start, but `uv sync` is the reproducible path):
-```bash
-pip install -r dev/requirements.txt
-```
+`uv` is the only supported way to install: the versions come from `uv.lock`, which is also what the dependency scans read.
 
 ### 2. Environment & Configuration
 Copy the example configuration files and populate them with your credentials:
@@ -432,7 +429,7 @@ download was built by this repository's workflow from its tag.
 |---|---|---|
 | `ci.yml` | every PR; pushes to `main` (public repository); `workflow_dispatch` | lint (`ruff`, `mypy`, `pip-audit`) and the unit tests on `windows-latest`; the Tk and browser tests on PRs and by hand |
 | `release.yml` | a `v*` tag | builds the portable zip, attests it, and creates the Release |
-| `codeql.yml` | PRs, pushes to `main`, weekly | CodeQL for Python and JavaScript - public repository only |
+| `codeql.yml` | PRs, pushes to `main`, weekly | CodeQL for Python and JavaScript - public repository only. `.github/codeql/codeql-config.yml` leaves out two queries that flag what a local, single-user app does by design (opening the owner's files, showing the owner an error), and says why |
 | `scorecard.yml` | pushes to `main`, branch-protection changes, weekly | OpenSSF Scorecard, published and uploaded to code scanning - public repository only |
 | `pages.yml` | pushes to `main` that touch `docs/`, `mkdocs.yml`, `README.md`, `CHANGELOG.md` or `ROADMAP.md`; `workflow_dispatch` | builds the documentation site with `mkdocs build --strict` and deploys it to GitHub Pages - public repository only |
 

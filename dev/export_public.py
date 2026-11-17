@@ -240,7 +240,8 @@ def _report(files, findings, ref, where):
     for kind, title in (("secret", "סודות"), ("personal", "נתיבים ופרטים אישיים"), ("dangling", "קישורים לקבצים שלא יצאו (אזהרה)")):
         print(f"== {title}: {counts[kind]}")
         for _k, rel, lineno, name, text in (f for f in findings if f[0] == kind):
-            print(f"  {rel}:{lineno} [{name}] {text}")
+            # 17.11.2026: את הסוד עצמו לא מדפיסים - המיקום ושם הדפוס מספיקים כדי למצוא אותו
+            print(f"  {rel}:{lineno} [{name}] " + ("(הטקסט מוסתר)" if kind == "secret" else text))
     return counts
 
 

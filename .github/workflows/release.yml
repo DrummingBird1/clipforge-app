@@ -14,10 +14,9 @@ on:
   push:
     tags: ["v*"]
 
+# 17.11.2026: ברירת המחדל לקריאה בלבד; הרשאות הכתיבה רק ל-job שבונה ומפרסם (OpenSSF Scorecard: Token-Permissions)
 permissions:
-  contents: write       # יצירת ה-Release והעלאת ה-zip
-  id-token: write       # attestation: חתימה דרך ה-OIDC של GitHub
-  attestations: write   # attestation: שמירה בריפו
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -31,6 +30,10 @@ jobs:
   portable:
     runs-on: windows-latest
     timeout-minutes: 45
+    permissions:
+      contents: write       # יצירת ה-Release והעלאת ה-zip
+      id-token: write       # attestation: חתימה דרך ה-OIDC של GitHub
+      attestations: write   # attestation: שמירה בריפו
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
