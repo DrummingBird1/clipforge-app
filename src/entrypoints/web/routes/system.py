@@ -126,12 +126,14 @@ async def api_export_dir_set(request: Request):
     return _export_dir_status()
 
 
-def _encoders_status(probe: bool):
+def _encoders_status(probe: int):
     """16.11.2026 (2.0): מקודד hevc/av1 - ההגדרה, מה נמצא במחשב (probe=True מריץ את הבדיקה, או קורא אותה מהמטמון),
     ומה ייבחר בפועל לכל קודק."""
     from utils.media import encoders
     setting = encoders.load_setting()
-    available = encoders.detect_backends(W.get_ffmpeg_exe(), creationflags=W.NO_WINDOW_FLAGS) if probe else None
+    # probe=2 (הכפתור "בדוק את הכרטיס"): בדיקה מחדש, בלי המטמון - אחרי עדכון דרייבר או החלפת כרטיס
+    available = (encoders.detect_backends(W.get_ffmpeg_exe(), creationflags=W.NO_WINDOW_FLAGS, use_cache=probe < 2)
+                 if probe else None)
     effective = {codec: encoders.resolve_backend(setting, codec, available)[0] if available is not None else None
                  for codec in encoders.GPU_CODECS}
     return {"setting": setting, "choices": [{"id": c, "label": encoders.LABELS[c]} for c in encoders.CHOICES],
@@ -140,7 +142,7 @@ def _encoders_status(probe: bool):
 
 @router.get("/api/encoders")
 def api_encoders(probe: int = 0):
-    return _encoders_status(bool(probe))
+    return _encoders_status(max(0, min(2, probe)))
 
 
 @router.post("/api/encoders")
@@ -155,7 +157,7 @@ async def api_encoders_set(request: Request):
     encoders.save_setting(backend)
     W.audit_log.record_action("web", "encoder_backend", details=backend,
                               username=request.client.host if request.client else None)
-    return _encoders_status(False)
+    return _encoders_status(0)
 
 
 @router.get("/api/scripts")

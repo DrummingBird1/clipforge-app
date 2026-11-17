@@ -263,9 +263,9 @@ CODEC = args.codec
 ENCODER_BACKEND = "nvenc"
 if CODEC in encoders.GPU_CODECS:
     _requested_backend = args.encoder_backend or encoders.load_setting()
-    if _requested_backend == "nvenc":
-        ENCODER_BACKEND = "nvenc"   # בלי בדיקה - בדיוק כמו קודם
-    else:
+    if encoders.forced_by_env() == "nvenc" and _requested_backend == "nvenc":
+        ENCODER_BACKEND = "nvenc"   # משתנה הסביבה (הטסטים): בלי בדיקה - בדיוק כמו קודם
+    else:                           # 17.11.2026: גם "NVIDIA" שנבחר בהגדרות נבדק - במחשב בלי NVIDIA עוברים למקודד שקיים
         ENCODER_BACKEND, _backend_note = encoders.resolve_backend(
             _requested_backend, CODEC, encoders.detect_backends(FFMPEG_EXE, creationflags=NO_WINDOW_FLAGS))
         if _backend_note:
@@ -508,6 +508,19 @@ def _file_control(filename):
     if RUN_CONTROL is None:
         return None
     return lambda: RUN_CONTROL.action_for(filename)
+
+
+def _mic_track_for_file(video_path, cfg):
+    """17.11.2026 (2.0.1): ערוץ המיקרופון לקובץ הזה, או None כשאין בו ערוץ כזה. ב-2.0.0 פרופיל עם ערוץ מיקרופון הפיל את
+    הרינדור של כל קליפ עם ערוץ שמע אחד (auto chain מעתיק את הפרופיל לכל קליפ) - עכשיו הקליפ מרונדר בלי הערבוב, עם שורה בלוג."""
+    if cfg.MIC_TRACK is None:
+        return None
+    from utils.media import audio_tracks
+    track = audio_tracks.usable_mic_track(audio_tracks.audio_titles(video_path, FFPROBE_EXE), cfg.MIC_TRACK, cfg.AUDIO_TRACK or 0)
+    if track is None:
+        print(f"[WARN] {os.path.basename(video_path)}: אין בקובץ ערוץ שמע {cfg.MIC_TRACK + 1} נפרד מערוץ המשחק - ממשיך בלי ערבוב המיקרופון.")
+        sys.stdout.flush()
+    return track
 CAPTION_FONT = args.caption_font
 CAPTION_FONT_SIZE = args.caption_font_size
 CAPTION_COLOR = args.caption_color
@@ -1894,7 +1907,7 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
         gpu_prefix=gpu_prefix,
         denoise_filter=cfg.DENOISE_FILTER_OVERRIDE, sharpen_filter=cfg.SHARPEN_FILTER_OVERRIDE, tonemap_filter=cfg.TONEMAP_FILTER_OVERRIDE,
         eq_filter=cfg.EQ_FILTER, lut_intensity=cfg.LUT_INTENSITY, audio_stream_index=cfg.AUDIO_TRACK, audio_fx_filters=cfg.AUDIO_FX_FILTERS,
-        mic_stream_index=cfg.MIC_TRACK, mic_gain=cfg.MIC_GAIN, mic_denoise=cfg.MIC_DENOISE, duck_game=cfg.DUCK_GAME,
+        mic_stream_index=_mic_track_for_file(video_path, cfg), mic_gain=cfg.MIC_GAIN, mic_denoise=cfg.MIC_DENOISE, duck_game=cfg.DUCK_GAME,
         layers=file_layers, layer_text_files=layer_text_files, layer_image_inputs=layer_image_inputs,
         broll_audio_sources=build_broll_audio_sources(file_layers, layer_image_inputs) if cfg.KEEP_AUDIO else None,
         progress_bar=cfg.PROGRESS_BAR, frame_border=cfg.FRAME_BORDER, frame_radius=cfg.FRAME_RADIUS,
@@ -2038,10 +2051,29 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
     # ואז ייתקלו בכשל session-limit שהניסיון-החוזר הקיים צריך לספוג בדיעבד.
     nvenc_guard = cfg.NVENC_SEMAPHORE if cfg.NVENC_SEMAPHORE is not None else contextlib.nullcontext()
     encode_stderr = []   # 24.10.2026: הסוף של ה-stderr של הקידוד - הסיכום של loudnorm (LUFS על הפלט, בלי מעבר נוסף)
+    encode_failure = []  # 17.11.2026: הסוף של ה-stderr כשהקידוד נכשל - כדי לזהות כישלון של מקודד הכרטיס
+    locals_bitrate = locals().get("bitrate_kbps")   # קיים רק ביעד גודל קובץ
     try:
         with nvenc_guard:
             ok = run_ffmpeg_with_progress_and_nvenc_retry(cmd, total_frames, progress_label, is_nvenc=cfg.CODEC in ("hevc", "av1"), control=_file_control(filename),
-                                                          on_stderr=encode_stderr.append)
+                                                          on_stderr=encode_stderr.append, on_failure=encode_failure.append)
+            # 17.11.2026: המקודד של הכרטיס נכשל ברינדור עצמו (הבדיקה המוקדמת עברה) - ניסיון אחד נוסף במעבד, במקום קובץ שנכשל.
+            # לא במצב שני מעברים (המעבר הראשון כבר נעשה בכרטיס) ולא כשהפריימים נשארים על ה-GPU (--hwaccel מלא).
+            cpu_cmd = None
+            if (ok is False and encode_failure and passlog_path is None and not use_hwaccel_for_file
+                    and encoders.is_encoder_failure(encode_failure[-1], cfg.CODEC, cfg.ENCODER_BACKEND)):
+                for build in (lambda backend: get_codec_args(cfg.CODEC, preset=file_nvenc_preset, cq=cfg.CODEC_QUALITY, backend=backend),
+                              lambda backend: get_two_pass_codec_args(cfg.CODEC, locals_bitrate, 2, "", preset=file_nvenc_preset, backend=backend)):
+                    try:
+                        cpu_cmd = cpu_cmd or encoders.swap_args(cmd, build(cfg.ENCODER_BACKEND), build("cpu"))
+                    except (TypeError, ValueError):
+                        continue
+            if cpu_cmd:
+                print(f"[WARN] {filename}: הקידוד ב-{encoders.LABELS[cfg.ENCODER_BACKEND]} נכשל - מנסה שוב במעבד "
+                      f"({encoders.encoder_name(cfg.CODEC, 'cpu')}). זה איטי יותר.")
+                sys.stdout.flush()
+                ok = run_ffmpeg_with_progress_and_nvenc_retry(cpu_cmd, total_frames, progress_label, is_nvenc=False,
+                                                              control=_file_control(filename), on_stderr=encode_stderr.append)
     except FfmpegCancelled:
         # item 95: בוטל מהווב באמצע הקידוד - מנקים את הפלט החלקי, ממשיכים לקבצים הבאים
         ok = None

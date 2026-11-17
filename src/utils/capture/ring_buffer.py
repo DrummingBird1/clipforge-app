@@ -81,11 +81,13 @@ def concat_list(paths: List[str]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def save_command(ffmpeg_exe: str, list_path: str, output_path: str, mp4: Optional[bool] = None) -> List[str]:
+def save_command(ffmpeg_exe: str, list_path: str, output_path: str, mp4: Optional[bool] = None,
+                 names: Optional[List[str]] = None) -> List[str]:
     """חיבור הקטעים בלי קידוד מחדש. ל-MP4: faststart (aac_adtstoasc ל-AAC מ-MPEG-TS - ffmpeg מוסיף בעצמו, ודגל מפורש
     נכשל על שמע שאינו AAC)."""
     is_mp4 = output_path.lower().endswith(".mp4") if mp4 is None else mp4
     cmd = [ffmpeg_exe, "-hide_banner", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-map", "0", "-c", "copy"]
+    cmd += list(names or [])      # שמות הערוצים (handler_name): מקטעי MPEG-TS לא נושאים אותם
     if is_mp4:
         cmd += ["-movflags", "+faststart"]
     return cmd + [output_path]

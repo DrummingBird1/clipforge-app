@@ -867,8 +867,9 @@ def test_youtube_export_adds_chapters_shorts_schedule_and_captions(tmp_path, mon
     monkeypatch.setattr(youtube_extras, "upload_captions", lambda vid, srt, **k: captions.append((vid, srt)))
     calls = {}
 
-    def fake_upload(path, title, description="", tags=None, privacy_status="private", progress_callback=None, publish_at=None):
-        calls.update(description=description, publish_at=publish_at)
+    def fake_upload(path, title, description="", tags=None, privacy_status="private", progress_callback=None, publish_at=None,
+                    need_captions=False):
+        calls.update(description=description, publish_at=publish_at, need_captions=need_captions)
         return "vid-1"
 
     monkeypatch.setattr(web_app.youtube_uploader, "upload_video", fake_upload)
@@ -880,6 +881,30 @@ def test_youtube_export_adds_chapters_shorts_schedule_and_captions(tmp_path, mon
     assert calls["publish_at"] == "2099-01-01T10:00:00Z"
     assert "00:00 א\n00:15 ב\n00:35 ג" in calls["description"] and calls["description"].endswith("#Shorts")
     assert captions == [("vid-1", str(tmp_path / "goal.srt"))]
+    assert calls["need_captions"] is True                  # 2.0.1: עם קובץ כתוביות מבקשים את הרשאת הכתוביות לפני ההעלאה
+    assert client.get("/api/clips/youtube_status").json()["warning"] is None
+
+
+def test_youtube_export_says_when_the_captions_did_not_upload(tmp_path, monkeypatch):
+    # 2.0.0: כתוביות שנכשלו נרשמו רק בלוג, וההעלאה דווחה כהצלחה מלאה
+    from utils.bot import youtube_extras
+    _reset_youtube_upload_state()
+    monkeypatch.setattr(web_app, "CLIPS_DIR", str(tmp_path))
+    clip = tmp_path / "goal.mp4"
+    clip.write_bytes(b"x")
+    (tmp_path / "goal.srt").write_text("1", encoding="utf-8")
+    monkeypatch.setattr(web_app, "generate_seo_with_sheet", MagicMock(return_value=_fake_seo()))
+    monkeypatch.setattr(web_app.youtube_uploader, "is_configured", lambda: True)
+
+    def refused(vid, srt, **k):
+        raise RuntimeError("403 insufficient scopes")
+
+    monkeypatch.setattr(youtube_extras, "upload_captions", refused)
+    monkeypatch.setattr(web_app.youtube_uploader, "upload_video", lambda *a, **k: "vid-2")
+    monkeypatch.setattr(web_app.threading, "Thread", _ImmediateThread)
+    assert client.post("/api/clips/youtube_export", json={"path": str(clip)}).status_code == 200
+    state = client.get("/api/clips/youtube_status").json()
+    assert state["success"] is True and state["video_id"] == "vid-2" and "הכתוביות לא" in state["warning"]
 
 
 def test_youtube_export_refuses_a_schedule_in_the_past(tmp_path, monkeypatch):

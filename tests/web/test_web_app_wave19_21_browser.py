@@ -246,8 +246,14 @@ def test_english_ui_translates_everything_visible_and_restores_hebrew(home_page)
 
 def test_focus_ring_is_visible_and_icon_buttons_are_big_enough(home_page):
     page = home_page
+    # 17.11.2026: הטסט נכשל בערך בחצי מהריצות. הכפתור עדיין visibility:hidden ברגע שהדף נטען (הסרגל העליון נחשף רגע
+    # אחר כך), ו-focus() על אלמנט מוסתר לא נתפס - המיקוד נשאר על body, ו-Tab משם הלך לכפתור אחר או יצא מהדף.
+    # עכשיו מחכים עד שהכפתור באמת מקבל מיקוד, ואז מגיעים אליו במקלדת עצמה: ממנו קדימה (Tab) וחזרה (Shift+Tab).
+    page.wait_for_function("() => { const el = document.getElementById('statsBtn'); el.focus(); return document.activeElement === el; }")
     page.keyboard.press("Tab")
-    page.evaluate("() => document.getElementById('statsBtn').focus()")
+    page.wait_for_function("() => document.activeElement && document.activeElement.id !== 'statsBtn'")
+    page.keyboard.press("Shift+Tab")
+    page.wait_for_function("() => document.activeElement && document.activeElement.id === 'statsBtn'")
     ring = page.evaluate("() => { const el = document.getElementById('statsBtn'); return [el.matches(':focus-visible'), getComputedStyle(el).boxShadow]; }")
     assert ring[0] is True and "rgb" in ring[1]
     sizes = page.evaluate("() => [...document.querySelectorAll('.topbar .icon-only')].filter(b => b.offsetParent).map(b => [b.id, b.getBoundingClientRect().width, b.getBoundingClientRect().height])")

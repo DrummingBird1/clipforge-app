@@ -40,7 +40,7 @@ class ClipShareCog(commands.Cog):
         channel_id = row.get("channel_id") or default_channel
         channel = self.bot.get_channel(int(channel_id)) if channel_id else None
         if channel is None:
-            return False, "לא נקבע ערוץ - הרץ /clip_channel בערוץ הרצוי", False
+            return None, "לא נקבע ערוץ - הרץ /clip_channel בערוץ הרצוי", False   # None: מחכה, לא כשל
         path = row["path"]
         if not os.path.isfile(path):
             return False, "הקובץ לא נמצא", True
@@ -53,16 +53,28 @@ class ClipShareCog(commands.Cog):
 
     @tasks.loop(seconds=15)
     async def send_pending(self):
-        rows = await asyncio.to_thread(discord_outbox.pending)
-        if not rows:
+        # 17.11.2026: כל חריגה נתפסת. tasks.loop מפסיק לתמיד על חריגה שהוא לא מכיר (למשל DB נעול לרגע), ו"שלח לדיסקורד"
+        # היה מת עד הפעלה מחדש של הבוט.
+        try:
+            rows = await asyncio.to_thread(discord_outbox.pending)
+            if not rows:
+                return
+            default_channel = await asyncio.to_thread(discord_outbox.get_channel)
+        except Exception as e:
+            print(f"[clip_share] reading the queue failed: {e}")
             return
-        default_channel = await asyncio.to_thread(discord_outbox.get_channel)
         for row in rows:
             try:
-                ok, error, final = await self.send_row(row, default_channel)
-            except discord.HTTPException as e:
-                ok, error, final = False, f"דיסקורד דחה את הקובץ: {e}", False
-            await asyncio.to_thread(discord_outbox.mark, row["id"], ok, error, final)
+                try:
+                    ok, error, final = await self.send_row(row, default_channel)
+                except discord.HTTPException as e:
+                    ok, error, final = False, f"דיסקורד דחה את הקובץ: {e}", False
+                if ok is None:     # עוד לא נקבע ערוץ: הקליפ מחכה בתור, בלי לשרוף ניסיונות
+                    await asyncio.to_thread(discord_outbox.waiting, row["id"], error)
+                else:
+                    await asyncio.to_thread(discord_outbox.mark, row["id"], ok, error, final)
+            except Exception as e:
+                print(f"[clip_share] row {row.get('id')} failed: {e}")
 
     @send_pending.before_loop
     async def _wait_ready(self):

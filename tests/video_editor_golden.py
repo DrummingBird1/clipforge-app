@@ -185,6 +185,7 @@ def run_scenario(scenario: Dict[str, Any], tmp: str, index: int = 0, stderr: str
     module.maybe_notify_per_file = lambda *a, **k: None
     module.render_preview_frame = lambda video_path, filename, cmd_prefix, *a, **k: captured.append(list(cmd_prefix))
     module._reserve_next_number = lambda: 7
+    module._mic_track_for_file = lambda video_path, cfg: cfg.MIC_TRACK   # 2.0.1: בלי ffprobe - לקובץ המדומה "יש" את הערוץ
     module._mark_number_used_successfully = lambda number: None
     out_dir = os.path.join(tmp, "out")
     os.makedirs(out_dir, exist_ok=True)

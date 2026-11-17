@@ -180,6 +180,35 @@
         </div>
       </div>
 
+      <div class="options-card" id="longShortsOptions" hidden>
+        <div class="ve-row">
+          <label>כמה שורטס מכל הקלטה:</label>
+          <input type="number" id="lsCount" value="5" min="1" max="20" class="u-width-80px">
+          <label>אורך כל Short (שניות):</label>
+          <input type="number" id="lsLength" value="30" min="5" max="180" class="u-width-80px">
+        </div>
+        <div class="ve-row">
+          <label title="בהקלטה עם ערוצים נפרדים, המיקרופון מעורבב מעל המשחק">מיקרופון בערוץ נפרד:</label>
+          <select id="lsMic">
+            <option value="auto">אוטומטי (הקלטה של ClipForge)</option>
+            <option value="none">בלי</option>
+            <option value="1">ערוץ 2</option>
+            <option value="2">ערוץ 3</option>
+          </select>
+          <label>רגישות לשיאים:</label>
+          <select id="lsThreshold">
+            <option value="18">רגילה</option>
+            <option value="12">גבוהה (יותר רגעים)</option>
+            <option value="24">נמוכה (רק החזקים)</option>
+          </select>
+        </div>
+        <div class="ve-row">
+          <label><input type="checkbox" id="lsPunch" checked> זום על השיא</label>
+          <label><input type="checkbox" id="lsSlowmo" checked> הילוך איטי על השיא</label>
+          <label><input type="checkbox" id="lsFace" checked> Facecam שעוקב אחרי הפנים</label>
+        </div>
+      </div>
+
       <div class="options-card" id="superStreamerOptions" hidden>
         <div class="ve-row">
           <label>מקור לכידה:</label>

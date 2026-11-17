@@ -21,7 +21,7 @@ web_app.limiter.enabled = False
 
 def _page_script():
     html = fa.assemble_inline_page()
-    return re.findall(r"<script>(.*?)</script>", html, re.S)[-1]
+    return re.findall(r"<script>(.*?)</script\s*>", html, re.S | re.I)[-1]
 
 
 # --- item 100: מונחים באנגלית לכל שדה ---

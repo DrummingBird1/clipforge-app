@@ -44,7 +44,7 @@ def _ui_texts():
     texts = []
     for part in fa.page_parts():
         if part.endswith(".html"):
-            source = re.sub(r"<script.*?</script>|<style.*?</style>|<!--.*?-->", "", fa.read_part(part), flags=re.S)
+            source = re.sub(r"<script.*?</script\s*>|<style.*?</style\s*>|<!--.*?-->", "", fa.read_part(part), flags=re.S | re.I)
             for match in re.finditer(r">([^<>]+)<", source):
                 texts += [(part, line.strip()) for line in re.split(r"\n\s*", html.unescape(match.group(1)))]
             texts += [(part, html.unescape(m.group(2))) for m in re.finditer(r'(title|placeholder|aria-label)="([^"]+)"', source)]

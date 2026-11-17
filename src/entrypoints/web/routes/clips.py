@@ -240,8 +240,11 @@ async def api_publish_discord(request: Request):
 
 
 @router.get("/api/publish/discord")
-def api_publish_discord_recent():
+def api_publish_discord_recent(id: int = 0):
+    """17.11.2026: עם id - המצב של שליחה אחת (pending / sent / failed והסיבה), כדי שהמסך יגיד מה קרה באמת."""
     from utils.bot import discord_outbox
+    if id:
+        return {"row": discord_outbox.get(id), "channel_set": discord_outbox.get_channel() is not None}
     return {"recent": discord_outbox.recent(), "channel_set": discord_outbox.get_channel() is not None}
 
 
@@ -291,7 +294,8 @@ async def api_clips_youtube_export(request: Request):
     with W._youtube_upload_lock:
         if W._youtube_upload_state["in_progress"]:
             return JSONResponse({"error": "כבר יש העלאה פעילה."}, status_code=409)
-        W._youtube_upload_state.update({"in_progress": True, "percent": 0, "success": None, "video_id": None, "error": None})
+        W._youtube_upload_state.update({"in_progress": True, "percent": 0, "success": None, "video_id": None, "error": None,
+                                        "warning": None})
 
     # גל 32: כותרת/תיאור/תגיות מ-Gemini כשיש; בלי - שם הקובץ (מערכת המונה) כמו קודם
     title = os.path.splitext(os.path.basename(validated))[0]
@@ -320,20 +324,24 @@ async def api_clips_youtube_export(request: Request):
     def _do_upload():
         try:
             schedule = {"publish_at": publish_at} if publish_at else {}
+            srt = youtube_extras.sidecar_srt(validated)
+            # 17.11.2026: עם קובץ כתוביות מבקשים כבר עכשיו את הרשאת הכתוביות (אם חסרה - חלון הסכמה אחד, לפני ההעלאה)
             video_id = W.youtube_uploader.upload_video(
                 validated, title=title, description=_extras(description), tags=tags,
-                privacy_status="private", progress_callback=_progress, **schedule,
+                privacy_status="private", progress_callback=_progress, **schedule, **({"need_captions": True} if srt else {}),
             )
-            srt = youtube_extras.sidecar_srt(validated)
+            warning = None
             if srt:
                 try:
                     youtube_extras.upload_captions(video_id, srt)
-                except Exception as e:   # הסרטון כבר עלה - כתוביות שנכשלו לא הופכות את ההעלאה לכישלון
+                except Exception as e:   # הסרטון כבר עלה - כתוביות שנכשלו לא הופכות את ההעלאה לכישלון, אבל המשתמש רואה את זה
+                    warning = "הסרטון עלה, אבל הכתוביות לא"
                     W.worker.log_queue.put((f"⚠️ העלאת הכתוביות ליוטיוב נכשלה: {e}\n", "red"))
             W.youtube_publish_log.record_upload(video_id, os.path.basename(validated), title)
             W._generate_and_record_thumbnail_candidates(video_id, validated)
             with W._youtube_upload_lock:
-                W._youtube_upload_state.update({"in_progress": False, "success": True, "video_id": video_id, "percent": 100})
+                W._youtube_upload_state.update({"in_progress": False, "success": True, "video_id": video_id, "percent": 100,
+                                                "warning": warning})
         except Exception as e:
             with W._youtube_upload_lock:
                 W._youtube_upload_state.update({"in_progress": False, "success": False, "error": str(e)})

@@ -261,3 +261,90 @@ def test_winget_manifests_point_at_the_release_zip_and_its_exe(tmp_path):
     assert "RelativeFilePath: ClipForge-2.0.0-win64\\ClipForge.exe" in installer
     assert sorted(p.name for p in folder.iterdir()) == ["DrummingBird1.ClipForge.installer.yaml",
                                                         "DrummingBird1.ClipForge.locale.en-US.yaml", "DrummingBird1.ClipForge.yaml"]
+
+
+# ---- 2.0.1: מהבדיקה המעמיקה ----
+
+def test_winget_is_recognised_in_a_custom_location_too():
+    from utils.shared import install_where
+    default = r"C:\Users\me\AppData\Local\Microsoft\WinGet\Packages\DrummingBird1.ClipForge_Microsoft.Winget.Source_8wekyb3d8bbwe\ClipForge-2.0.1-win64"
+    assert install_where.is_winget(default, locations=[])
+    custom = r"D:\Apps\ClipForge\ClipForge-2.0.1-win64"
+    assert not install_where.is_winget(custom, locations=[])
+    assert install_where.is_winget(custom, locations=[r"D:\Apps\ClipForge"])       # מה ש-winget רשם ב-Uninstall
+    assert not install_where.is_winget(r"D:\Apps\ClipForge2\x", locations=[r"D:\Apps\ClipForge"])
+    env = {"LOCALAPPDATA": r"C:\Users\me\AppData\Local"}
+    moved = launcher.managed_data_dirs(custom, env, is_winget=lambda root: True)
+    assert moved["CLIPFORGE_DATA_DIR"] == r"C:\Users\me\AppData\Local\ClipForge\data"
+    assert launcher.managed_data_dirs(custom, env, is_winget=lambda root: False) == {}
+    assert launcher.managed_data_dirs(custom, {**env, "CLIPFORGE_DATA_DIR": "X:/mine"}, is_winget=lambda root: True) == {
+        "CLIPFORGE_WORKSPACE_DIR": r"C:\Users\me\AppData\Local\ClipForge\workspace"}
+
+
+def test_a_new_winget_data_folder_starts_in_the_layout_by_topic(tmp_path):
+    """17.11.2026: data_paths לא מאמץ את המבנה לפי נושא כש-CLIPFORGE_DATA_DIR מוגדר, ובהתקנת winget הלאנצ'ר הוא שמגדיר אותו -
+    התקנה חדשה התחילה במבנה השטוח. הלאנצ'ר מסמן את התיקייה שבחר; תיקייה שהמשתמש קבע, או אחת עם קבצים ישנים, לא משתנה."""
+    from utils.shared import data_paths
+    new = tmp_path / "ClipForge" / "data"
+    assert launcher.adopt_managed_layout({"CLIPFORGE_DATA_DIR": str(new)}) is True
+    assert data_paths.migrated(str(new)) and (new / "security").is_dir()
+    assert launcher.adopt_managed_layout({"CLIPFORGE_DATA_DIR": str(new)}) is False          # כבר מסומנת
+    assert launcher.adopt_managed_layout({"CLIPFORGE_WORKSPACE_DIR": str(tmp_path / "w")}) is False   # את data קבע המשתמש
+    old = tmp_path / "old"
+    old.mkdir()
+    (old / "web_app_token.txt").write_text("t", encoding="utf-8")                           # קובץ במבנה השטוח הישן
+    assert launcher.adopt_managed_layout({"CLIPFORGE_DATA_DIR": str(old)}) is False
+    assert not data_paths.migrated(str(old))
+
+
+def test_scoop_is_recognised_in_a_custom_root_too(tmp_path):
+    from utils.shared import install_where, update_checker
+    app = tmp_path / "MyScoop" / "apps" / "clipforge" / "2.0.1"
+    app.mkdir(parents=True)
+    assert not install_where.is_scoop(str(app))
+    for name in ("shims", "buckets"):
+        (tmp_path / "MyScoop" / name).mkdir()
+    assert install_where.is_scoop(str(app)) and update_checker.install_kind(str(app)) == "scoop"
+    assert install_where.is_scoop(r"C:\Users\me\scoop\apps\clipforge\current")
+
+
+def test_the_users_connection_files_survive_an_update(tmp_path):
+    # .env והחיבור ליוטיוב יושבים בתיקיית ההתקנה. Scoop ו-winget מחליפים אותה בכל עדכון - וכל עדכון מחק את החיבורים.
+    import json
+
+    from utils.shared import install_files
+    data = tmp_path / "data"
+    old, new = tmp_path / "ClipForge-2.0.1-win64", tmp_path / "ClipForge-2.0.2-win64"
+    for root, version in ((old, "2.0.1"), (new, "2.0.2")):
+        root.mkdir()
+        (root / "portable.json").write_text(json.dumps({"version": version}), encoding="utf-8")
+    (old / ".env").write_text("DISCORD_TOKEN=abc", encoding="utf-8")
+    (old / "youtube_token.json").write_text("{}", encoding="utf-8")
+    assert install_files.sync(str(old), str(data)) == {".env": "saved", "youtube_token.json": "saved"}
+    assert install_files.sync(str(old), str(data)) == {}                           # אין מה לעדכן
+    assert install_files.sync(str(new), str(data)) == {".env": "restored", "youtube_token.json": "restored"}
+    assert (new / ".env").read_text(encoding="utf-8") == "DISCORD_TOKEN=abc"
+    (new / "youtube_token.json").unlink()                                          # המשתמש ניתק את יוטיוב
+    assert install_files.sync(str(new), str(data)) == {"youtube_token.json": "dropped"}
+    assert install_files.sync(str(new), str(data)) == {} and not (new / "youtube_token.json").exists()
+    (new / ".env").write_text("DISCORD_TOKEN=changed", encoding="utf-8")
+    os.utime(new / ".env", (time.time() + 5, time.time() + 5))
+    assert install_files.sync(str(new), str(data)) == {".env": "saved"}
+    checkout = tmp_path / "git_checkout"
+    checkout.mkdir()
+    (checkout / ".env").write_text("X=1", encoding="utf-8")
+    assert install_files.sync(str(checkout), str(tmp_path / "data2")) == {} and not (tmp_path / "data2").exists()   # שכפול git: לא נוגעים
+    from utils.shared import data_paths
+    assert "install_files" in data_paths.BACKUP_SKIP_DIRS                           # הסודות לא נכנסים לקובץ הגיבוי
+
+
+def test_the_launcher_does_not_open_something_that_is_not_this_version():
+    # 2.0.0: ה-launcher פתח בדפדפן כל מה שענה בפורט - גם ClipForge ישן שנשאר לרוץ אחרי עדכון, והגרסה החדשה לא עלתה
+    same = {"clipforge": True, "version": "2.0.1"}
+    assert launcher.already_running_text("he", same, "2.0.1") is None
+    assert launcher.already_running_text("he", same, "") is None                    # שכפול בלי portable.json
+    older = launcher.already_running_text("he", {"clipforge": True, "version": "2.0.0"}, "2.0.1")
+    assert "2.0.0" in older and "מגש" in older
+    assert "earlier" in launcher.already_running_text("en", {"clipforge": True, "version": ""}, "2.0.1")   # 2.0.0 לא דיווח גרסה
+    assert "8878" in launcher.already_running_text("en", {"clipforge": False, "version": ""}, "2.0.1")
+    assert launcher.running_app(port=1, timeout=0.2) == {"clipforge": False, "version": ""}

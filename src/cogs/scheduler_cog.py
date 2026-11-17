@@ -22,7 +22,7 @@ import zipfile
 from utils.media.compilation import should_run_recap_today
 from utils.shared.ffmpeg_locator import get_ffmpeg_exe
 from utils.shared.render_lock import get_status as get_render_lock_status
-from utils.shared.render_lock import render_lock
+from utils.shared.render_lock import CALLER_HOLDS_LOCK_ENV_VAR, render_lock
 from utils.shared.subprocess_flags import NO_WINDOW_FLAGS
 
 from discord.ext import commands, tasks
@@ -115,7 +115,10 @@ def _run_script_blocking(script_relpath, extra_args=None, timeout=3600, record_h
             result = subprocess.run(
                 [sys.executable, "-u", script_path, *(extra_args or [])],
                 capture_output=True, text=True, encoding="utf-8", errors="replace",
-                timeout=timeout, creationflags=NO_WINDOW_FLAGS
+                timeout=timeout, creationflags=NO_WINDOW_FLAGS,
+                # 17.11.2026: המנעול כבר אצלנו. בלי המשתנה הזה הסקריפט חיכה למנעול של ההורה שלו עד שנהרג, ורינדור
+                # הקנרית היומי נכשל בכל יום עם "timed out", גם כש-ffmpeg תקין.
+                env={**os.environ, CALLER_HOLDS_LOCK_ENV_VAR: "1"},
             )
         status = "success" if result.returncode == 0 else "failed"
         tail = ((result.stdout or "") + (result.stderr or ""))[-1500:]

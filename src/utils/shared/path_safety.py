@@ -57,3 +57,43 @@ def same_file_ancestor(path: str, root: str) -> bool:
 def is_inside_protected(path: str, root: str) -> bool:
     """לתיקייה שאסור להגיש ממנה (data/): גם לפי הנתיב וגם לפי זהות הקובץ."""
     return is_within(path, root) or same_file_ancestor(path, root)
+
+
+# --- 17.11.2026 (2.0.1), מהבדיקה המעמיקה ---
+
+SECRET_FILE_NAMES = ("client_secret.json", "youtube_token.json", "tiktok_cookies.txt")
+
+
+def is_secret_name(path: str) -> bool:
+    """קובץ סודות לפי השם שלו, בכל תיקייה: .env (וגם .env.local וכו'), ההרשאות והטוקן של יוטיוב, והעוגיות של TikTok.
+    הם יושבים בתיקיית ההתקנה, מחוץ ל-data/, ולכן הבדיקה של data/ לא כיסתה אותם. השם נלקח אחרי realpath (שם קצר 8.3
+    וקישורים נפתרים), בלי זרם נתונים חלופי (file::$DATA) ובלי נקודות ורווחים בסוף."""
+    try:
+        name = os.path.basename(os.path.realpath(path))
+    except (OSError, ValueError):
+        name = os.path.basename(str(path))
+    name = name.split(":")[0].rstrip(" .").lower()
+    return name in SECRET_FILE_NAMES or name == ".env" or (name.startswith(".env.") and not name.endswith(".example"))
+
+
+def free_destination(dst: str) -> str:
+    """dst אם הוא פנוי, אחרת name_2.ext, name_3.ext..."""
+    stem, ext = os.path.splitext(dst)
+    candidate, n = dst, 2
+    while os.path.lexists(candidate):
+        candidate, n = f"{stem}_{n}{ext}", n + 1
+    return candidate
+
+
+def link_or_copy_new(src: str, dst: str) -> str:
+    """קישור קשיח של src ב-dst (או העתקה כשאי אפשר לקשר - כונן אחר), תמיד בשם פנוי. מחזיר את הנתיב שנוצר.
+    ב-2.0.0 שם תפוס גרם לנפילה ל-copy2 על הקובץ הקיים - שהוא קישור קשיח למקור אחר - והתוכן של המקור ההוא נדרס."""
+    import shutil
+    target = free_destination(dst)
+    try:
+        os.link(src, target)
+    except OSError:
+        if os.path.lexists(target):          # מישהו יצר אותו בינתיים: לא כותבים עליו
+            target = free_destination(dst)
+        shutil.copy2(src, target)
+    return target

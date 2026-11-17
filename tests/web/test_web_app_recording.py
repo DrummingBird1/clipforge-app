@@ -46,6 +46,11 @@ class FakeManager:
     def scenes(self):
         raise CaptureError("סצנות זמינות רק עם OBS")
 
+    def forget_engine(self):
+        if "record/start" in self.calls:
+            raise CaptureError("עצור את ההקלטה וה-replay לפני שינוי הסיסמה")
+        self.calls.append("forget_engine")
+
 
 @pytest.fixture
 def manager(monkeypatch):
@@ -70,6 +75,35 @@ def test_actions_go_to_the_manager_and_errors_are_400(manager):
     assert client.get("/api/recording/obs/scenes").status_code == 400
 
 
+def test_the_obs_password_is_saved_to_the_vault_and_never_sent_back(manager, monkeypatch):
+    """18.11.2026: המסך אמר "הסיסמה נשמרת בכספת" בלי שום דרך להזין אותה. הכספת כאן מדומה - הטסט לא נוגע ב-Credential Manager."""
+    vault, logged = {}, []
+    monkeypatch.setattr(web_app, "set_vault_secret", lambda key, value: vault.__setitem__(key, value))
+    monkeypatch.setattr(web_app, "is_vault_available", lambda: True)
+    monkeypatch.setattr(web_app.audit_log, "record_action", lambda *a, **k: logged.append((a, k)))
+    monkeypatch.setattr(rec_routes, "_obs_password_saved", lambda: bool(vault))
+    assert client.get("/api/recording/settings").json()["obs_password"] is False
+    resp = client.post("/api/recording/obs/password", json={"password": "s3cret-from-obs"})
+    assert resp.status_code == 200 and resp.json() == {"ok": True, "obs_password": True}
+    assert vault == {"OBS_WEBSOCKET_PASSWORD": "s3cret-from-obs"} and "forget_engine" in manager.calls   # החיבור הבא עם הסיסמה החדשה
+    assert "s3cret-from-obs" not in resp.text and "s3cret-from-obs" not in repr(logged)
+    settings = client.get("/api/recording/settings")
+    assert settings.json()["obs_password"] is True and "s3cret-from-obs" not in settings.text
+
+
+def test_the_obs_password_route_refuses_what_it_should(manager, monkeypatch):
+    vault = {}
+    monkeypatch.setattr(web_app, "set_vault_secret", lambda key, value: vault.__setitem__(key, value))
+    monkeypatch.setattr(web_app, "is_vault_available", lambda: True)
+    assert client.post("/api/recording/obs/password", json={"password": ""}).status_code == 400
+    assert client.post("/api/recording/obs/password", json={"password": "x"}, headers={"Origin": "https://evil.example"}).status_code == 403
+    client.post("/api/recording/record/start")                                   # באמצע הקלטה: לא מחליפים סיסמה
+    busy = client.post("/api/recording/obs/password", json={"password": "x"})
+    assert busy.status_code == 400 and "לפני שינוי הסיסמה" in busy.json()["error"] and vault == {}
+    monkeypatch.setattr(web_app, "is_vault_available", lambda: False)
+    assert client.post("/api/recording/obs/password", json={"password": "x"}).status_code == 400 and vault == {}
+
+
 def test_a_foreign_origin_cannot_start_a_recording(manager):
     resp = client.post("/api/recording/record/start", headers={"Origin": "https://evil.example"})
     assert resp.status_code == 403 and manager.calls == []
@@ -86,3 +120,8 @@ def test_a_saved_replay_goes_to_the_auto_chain(monkeypatch):
     monkeypatch.setattr(web_app, "_on_clip_ready", events.append)
     rec_routes._on_clip("C:/imports/replay_1.mp4", "replay")
     assert events == [{"script": "recording", "path": "C:/imports/replay_1.mp4", "source": "replay"}]
+
+
+def test_the_manifest_reports_the_version_for_the_launcher():
+    data = client.get("/manifest.json").json()
+    assert data["short_name"] == "ClipForge" and data["version"] == web_app.APP_VERSION

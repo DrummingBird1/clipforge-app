@@ -60,3 +60,33 @@ def test_chapters_are_read_from_the_file_the_studio_wrote(tmp_path):
                     "-i", str(meta), "-map_metadata", "1", "-c:v", "libx264", "-preset", "ultrafast", str(out)],
                    check=True, capture_output=True, timeout=120)
     assert yx.read_chapters(str(out), get_ffprobe_exe()) == [(0.0, "פתיחה"), (12.0, "גול")]
+
+
+def test_the_caption_language_comes_from_the_name_then_the_text(tmp_path):
+    # 2.0.0: כל קובץ כתוביות הועלה כ"עברית", גם כתוביות באנגלית
+    from utils.bot import youtube_extras as ye
+    hebrew, english, named = tmp_path / "a.srt", tmp_path / "b.srt", tmp_path / "c.en.srt"
+    hebrew.write_text("1\n00:00:00,000 --> 00:00:01,000\nשלום\n", encoding="utf-8")
+    english.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello\n", encoding="utf-8")
+    named.write_text("1\n00:00:00,000 --> 00:00:01,000\nשלום\n", encoding="utf-8")
+    assert (ye.srt_language(str(hebrew)), ye.srt_language(str(english)), ye.srt_language(str(named))) == ("he", "en", "en")
+    assert ye.srt_language(str(tmp_path / "missing.srt")) == "en"
+    empty_video = tmp_path / "v.mp4"
+    empty_video.write_bytes(b"x")
+    (tmp_path / "v.srt").write_bytes(b"")
+    assert ye.sidecar_srt(str(empty_video)) is None            # קובץ כתוביות ריק לא מועלה
+
+
+def test_captions_need_their_own_permission_and_old_tokens_keep_working(tmp_path, monkeypatch):
+    # 2.0.0: ההרשאה לכתוביות לא התבקשה בכלל - כל העלאת כתוביות נכשלה ב-403, וההעלאה דווחה כהצלחה
+    import json
+
+    from utils.bot import youtube_uploader as yu
+    assert yu.CAPTIONS_SCOPE not in yu.SCOPES                  # טוקן קיים לא נדרש להסכמה מחודשת בשביל העלאה רגילה
+    token = tmp_path / "youtube_token.json"
+    monkeypatch.setattr(yu, "TOKEN_FILE", str(token))
+    assert yu.can_upload_captions() is False
+    token.write_text(json.dumps({"scopes": yu.SCOPES}), encoding="utf-8")
+    assert yu.can_upload_captions() is False
+    token.write_text(json.dumps({"scopes": yu.SCOPES + [yu.CAPTIONS_SCOPE]}), encoding="utf-8")
+    assert yu.can_upload_captions() is True

@@ -22,7 +22,8 @@ def test_only_a_version_tag_runs_it():
     triggers = wf.get("on", wf.get(True))   # yaml קורא את המפתח on כ-True
     assert triggers == {"push": {"tags": ["v*"]}}
     # 30.10.2026: גם id-token ו-attestations, בשביל ה-attestation של מקור הבנייה
-    assert wf["permissions"] == {"contents": "write", "id-token": "write", "attestations": "write"}
+    assert wf["permissions"] == {"contents": "read"}       # 17.11.2026: כתיבה רק ל-job שמפרסם
+    assert wf["jobs"]["portable"]["permissions"] == {"contents": "write", "id-token": "write", "attestations": "write"}
     assert wf["concurrency"]["cancel-in-progress"] is False
 
 
@@ -54,8 +55,9 @@ def test_the_release_checks_and_attaches_sha256sums_and_puts_the_hash_in_the_not
     release = next(s for s in steps if "gh release create" in s.get("run", ""))
     assert "dist/SHA256SUMS.txt" in release["run"].split("gh release create", 1)[1]
     script = release["run"].split("<<'EOF' > release_notes.md\n", 1)[1].split("\nEOF\n", 1)[0]
-    (tmp_path / "CHANGELOG.md").write_text("# Changelog\n\n## 9.9.9 - 2026-10-30\n\n### Security\n- a fix\n\n## 9.9.8\n- old\n",
-                                           encoding="utf-8")
+    (tmp_path / "CHANGELOG.md").write_text("# Changelog\n\n## 9.9.9 - 2026-10-30\n\n### Security\n- a fix\n\n"
+                                           "![The screen](docs/images/recording.png)\n[the docs](https://example.invalid/x)\n\n"
+                                           "## 9.9.8\n- old\n", encoding="utf-8")
     (tmp_path / "dist").mkdir()
     (tmp_path / "dist" / "SHA256SUMS.txt").write_text("ab" * 32 + "  ClipForge-9.9.9-win64.zip\n", encoding="utf-8")
     notes = subprocess.run([sys.executable, "-c", script], cwd=tmp_path, env={**os.environ, "GITHUB_REF_NAME": "v9.9.9",
@@ -64,3 +66,6 @@ def test_the_release_checks_and_attaches_sha256sums_and_puts_the_hash_in_the_not
     assert notes.startswith("### Security\n- a fix") and "old" not in notes
     assert "ab" * 32 in notes and "ClipForge-9.9.9-win64.zip" in notes
     assert "gh attestation verify ClipForge-9.9.9-win64.zip --repo DrummingBird1/clipforge-app" in notes
+    # 17.11.2026 (2.0.1): צילומי המסך של ה-changelog מקושרים בנתיב בתוך הריפו; בעמוד ה-Release הם מופנים לקבצים של ה-tag
+    assert "![The screen](https://raw.githubusercontent.com/DrummingBird1/clipforge-app/v9.9.9/docs/images/recording.png)" in notes
+    assert "[the docs](https://example.invalid/x)" in notes

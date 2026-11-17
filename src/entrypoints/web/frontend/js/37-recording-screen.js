@@ -14,6 +14,7 @@ async function loadRecordingScreen() {
     _recSettings = data.settings;
     _recConsoles = data.consoles || [];
     document.getElementById("recLoopbackHint").hidden = !!data.loopback;
+    _renderRecObsPassword(!!data.obs_password);
     _fillRecConsoles();
     _fillRecForm(_recSettings);
   }
@@ -61,8 +62,8 @@ function recShowConsoleNote() {
   document.getElementById("recConsoleNote").textContent = profile ? profile.note : "";
 }
 
-async function loadRecDevices() {
-  const devices = await _recGet("/api/recording/devices");
+async function loadRecDevices(refresh) {
+  const devices = await _recGet("/api/recording/devices" + (refresh ? "?refresh=1" : ""));   // refresh: גם מודדים את הכרטיס מחדש
   if (!devices || !_recSettings) return;
   _recOptions(document.getElementById("recDeviceVideo"), devices.video, _recSettings.device_video, "בחר כרטיס");
   _recOptions(document.getElementById("recDeviceAudio"), devices.audio, _recSettings.device_audio, "בלי שמע מהכרטיס");
@@ -75,6 +76,7 @@ function _fillRecForm(s) {
   document.getElementById("recSource").value = s.source;
   document.getElementById("recScreen").value = s.screen_index;
   document.getElementById("recGameAudio").checked = s.game_audio;
+  document.getElementById("recCardPrefer").value = s.card_prefer;
   document.getElementById("recCodec").value = s.codec;
   document.getElementById("recFps").value = s.fps;
   document.getElementById("recQuality").value = s.quality;
@@ -98,7 +100,7 @@ function _readRecForm() {
   const value = (id) => document.getElementById(id).value;
   return {
     engine: value("recEngine"), source: value("recSource"), screen_index: Number(value("recScreen")),
-    game_audio: document.getElementById("recGameAudio").checked, console: value("recConsole"),
+    game_audio: document.getElementById("recGameAudio").checked, console: value("recConsole"), card_prefer: value("recCardPrefer"),
     device_video: value("recDeviceVideo"), device_audio: value("recDeviceAudio"), mic: value("recMic"),
     facecam: value("recFacecam"), codec: value("recCodec"), fps: Number(value("recFps")), quality: Number(value("recQuality")),
     replay_seconds: Number(value("recReplaySeconds")), hotkey_save_replay: value("recHotkeySave"),
@@ -147,6 +149,7 @@ function _renderRecStatus(s) {
   if (!s.recording && !s.replay) line("לא מקליט");
   if (s.hotkeys) line("⌨️ מקשי הקיצור פעילים");
   if (s.last_saved) line("💾 נשמר אחרון: " + s.last_saved);
+  if (s.notice) line("ℹ️ " + s.notice);
   if (s.error) line("⚠️ " + s.error, "rec-error");
   _renderRecImport(s.import || {});
   document.getElementById("recReplayStart").disabled = !!s.replay;
@@ -154,6 +157,28 @@ function _renderRecStatus(s) {
   document.getElementById("recReplayStop").disabled = !s.replay;
   document.getElementById("recRecordStart").disabled = !!s.recording;
   document.getElementById("recRecordStop").disabled = !s.recording;
+}
+
+// 18.11.2026: סיסמת ה-WebSocket של OBS נשמרת מכאן לכספת של Windows (routes/recording.py). הדפדפן יודע רק אם יש סיסמה שמורה.
+function _renderRecObsPassword(saved) {
+  document.getElementById("recObsPasswordState").textContent = saved ? "יש סיסמה שמורה" : "עדיין לא נשמרה סיסמה";
+}
+
+async function saveRecObsPassword() {
+  const input = document.getElementById("recObsPassword");
+  if (!input.value) {
+    uiToast("הדבק כאן את הסיסמה מ-OBS", "warn");
+    return;
+  }
+  try {
+    await _recPost("/api/recording/obs/password", {password: input.value});
+    input.value = "";
+    _renderRecObsPassword(true);
+    uiToast("הסיסמה נשמרה", "ok");
+    loadRecScenes();
+  } catch (e) {
+    uiToast(e.message, "warn");
+  }
 }
 
 async function loadRecScenes() {

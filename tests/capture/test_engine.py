@@ -113,6 +113,14 @@ class FakeObs:
 
     async def call(self, request):
         self.calls.append((request.requestType, request.requestData))
+        active = self.__dict__.setdefault("active", {"Record": False, "ReplayBuffer": False})
+        for output in active:
+            if request.requestType == f"Start{output}":
+                active[output] = True
+            elif request.requestType == f"Stop{output}":
+                active[output] = False
+            elif request.requestType == f"Get{output}Status":
+                return FakeResponse({"outputActive": active[output]})
         if request.requestType == "GetSceneList":
             return FakeResponse({"currentProgramSceneName": "Game", "scenes": [{"sceneName": "BRB"}, {"sceneName": "Game"}]})
         if request.requestType == "StopRecord":
@@ -135,12 +143,104 @@ def test_obs_engine_drives_obs_and_forwards_saved_replays():
         engine.start_record()
         assert engine.stop_record() == "C:/obs/rec.mkv"
         obs = FakeObs.instances[0]
-        assert [c[0] for c in obs.calls] == ["StartReplayBuffer", "SaveReplayBuffer", "GetSceneList",
-                                             "SetCurrentProgramScene", "StartRecord", "StopRecord"]
-        assert obs.calls[3][1] == {"sceneName": "BRB"}
+        actions = [c for c in obs.calls if not c[0].endswith("Status")]          # בלי שאלות המצב שבין הפעולות
+        assert [c[0] for c in actions] == ["StartReplayBuffer", "SaveReplayBuffer", "GetSceneList",
+                                           "SetCurrentProgramScene", "StartRecord", "StopRecord"]
+        assert actions[3][1] == {"sceneName": "BRB"}
         asyncio.run_coroutine_threadsafe(obs.callback("ReplayBufferSaved", {"savedReplayPath": "C:/obs/r.mp4"}),
                                          engine._loop).result(5)
         assert clips == [("C:/obs/r.mp4", "obs")]
+    finally:
+        engine.shutdown()
+
+
+def test_obs_state_is_right_as_soon_as_start_and_stop_return():
+    """18.11.2026, מול OBS אמיתי: OBS עונה ל-StartRecord לפני שההקלטה התחילה ול-StopRecord לפני שנעצרה. המצב שנשאל מיד אחר כך
+    היה הקודם: "לא מקליט" אחרי התחלה, "מקליט" אחרי עצירה."""
+    class Slow(FakeObs):
+        """כמו OBS: שתי שאלות המצב הראשונות אחרי כל פעולה עוד מחזירות את המצב הקודם."""
+        async def call(self, request):
+            lag = self.__dict__.setdefault("lag", {})
+            kind = request.requestType
+            if kind in ("StartRecord", "StopRecord"):
+                lag["left"], lag["old"] = 2, kind == "StopRecord"
+            response = await super().call(request)
+            if kind == "GetRecordStatus" and lag.get("left"):
+                lag["left"] -= 1
+                return FakeResponse({"outputActive": lag["old"]})
+            return response
+
+    engine = ObsEngine("ws://localhost:4455", "pw", client_factory=Slow)
+    try:
+        engine.start_record()
+        assert engine.status()["recording"] is True
+        engine.stop_record()
+        assert engine.status()["recording"] is False
+    finally:
+        engine.shutdown()
+
+
+def test_obs_that_never_settles_does_not_hang(monkeypatch):
+    from utils.capture import engine as engine_module
+    monkeypatch.setattr(engine_module, "OBS_SETTLE_SECONDS", 0.3)
+
+    class Stuck(FakeObs):
+        async def call(self, request):
+            self.calls.append((request.requestType, request.requestData))
+            return FakeResponse({"outputActive": False})
+
+    engine = ObsEngine("ws://localhost:4455", "pw", client_factory=Stuck)
+    try:
+        started = time.monotonic()
+        engine.start_record()
+        assert time.monotonic() - started < 3
+    finally:
+        engine.shutdown()
+
+
+def test_obs_without_a_replay_buffer_still_records_and_says_where_to_turn_it_on():
+    """18.11.2026, מול OBS אמיתי: כשה-Replay Buffer כבוי בהגדרות של OBS, כל רענון של המצב הציג "GetReplayBufferStatus נכשל
+    (code=604)" כשגיאה של כל המסך. ההקלטה עובדת בלי קשר; רק ה-replay לא זמין, ועל זה יש הודעה שאומרת איפה מפעילים אותו."""
+    class Status:
+        code = 604
+
+        def __str__(self):
+            return "RequestStatus(result=False, code=604, comment='Replay buffer is not available.')"
+
+    class NoReplay(FakeObs):
+        async def call(self, request):
+            self.calls.append((request.requestType, request.requestData))
+            if "ReplayBuffer" in request.requestType:
+                response = FakeResponse(ok=False)
+                response.requestStatus = Status()
+                return response
+            return FakeResponse({"outputActive": request.requestType == "GetRecordStatus"})
+
+    engine = ObsEngine("ws://localhost:4455", "pw", client_factory=NoReplay)
+    try:
+        status = engine.status()
+        assert status["error"] is None and status["recording"] is True and status["replay"] is False
+        assert "Enable Replay Buffer" in status["notice"]
+        for action in (engine.start_replay, engine.save_replay, engine.stop_replay):
+            with pytest.raises(CaptureError, match="Enable Replay Buffer"):
+                action()
+        assert engine.status()["replay"] is False                    # start_replay שנכשל לא משאיר "replay פועל"
+    finally:
+        engine.shutdown()
+
+
+def test_another_obs_failure_is_still_an_error():
+    class Broken(FakeObs):
+        async def call(self, request):
+            response = FakeResponse(ok=False)
+            response.requestStatus = type("Status", (), {"code": 207})()
+            return response
+
+    engine = ObsEngine("ws://localhost:4455", "pw", client_factory=Broken)
+    try:
+        assert "GetRecordStatus" in engine.status()["error"]
+        with pytest.raises(CaptureError, match="StartReplayBuffer"):
+            engine.start_replay()
     finally:
         engine.shutdown()
 
@@ -155,5 +255,235 @@ def test_obs_not_running_gives_a_clear_error():
         with pytest.raises(CaptureError, match="OBS"):
             engine.start_record()
         assert engine.status()["error"]
+    finally:
+        engine.shutdown()
+
+
+
+# ---- 2.0.1: מהבדיקה המעמיקה ----
+
+class _FakeProcess:
+    """תהליך מדומה: רץ עד kill/stop, או מת מיד (dies=True) עם שורת שגיאה."""
+
+    def __init__(self, cmd, dies=False):
+        self.cmd, self.tail, self.pid = cmd, (["cannot open the source"] if dies else []), None
+        self.running, self.returncode, self.killed = not dies, (1 if dies else None), False
+
+    def stop(self):
+        self.running = False
+        return 0
+
+    def kill(self):
+        self.running, self.killed = False, True
+
+
+class _FakeSender:
+    def __init__(self, connects):
+        import threading
+        self.connected, self.error, self.stopped = threading.Event(), None, False
+        self._connects = connects
+
+    def start(self):
+        if self._connects:
+            self.connected.set()
+        else:
+            self.error = "Invalid number of channels"
+
+    def stop(self):
+        self.stopped = True
+
+
+def _fake_engine(tmp_path, processes, senders=None):
+    made = {"cmds": [], "senders": []}
+
+    def factory(cmd, creationflags=0):
+        made["cmds"].append(cmd)
+        return processes(cmd)
+
+    def loopback_factory(port, rate, channels):
+        sender = senders()
+        made["senders"].append(sender)
+        return sender
+
+    engine = FfmpegEngine("ffmpeg", str(tmp_path / "cache"), lambda: str(tmp_path / "out"), process_factory=factory,
+                          loopback_factory=loopback_factory if senders else None, record_dir=lambda: str(tmp_path / "rec"))
+    return engine, made
+
+
+def test_game_audio_that_cannot_open_does_not_leave_a_recording_that_records_nothing(tmp_path, monkeypatch):
+    # 2.0.0: השולח נכשל, ffmpeg חיכה לנצח לחיבור השמע, והמסך אמר "מקליט". עכשיו: מתחילים שוב בלי שמע המשחק, עם הודעה.
+    from utils.capture import engine as engine_module
+    monkeypatch.setattr(engine_module, "START_GRACE_SECONDS", 0.05)
+    engine, made = _fake_engine(tmp_path, lambda cmd: _FakeProcess(cmd), senders=lambda: _FakeSender(connects=False))
+    engine.start_record(CaptureSpec(fps=30, game_audio_port=50123), "rec")
+    first, second = made["cmds"]
+    assert any("tcp://127.0.0.1:50123" in part for part in first) and not any("tcp://" in part for part in second)
+    assert made["senders"][0].stopped and len(made["senders"]) == 1
+    status = engine.status()
+    assert status["recording"] and "בלי שמע המשחק" in status["notice"] and status["error"] is None
+
+
+def test_game_audio_that_connects_keeps_its_track(tmp_path, monkeypatch):
+    from utils.capture import engine as engine_module
+    monkeypatch.setattr(engine_module, "START_GRACE_SECONDS", 0.05)
+    engine, made = _fake_engine(tmp_path, lambda cmd: _FakeProcess(cmd), senders=lambda: _FakeSender(connects=True))
+    engine.start_record(CaptureSpec(fps=30, game_audio_port=50123), "rec")
+    assert len(made["cmds"]) == 1 and engine.status()["notice"] is None
+
+
+def test_a_screen_capture_that_fails_tries_the_plain_capture(tmp_path, monkeypatch):
+    # ddagrab לא עולה במשחק במסך מלא בלעדי או במחשב ישן. הנפילה ל-gdigrab הייתה קיימת בקוד אבל אף פעם לא הופעלה.
+    from utils.capture import engine as engine_module
+    monkeypatch.setattr(engine_module, "START_GRACE_SECONDS", 0.05)
+    engine, made = _fake_engine(tmp_path, lambda cmd: _FakeProcess(cmd, dies=any("ddagrab" in part for part in cmd)))
+    engine.start_record(CaptureSpec(fps=30), "rec")
+    assert "gdigrab" in made["cmds"][1] and engine.status()["recording"] and "בלכידה הרגילה" in engine.status()["notice"]
+    both, made = _fake_engine(tmp_path, lambda cmd: _FakeProcess(cmd, dies=True))
+    with pytest.raises(CaptureError, match="cannot open the source"):
+        both.start_record(CaptureSpec(fps=30), "rec")
+    assert len(made["cmds"]) == 2 and not both.status()["recording"]
+    card, made = _fake_engine(tmp_path, lambda cmd: _FakeProcess(cmd, dies=True))      # כרטיס לכידה: אין מה לנסות במקומו
+    with pytest.raises(CaptureError):
+        card.start_record(CaptureSpec(fps=30, source="device", device_video="Card"), "rec")
+    assert len(made["cmds"]) == 1
+
+
+def test_a_card_held_by_another_app_says_so(tmp_path, monkeypatch):
+    # 17.11.2026, על חומרה אמיתית: OBS היה פתוח עם הכרטיס, וההודעה הייתה שורת ffmpeg גולמית ("Error opening input: I/O error")
+    from utils.capture import engine as engine_module
+    monkeypatch.setattr(engine_module, "START_GRACE_SECONDS", 0.05)
+
+    class Busy(_FakeProcess):
+        def __init__(self, cmd):
+            super().__init__(cmd, dies=True)
+            self.tail = ["[in#0 @ 000001] Error opening input: I/O error", "Error opening input file video=Card:audio=Card Audio.",
+                         "Error opening input files: I/O error"]
+
+    card, _made = _fake_engine(tmp_path, Busy)
+    with pytest.raises(CaptureError, match="כרטיס הלכידה תפוס"):
+        card.start_record(CaptureSpec(fps=30, source="device", device_video="Card", device_audio="Card Audio"), "rec")
+    assert not card.status()["recording"]
+    screen, _made = _fake_engine(tmp_path, Busy)                 # אותה שורה בלכידת מסך אינה כרטיס תפוס
+    with pytest.raises(CaptureError) as error:
+        screen.start_record(CaptureSpec(fps=30), "rec")
+    assert "תפוס" not in str(error.value)
+    other, _made = _fake_engine(tmp_path, lambda cmd: _FakeProcess(cmd, dies=True))   # כשל אחר של הכרטיס נשאר כמו שהוא
+    with pytest.raises(CaptureError, match="cannot open the source"):
+        other.start_record(CaptureSpec(fps=30, source="device", device_video="Card"), "rec")
+
+
+def test_two_saves_in_one_second_get_two_names(tmp_path):
+    from utils.capture.engine import free_path
+    folder = tmp_path / "out"
+    folder.mkdir()
+    first = free_path(str(folder), "replay_1", ".mp4")
+    open(first, "wb").close()
+    second = free_path(str(folder), "replay_1", ".mp4")
+    assert first.endswith("replay_1.mp4") and second.endswith("replay_1_2.mp4")
+
+
+def test_leftovers_of_a_run_that_died_are_cleaned_at_start(tmp_path):
+    from utils.capture import orphans
+    stale = tmp_path / "cache" / "replay" / "20261116_182838"
+    stale.mkdir(parents=True)
+    for name in ("seg_000001.ts", "seg_000002.ts", "save_123.txt"):
+        (stale / name).write_bytes(b"x" * 10)
+    keep = tmp_path / "cache" / "encoders.json"
+    keep.write_text("{}", encoding="utf-8")
+    FfmpegEngine("ffmpeg", str(tmp_path / "cache"), lambda: str(tmp_path / "out"))
+    assert not stale.exists() and keep.exists()
+    pid_file = str(tmp_path / "cache" / "capture_pids.json")
+    orphans.remember(pid_file, os.getpid())                 # התהליך הזה חי אבל אינו ffmpeg - לא נוגעים בו
+    assert orphans.kill_leftovers(pid_file) == 0 and orphans._load(pid_file) == []
+
+
+@needs_ffmpeg
+def test_an_ffmpeg_left_by_a_dead_server_is_closed_at_start(tmp_path):
+    import subprocess
+
+    from utils.capture import orphans
+    pid_file = str(tmp_path / "cache" / "capture_pids.json")
+    orphan = subprocess.Popen([get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-re", "-f", "lavfi", "-i", "testsrc=size=160x120:rate=5",
+                               "-f", "null", "-"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        orphans.remember(pid_file, orphan.pid)
+        FfmpegEngine(get_ffmpeg_exe(), str(tmp_path / "cache"), lambda: str(tmp_path / "out"))
+        assert orphan.wait(timeout=15) is not None
+    finally:
+        if orphan.poll() is None:
+            orphan.kill()
+
+
+@needs_ffmpeg
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object")
+def test_ffmpeg_dies_with_the_server(tmp_path):
+    # 2.0.0: שרת שנסגר בכוח השאיר את ffmpeg של ה-replay לכתוב מקטעים עד שהדיסק מתמלא (10GB ב-19 שעות בבדיקה).
+    import subprocess
+    import sys
+
+    import psutil
+
+    from tests import PROJECT_ROOT
+    script = tmp_path / "server.py"
+    script.write_text(
+        "import sys, time\n"
+        "sys.path.insert(0, sys.argv[1])\n"
+        "from utils.capture.engine import FfmpegProcess\n"
+        "p = FfmpegProcess([sys.argv[2], '-hide_banner', '-loglevel', 'error', '-re', '-f', 'lavfi', '-i', 'testsrc=size=160x120:rate=5', '-f', 'null', '-'])\n"
+        "print(p.pid, p.guarded, flush=True)\n"
+        "time.sleep(120)\n", encoding="utf-8")
+    server = subprocess.Popen([sys.executable, str(script), os.path.join(PROJECT_ROOT, "src"), get_ffmpeg_exe()],
+                              stdout=subprocess.PIPE, text=True)
+    try:
+        pid, guarded = server.stdout.readline().split()
+        assert guarded == "True" and psutil.pid_exists(int(pid))
+        subprocess.run(["taskkill", "/PID", str(server.pid), "/F"], capture_output=True)      # בלי /T: רק השרת
+        deadline = time.time() + 15
+        while psutil.pid_exists(int(pid)) and time.time() < deadline:
+            time.sleep(0.2)
+        assert not psutil.pid_exists(int(pid))
+    finally:
+        if server.poll() is None:
+            server.kill()
+
+
+def test_obs_opens_one_connection_for_calls_that_arrive_together():
+    # 2.0.0: המסך שואל status ו-scenes יחד - שני לקוחות נפתחו, וכל replay שנשמר טופל פעמיים.
+    clients = []
+
+    class SlowObs(FakeObs):
+        async def connect(self):
+            await asyncio.sleep(0.05)
+            await super().connect()
+
+    def factory(url, password):
+        clients.append(SlowObs(url, password))
+        return clients[-1]
+
+    seen = []
+    engine = ObsEngine("ws://localhost:4455", "pw", on_clip=lambda path, source: seen.append((path, source)), client_factory=factory)
+    try:
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(4) as pool:
+            list(pool.map(lambda _: engine.status(), range(4)))
+        assert len(clients) == 1
+        engine._run(clients[0].callback("RecordStateChanged", {"outputActive": False, "outputState": "OBS_WEBSOCKET_OUTPUT_STOPPED",
+                                                               "outputPath": "full.mkv"}))
+        assert seen == [("full.mkv", "recording")]         # הקלטה מלאה של OBS: לא "obs" - לא נכנסת לשרשור של השורטס
+    finally:
+        engine.shutdown()
+
+
+def test_obs_wrong_password_says_so():
+    class Refusing(FakeObs):
+        async def wait_until_identified(self, timeout=10):
+            return False
+
+    engine = ObsEngine("ws://localhost:4455", "bad", client_factory=lambda url, password: Refusing(url, password))
+    try:
+        with pytest.raises(CaptureError, match="הסיסמה"):
+            engine.start_record()
+        status = engine.status()
+        assert not status["recording"] and "הסיסמה" in status["error"]
     finally:
         engine.shutdown()

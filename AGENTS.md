@@ -68,7 +68,7 @@ The browser tests need Playwright and Microsoft Edge. CI fails if coverage drops
 
 ## State
 
-- Public repository, default branch `main`, MIT license. This repository is published from a separate development repository with `dev/export_public.py` (see "Releasing a new version" in `docs/development.md`). Releases are tag-driven and checked by `.github/workflows/release.yml`. Do not tag or publish a release without the owner's go-ahead.
+- Public repository, default branch `main`, MIT license. It is developed here directly: everything pushed is public, so run `uv run python dev/leak_check.py` before a push (see "Releasing a new version" in `docs/development.md`). Releases are tag-driven and checked by `.github/workflows/release.yml`. Do not tag or publish a release without the owner's go-ahead.
 - The Scoop bucket for this app lives in a separate repository.
 
 ## Handoff

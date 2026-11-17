@@ -161,6 +161,7 @@ function _watchOutputUpload(status) {
     }
     clearInterval(timer);
     status.textContent = data.success ? `✅ הועלה ל-YouTube! ID: ${data.video_id}` : `❌ העלאה נכשלה: ${data.error}`;   // כמו בגלריה
+    if (data.success && data.warning) uiToast("⚠️ " + data.warning, "warn");
   }, 1500);
 }
 
@@ -185,12 +186,24 @@ async function buildOutputPackage() {
   }
 }
 
+// 17.11.2026: מה קרה לשליחה באמת - נשלח, נכשל (והסיבה), או שהבוט לא רץ. קודם ההודעה הייתה "נשלח" בכל מקרה.
+function _watchDiscordSend(id, tries) {
+  setTimeout(async () => {
+    const row = ((await fetch(`/api/publish/discord?id=${id}`).then((r) => r.json()).catch(() => null)) || {}).row;
+    if (row && row.status === "sent") return uiToast("💬 נשלח לדיסקורד", "ok");
+    if (row && row.status === "failed") return uiToast("💬 השליחה לדיסקורד נכשלה: " + (row.error || ""), "warn");
+    if (tries >= 7) return uiToast("💬 הקליפ עדיין בתור. ודא שהבוט של ClipForge רץ", "warn");
+    _watchDiscordSend(id, tries + 1);
+  }, 5000);
+}
+
 // 16.11.2026 (2.0): "שלח לדיסקורד" - נכנס לתור, והבוט שולח (cogs/clip_share_cog.py)
 async function sendOutputToDiscord() {
   if (!_selectedOutput) return;
   try {
     const data = await _postOutput("/api/publish/discord");
-    uiToast(data.channel_set ? "💬 נשלח לבוט - יופיע בערוץ תוך כמה שניות" : "💬 בתור. קבע ערוץ: /clip_channel בדיסקורד", data.channel_set ? "ok" : "warn");
+    uiToast(data.channel_set ? "💬 בתור לשליחה" : "💬 בתור. קבע ערוץ: /clip_channel בדיסקורד", data.channel_set ? "" : "warn");
+    if (data.channel_set) _watchDiscordSend(data.id, 0);
   } catch (e) {
     uiToast(e.message, "warn");
   }

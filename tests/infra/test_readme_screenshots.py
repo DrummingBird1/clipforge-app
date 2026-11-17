@@ -8,7 +8,8 @@ import re
 
 from tests import PROJECT_ROOT
 
-SCREENS = {"studio", "simple", "branding", "dataviz", "outputs", "notifications", "phone"}
+SCREENS = {"studio", "simple", "branding", "dataviz", "outputs", "notifications", "phone",
+           "recording", "recording_console", "encoders", "packages", "shorts"}   # 17.11.2026: המסכים של 2.0
 IMAGE = re.compile(r"!\[[^\]]*\]\((docs/images/[^)]+\.png)\)")
 
 

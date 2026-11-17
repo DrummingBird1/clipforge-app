@@ -146,6 +146,8 @@ def test_touch_refreshes_acquired_at_for_own_pid(lock_path, waiters_path):
     status = render_lock.get_status(lock_path=lock_path, waiters_path=waiters_path)
     assert status["is_stale"] is False
     assert status["pid"] == os.getpid()
+    # 2.0.1: הדופק לא מאפס את הגיל. קודם הוא איפס את acquired_at כל 10 דקות, והאזהרה על רינדור תקוע (45 דקות) לא קפצה לעולם.
+    assert status["acquired_at"] == pytest.approx(old_acquired_at) and status["age_seconds"] > render_lock.MAX_LOCK_AGE_SECONDS
     render_lock.release(lock_path=lock_path)
 
 

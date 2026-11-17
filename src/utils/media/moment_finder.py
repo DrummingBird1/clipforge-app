@@ -3,9 +3,15 @@
 # 16.11.2026 (ClipForge 2.0): "קליפ ארוך לכמה שורטס" - הרגעים הכי חזקים בהקלטה ארוכה או VOD. אותו מדד כמו "זהה הייליטס"
 # (utils/video/highlight_detect.py: עוצמת שמע בנתחים של 100ms, סף = ממוצע + offset), אבל במקום טווחים לשמירה - N חלונות
 # באורך של Short, שלא חופפים, מהחזק לחלש. השיא יושב ב-70% מהחלון (הבנייה לפניו, התגובה אחריו).
+# 17.11.2026 (2.0.1): בהקלטה רועשת (ממוצע מעל -18dBFS) שום נתח לא יכול לעבור "ממוצע + 18dB", ולא נמצא אף רגע. כשהסף לא
+# מניב כלום - כל נתח שעובר את חצי הדרך (ב-dB) מהחציון לשיא החזק ביותר, בתנאי שהשיא בולט 6dB מעל החציון (קובץ שטוח נשאר
+# בלי רגעים). בשוויון - המוקדם קודם.
 from typing import List, NamedTuple, Sequence
 
 from utils.video.highlight_detect import CHUNK_MS, DEFAULT_THRESHOLD_OFFSET_DB
+
+
+LOUD_FALLBACK_MIN_DB = 6.0   # השיא החזק צריך לבלוט לפחות ככה מעל החציון
 
 
 class Moment(NamedTuple):
@@ -28,7 +34,13 @@ def find_moments(chunk_dbfs: Sequence[float], average_dbfs: float, duration: flo
         return []
     length = min(length, duration)
     threshold = average_dbfs + threshold_offset_db
-    candidates = sorted(((value, i * chunk_ms / 1000.0) for i, value in enumerate(chunk_dbfs) if value > threshold), reverse=True)
+    if chunk_dbfs and max(chunk_dbfs) <= threshold:
+        top, middle = max(chunk_dbfs), sorted(chunk_dbfs)[len(chunk_dbfs) // 2]
+        if top - middle < LOUD_FALLBACK_MIN_DB:
+            return []
+        threshold = (top + middle) / 2
+    candidates = sorted(((value, i * chunk_ms / 1000.0) for i, value in enumerate(chunk_dbfs) if value > threshold),
+                        key=lambda item: (-item[0], item[1]))
     chosen: List[Moment] = []
     for value, peak in candidates:
         start = min(max(0.0, peak - length * peak_position), duration - length)

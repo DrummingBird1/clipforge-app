@@ -24,7 +24,7 @@ def test_screen_with_game_audio_and_mic_records_two_audio_tracks_to_mkv():
     assert _value(cmd, "-i") == "ddagrab=output_idx=0:framerate=60"
     assert "hwdownload,format=bgra,format=yuv420p[game]" in _value(cmd, "-filter_complex")
     assert [cmd[i + 1] for i, part in enumerate(cmd) if part == "-map"] == ["[game]", "1:a", "2:a"]
-    assert "audio=Mic (USB)" in cmd and "tcp://127.0.0.1:50123?listen=1" in cmd
+    assert "audio=Mic (USB)" in cmd and "tcp://127.0.0.1:50123?listen=1&listen_timeout=20000" in cmd
     assert _value(cmd, "-ar") == "44100"
     assert cmd[cmd.index("-metadata:s:a:0") + 1] == "title=game" and cmd[cmd.index("-metadata:s:a:1") + 1] == "title=mic"
     assert cmd[-3:] == ["-f", "matroska", "C:/rec/a.mkv"]
@@ -100,3 +100,55 @@ def test_replay_segments_join_into_a_clip_with_both_audio_tracks(tmp_path):
     duration = float(next(p for p in probe if p.replace(".", "", 1).isdigit()))
     assert 4.0 <= duration <= 6.5
     assert os.path.getsize(out) > 0
+
+
+def test_track_names_survive_the_move_to_mp4():
+    # 2.0.1: שם ערוץ (title) לא נשמר ב-MP4. אחרי ההמרה מ-MKV הערוצים נשארו בלי שם, והזיהוי האוטומטי של המיקרופון לא מצא אותו.
+    from utils.capture.command import remux_command, stream_titles, title_args
+    from utils.capture.ring_buffer import save_command
+    from utils.media import audio_tracks
+    spec = CaptureSpec(game_audio_port=50123, mic="Mic (USB)", facecam="Cam")
+    assert stream_titles(spec) == (["game", "facecam"], ["game", "mic"])
+    assert stream_titles(CaptureSpec(mic="Mic (USB)")) == (["game"], ["mic"])              # בלי שמע משחק: המיקרופון הוא הערוץ היחיד
+    names = ["-metadata:s:v:0", "handler_name=game", "-metadata:s:v:1", "handler_name=facecam",
+             "-metadata:s:a:0", "handler_name=game", "-metadata:s:a:1", "handler_name=mic"]
+    assert title_args(spec, "handler_name") == names
+    remux = remux_command("ffmpeg", "a.mkv", "a.mp4", spec)
+    assert remux[remux.index("copy") + 1:remux.index("-movflags")] == names and remux[-1] == "a.mp4"
+    assert "handler_name=mic" not in remux_command("ffmpeg", "a.mkv", "a.mp4")
+    saved = save_command("ffmpeg", "list.txt", "out.mp4", names=names)
+    assert saved[saved.index("copy") + 1:saved.index("-movflags")] == names
+    assert audio_tracks._title({"handler_name": "mic"}) == "mic" and audio_tracks._title({"handler_name": "SoundHandler"}) == ""
+    assert audio_tracks._title({"title": "Game", "handler_name": "mic"}) == "game"
+
+
+def test_recordings_are_written_at_a_constant_frame_rate():
+    # 2.0.1: קליפ replay מכרטיס לכידה דיווח 240 פריימים בשנייה במקום 30 (חותמות זמן קופצות), והסטודיו היה מרנדר אותו ב-240
+    from utils.media.ffprobe_cache import _pick_frame_rate
+    cmd = build_command("ffmpeg", CaptureSpec(source="device", device_video="Card", fps=30, output="out.mkv"))
+    assert cmd[cmd.index("-r") + 1] == "30" and cmd[cmd.index("-fps_mode") + 1] == "cfr"
+    assert _pick_frame_rate("240/1", "9000000/307859") == "30000/1001"      # 29.23 בפועל: הקצב הנפוץ הקרוב, לא 240
+    assert _pick_frame_rate("60/1", "3600000/60691") == "60/1"               # 59.3 מול 60 - הנומינלי נכון
+    assert _pick_frame_rate("30000/1001", "30000/1001") == "30000/1001"
+    assert _pick_frame_rate("90/1", "41300/1000") == "41300/1000"            # ממוצע שלא קרוב לשום קצב נפוץ
+    assert _pick_frame_rate("0/0", "25/1") == "25/1" and _pick_frame_rate(None, None) is None
+
+
+def test_every_input_is_put_on_one_clock():
+    # 2.0.1: בהקלטת מסך השמע הקדים את התמונה ב-0.3 שנייה (נמדד), כי ffmpeg מאפס כל קלט לרגע שבו הוא נפתח
+    spec = CaptureSpec(game_audio_port=50123, mic="Mic (USB)", facecam="Cam", output="out.mkv", clock_wall=1794936436.5, clock_mono=333555.25)
+    cmd = build_command("ffmpeg", spec)
+    screen = cmd.index("ddagrab=output_idx=0:framerate=60")
+    assert cmd[screen - 7:screen - 3] == ["-use_wallclock_as_timestamps", "1", "-itsoffset", "-1794936436.500000"]
+    for device in ("audio=Mic (USB)", "video=Cam"):
+        i = cmd.index(device)
+        before = cmd[:i]
+        assert before[len(before) - 1 - before[::-1].index("-itsoffset") + 1] == "-333555.250000", device
+    tcp = next(i for i, part in enumerate(cmd) if part.startswith("tcp://"))
+    assert "-itsoffset" not in cmd[screen + 1:tcp]            # שמע המשחק בלי היסט: השולח ממלא שקט עד רגע ההתחלה
+    assert "-copyts" in cmd and cmd.index("-copyts") < cmd.index("-filter_complex")
+    card = build_command("ffmpeg", CaptureSpec(source="device", device_video="Card", device_audio="Card Audio", output="o.mkv",
+                                               clock_wall=5.0, clock_mono=7.5))
+    assert card[card.index("dshow") - 5:card.index("dshow") - 3] == ["-itsoffset", "-7.500000"] and "-use_wallclock_as_timestamps" not in card
+    plain = build_command("ffmpeg", CaptureSpec(game_audio_port=50123, output="out.mkv"))
+    assert "-copyts" not in plain and "-itsoffset" not in plain    # בלי רגע התחלה (בדיקות ישנות, כלים אחרים) - הפקודה כמו קודם

@@ -126,10 +126,7 @@ Install required Python packages with [uv](https://github.com/astral-sh/uv) (pre
 uv sync
 ```
 
-Or with plain pip (uses `dev/requirements.txt`'s looser `>=` version bounds, not the exact lockfile - fine for a quick start, but `uv sync` is the reproducible path):
-```bash
-pip install -r dev/requirements.txt
-```
+`uv` is the only supported way to install: the versions come from `uv.lock`, which is also what the dependency scans read.
 
 ### 2. Environment & Configuration
 Copy the example configuration files and populate them with your credentials:
@@ -382,22 +379,22 @@ A GitHub Actions workflow (`.github/workflows/ci.yml`) runs tests+coverage, lint
 The roadmap is kept outside the repository; [CHANGELOG.md](../CHANGELOG.md) records what shipped in each version.
 
 ### Releasing a new version
-The public repository is published from the development repository with `dev/export_public.py`, one commit per version, so
-its history never needs a force-push:
+From 2.0.1 this repository is developed directly: a version is a branch, a pull request and a tag, with no separate
+development repository and no export step.
 
-1. In the development repository: set the new version in `pyproject.toml` and `src/utils/shared/version.py`, add its
-   section to `CHANGELOG.md` (the section becomes the Release notes), and merge to `master`.
-2. Export into a clean clone of the public repository:
+1. On a branch (`release/<version>`): set the new version in `pyproject.toml` and `src/utils/shared/version.py`, and add
+   its section to `CHANGELOG.md` (the section becomes the Release notes; screenshots linked from `docs/images/` are
+   shown on the Release page too).
+2. Before every push, scan what the branch adds for secrets and personal details:
    ```bash
-   uv run python dev/export_public.py --update ..\clipforge-app
+   uv run python dev/leak_check.py
    ```
-   It extracts the files tracked at `origin/master` (`--ref` for another commit) into a temporary folder and scans them
-   for secrets and personal details first - a finding stops it (exit code 2 or 3) and the clone stays as it was. Then it
-   replaces the clone's tracked files, deletes the ones no longer exported (`.git`, `dist/` and anything in
-   `.gitignore` are left alone), and makes one commit, "ClipForge <version>", with a `Source:` line of short commit
-   hashes. No change means no commit. It never pushes, and refuses a clone with unsaved work.
-3. Review the commit in the clone, then push it: `git -C ..\clipforge-app push`.
-4. Tag the version there and push the tag: `git tag v1.2.0` and `git push origin v1.2.0`. The tag starts
+   It checks the lines added since `origin/main` (commits, unsaved changes and untracked files), changed binary files,
+   and the branch's commit messages and authors, since those are public as well. A secret exits with 2 and a personal
+   detail (a user folder, an e-mail address, a name listed in the untracked `dev/export_public.local.json`) with 3.
+   `--all` scans every tracked file. It also runs as a `pre-push` hook (`.pre-commit-config.yaml`).
+3. Open a pull request to `main`, wait for the checks, and merge it (squash).
+4. Tag the version on `main` and push the tag: `git tag v2.0.1` and `git push origin v2.0.1`. The tag starts
    `.github/workflows/release.yml`, which checks that the tag matches the version, builds the portable zip with the
    pinned FFmpeg (`dev/build_portable.py`), and creates the GitHub Release with the zip, `SHA256SUMS.txt` and the
    `CHANGELOG.md` section, with the zip's SHA-256 in the notes.
@@ -420,7 +417,7 @@ its history never needs a force-push:
 `dev/build_portable.py` writes `dist/SHA256SUMS.txt` next to the zip (`sha256sum -c SHA256SUMS.txt` checks it). For a
 Release made by hand, upload `SHA256SUMS.txt` together with the zip.
 
-To try the zip before tagging, run `uv run python dev/build_portable.py` in the clone. Keep the clone at a short path:
+To try the zip before tagging, run `uv run python dev/build_portable.py`. Keep the checkout at a short path:
 the build's staging folder sits under it, and a deep one makes Windows fail to load the packaged Python's DLLs.
 
 Each Release also carries a build-provenance attestation for the zip and `SHA256SUMS.txt`
@@ -432,7 +429,7 @@ download was built by this repository's workflow from its tag.
 |---|---|---|
 | `ci.yml` | every PR; pushes to `main` (public repository); `workflow_dispatch` | lint (`ruff`, `mypy`, `pip-audit`) and the unit tests on `windows-latest`; the Tk and browser tests on PRs and by hand |
 | `release.yml` | a `v*` tag | builds the portable zip, attests it, and creates the Release |
-| `codeql.yml` | PRs, pushes to `main`, weekly | CodeQL for Python and JavaScript - public repository only |
+| `codeql.yml` | PRs, pushes to `main`, weekly | CodeQL for Python and JavaScript - public repository only. `.github/codeql/codeql-config.yml` leaves out two queries that flag what a local, single-user app does by design (opening the owner's files, showing the owner an error), and says why |
 | `scorecard.yml` | pushes to `main`, branch-protection changes, weekly | OpenSSF Scorecard, published and uploaded to code scanning - public repository only |
 | `pages.yml` | pushes to `main` that touch `docs/`, `mkdocs.yml`, `README.md`, `CHANGELOG.md` or `ROADMAP.md`; `workflow_dispatch` | builds the documentation site with `mkdocs build --strict` and deploys it to GitHub Pages - public repository only |
 

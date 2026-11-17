@@ -83,20 +83,110 @@ def test_detection_probes_every_pair_once_and_then_reads_the_cache(tmp_path, mon
     monkeypatch.setenv("CLIPFORGE_WORKSPACE_DIR", str(tmp_path / "ws"))
     calls = []
 
-    def fake_probe(exe, encoder, flags):
-        calls.append(encoder)
-        return encoder in ("hevc_amf", "libx265", "libsvtav1")
+    def fake_probe(exe, args, flags):
+        calls.append(args[1])
+        return args[1] in ("hevc_amf", "libx265", "libsvtav1")
 
     monkeypatch.setattr(encoders, "_probe", fake_probe)
+    monkeypatch.setattr(encoders, "_gpu_signature", lambda: "Card A@1.0")
     first = encoders.detect_backends(str(ffmpeg))
     assert first == {"nvenc": [], "amf": ["hevc"], "qsv": [], "cpu": ["hevc", "av1"]}
-    assert len(calls) == 8
-    assert encoders.detect_backends(str(ffmpeg)) == first and len(calls) == 8
+    assert len(calls) == 9                       # 6 בכרטיס, libx265, ושני מקודדי ה-AV1 של ה-CPU
+    assert encoders.detect_backends(str(ffmpeg)) == first and len(calls) == 9
     ffmpeg.write_bytes(b"a newer ffmpeg")      # ffmpeg אחר - בודקים שוב
     encoders.detect_backends(str(ffmpeg))
-    assert len(calls) == 16
+    assert len(calls) == 18
+    # 2.0.1: דרייבר חדש או כרטיס אחר - בודקים שוב; והכפתור "בדוק את הכרטיס" (use_cache=False) בודק תמיד
+    monkeypatch.setattr(encoders, "_gpu_signature", lambda: "Card A@2.0")
+    encoders.detect_backends(str(ffmpeg))
+    assert len(calls) == 27
+    encoders.detect_backends(str(ffmpeg), use_cache=False)
+    assert len(calls) == 36
+
+
+def test_a_probe_that_timed_out_is_not_remembered(tmp_path, monkeypatch):
+    ffmpeg = tmp_path / "ffmpeg.exe"
+    ffmpeg.write_bytes(b"fake")
+    monkeypatch.setenv("CLIPFORGE_WORKSPACE_DIR", str(tmp_path / "ws"))
+    monkeypatch.setattr(encoders, "_gpu_signature", lambda: "")
+    busy = {"on": True}
+    calls = []
+
+    def fake_probe(exe, args, flags):
+        calls.append(args[1])
+        if args[1] == "hevc_nvenc":
+            return None if busy["on"] else True      # None = הזמן נגמר (מחשב עמוס), לא "אין כרטיס"
+        return args[1] == "libx265"
+
+    monkeypatch.setattr(encoders, "_probe", fake_probe)
+    assert encoders.detect_backends(str(ffmpeg))["nvenc"] == []
+    busy["on"] = False
+    assert encoders.detect_backends(str(ffmpeg))["nvenc"] == ["hevc"]    # לא נשמר "אין NVIDIA" לתמיד
+    assert len(calls) == 18
+    encoders.detect_backends(str(ffmpeg))
+    assert len(calls) == 18                                               # תשובה מלאה - נשמרה
+
+
+def test_av1_on_the_cpu_uses_the_encoder_this_ffmpeg_has(tmp_path, monkeypatch):
+    # ה-build שהחבילה מביאה (essentials) בלי libsvtav1 - שם AV1 ב-CPU הוא libaom-av1
+    ffmpeg = tmp_path / "ffmpeg.exe"
+    ffmpeg.write_bytes(b"essentials")
+    monkeypatch.setenv("CLIPFORGE_WORKSPACE_DIR", str(tmp_path / "ws"))
+    monkeypatch.setattr(encoders, "_gpu_signature", lambda: "")
+    monkeypatch.setattr(encoders, "_cpu_av1", "libsvtav1")
+    seen = {}
+
+    def fake_probe(exe, args, flags):
+        seen[args[1]] = args
+        return args[1] in ("libx265", "libaom-av1")
+
+    monkeypatch.setattr(encoders, "_probe", fake_probe)
+    assert encoders.detect_backends(str(ffmpeg))["cpu"] == ["hevc", "av1"]
+    assert seen["libaom-av1"][:2] == ["-c:v", "libaom-av1"] and seen["libsvtav1"][:2] == ["-c:v", "libsvtav1"]
+    assert encoders.encoder_name("av1", "cpu") == "libaom-av1"
+    assert encoders.codec_args("av1", "cpu", preset="p5", cq=30) == ["-c:v", "libaom-av1", "-cpu-used", "4", "-row-mt", "1", "-crf", "30", "-b:v", "0"]
+    assert encoders.bitrate_args("av1", "cpu", 3000) == ["-c:v", "libaom-av1", "-cpu-used", "4", "-row-mt", "1", "-b:v", "3000k"]
+    monkeypatch.setattr(encoders, "_cpu_av1", "libsvtav1")
+    encoders.detect_backends(str(ffmpeg))                    # מהמטמון - והבחירה חוזרת איתו
+    assert encoders.encoder_name("av1", "cpu") == "libaom-av1"
+
+
+def test_the_probe_runs_the_real_flags_of_each_encoder():
+    assert encoders._probe_args("hevc", "amf") == encoders.codec_args("hevc", "amf")
+    assert encoders._probe_args("av1", "qsv")[:2] == ["-c:v", "av1_qsv"] and "-global_quality" in encoders._probe_args("av1", "qsv")
+
+
+def test_av1_on_amd_gets_its_own_quality_scale():
+    # av1_amf: QP 0-255. עם הערך של hevc (0-51) הקובץ יצא כמעט בלי דחיסה.
+    assert encoders.codec_args("av1", "amf") == ["-c:v", "av1_amf", "-quality", "balanced", "-rc", "cqp", "-qp_i", "104", "-qp_p", "104"]
+    assert encoders.codec_args("av1", "amf", cq=51)[-1] == "204" and encoders.codec_args("av1", "amf", cq=90)[-1] == "255"
+    assert encoders.codec_args("hevc", "amf", cq=30)[-1] == "30"
+
+
+def test_only_the_environment_variable_skips_the_check(monkeypatch):
+    monkeypatch.setenv(encoders.ENV_VAR, "nvenc")
+    assert encoders.forced_by_env() == "nvenc"
+    monkeypatch.setenv(encoders.ENV_VAR, "bogus")
+    assert encoders.forced_by_env() is None
+    monkeypatch.delenv(encoders.ENV_VAR)
+    assert encoders.forced_by_env() is None
 
 
 def test_no_ffmpeg_means_no_answer(tmp_path, monkeypatch):
     monkeypatch.setenv("CLIPFORGE_WORKSPACE_DIR", str(tmp_path / "ws"))
     assert encoders.detect_backends(str(tmp_path / "missing" / "ffmpeg.exe")) is None
+
+
+def test_a_card_encoder_that_fails_in_the_render_is_recognised():
+    # 2.0.1: הבדיקה לפני הרינדור קטנה (256x144, 8 ביט). כרטיס שעבר אותה ונפל ברינדור האמיתי - מנסים שוב במעבד.
+    amd = "[hevc_amf @ 000001] CreateComponent(AMFVideoEncoderHW_HEVC) failed" + chr(10) + "Error while opening encoder"
+    assert encoders.is_encoder_failure(amd, "hevc", "amf")
+    assert encoders.is_encoder_failure("[av1_qsv @ 0x1] Error initializing the encoder", "av1", "qsv")
+    assert encoders.is_encoder_failure("Error initializing output stream: could not open encoder", "hevc", "nvenc")
+    assert not encoders.is_encoder_failure("No space left on device", "hevc", "nvenc")          # דיסק מלא - לא המקודד
+    assert not encoders.is_encoder_failure("[Parsed_scale_0] Invalid size", "hevc", "amf")       # פילטר - לא המקודד
+    assert not encoders.is_encoder_failure(amd, "hevc", "cpu") and not encoders.is_encoder_failure(amd, "h264", "amf")
+    cmd = ["ffmpeg", "-i", "in.mp4"] + encoders.codec_args("hevc", "amf") + ["out.mp4"]
+    swapped = encoders.swap_args(cmd, encoders.codec_args("hevc", "amf"), encoders.codec_args("hevc", "cpu"))
+    assert swapped == ["ffmpeg", "-i", "in.mp4", "-c:v", "libx265", "-preset", "slow", "-crf", "22", "out.mp4"]
+    assert encoders.swap_args(cmd, ["-c:v", "nope"], ["x"]) is None and encoders.swap_args(cmd, [], ["x"]) is None

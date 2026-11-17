@@ -5,11 +5,13 @@
 # dev/_web_launcher_impl.bat does for a git checkout. The package's Python is isolated from the user's PYTHONPATH,
 # PYTHONHOME and user site-packages; the app and every script it runs inherit that environment.
 import ctypes
+import json
 import os
 import socket
 import subprocess
 import sys
 import time
+import urllib.request
 import webbrowser
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -20,19 +22,43 @@ CREATE_NEW_PROCESS_GROUP = 0x00000200
 
 
 
-def managed_data_dirs(root, environ):
+sys.path.insert(0, os.path.join(ROOT, "src"))
+from utils.shared import install_where  # noqa: E402 - בלי data_paths: עוד לא נקבע איפה הנתונים
+
+
+def managed_data_dirs(root, environ, is_winget=None):
     """16.11.2026 (2.0): התקנת winget מחליפה את כל תיקיית ההתקנה בכל עדכון - data/ ו-workspace/ לידה היו נמחקים. שם הם עוברים
-    ל-%LOCALAPPDATA%\\ClipForge. משתנה שכבר מוגדר (המשתמש, טסטים) גובר. Scoop שומר אותם בעצמו (persist), וה-zip הרגיל - לידו."""
-    if "\\winget\\packages\\" not in os.path.normcase(root) + "\\":
+    ל-%LOCALAPPDATA%\\ClipForge. משתנה שכבר מוגדר (המשתמש, טסטים) גובר. Scoop שומר אותם בעצמו (persist), וה-zip הרגיל - לידו.
+    17.11.2026: winget מזוהה גם לפי הרישום (install_where), לא רק לפי "\\winget\\packages\\" בנתיב - התקנה לתיקייה אחרת
+    (winget install --location) זוהתה כ-zip רגיל, והנתונים נשארו בתוך התיקייה של הגרסה."""
+    if not (install_where.is_winget if is_winget is None else is_winget)(root):
         return {}
     base = os.path.join(environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "ClipForge")
     wanted = {"CLIPFORGE_DATA_DIR": os.path.join(base, "data"), "CLIPFORGE_WORKSPACE_DIR": os.path.join(base, "workspace")}
     return {key: value for key, value in wanted.items() if not environ.get(key)}
 
 
-os.environ.update(managed_data_dirs(ROOT, os.environ))   # לפני data_paths - הוא קורא את התיקייה בייבוא
-sys.path.insert(0, os.path.join(ROOT, "src"))
+MANAGED_DIRS = managed_data_dirs(ROOT, os.environ)
+os.environ.update(MANAGED_DIRS)   # לפני data_paths - הוא קורא את התיקייה בייבוא
 from utils.shared import data_paths  # noqa: E402 - אחרי src ב-sys.path
+from utils.shared import install_files  # noqa: E402
+
+
+def adopt_managed_layout(managed, adopt=None):
+    """17.11.2026: data_paths מדלג על המבנה לפי נושא כש-CLIPFORGE_DATA_DIR מוגדר (טסטים ושרת בדיקה בוחרים מבנה בעצמם). בהתקנת
+    winget המשתנה מגיע מכאן ולא מהמשתמש, ולכן התקנה חדשה התחילה במבנה השטוח הישן. כשהלאנצ'ר בחר את התיקייה - הוא גם מסמן
+    אותה כמבנה לפי נושא (רק כשהיא חדשה; תיקייה עם קבצים במבנה הישן לא משתנה). מחזיר True אם סומנה עכשיו."""
+    folder = managed.get("CLIPFORGE_DATA_DIR")
+    if not folder:
+        return False
+    try:
+        os.makedirs(folder, exist_ok=True)
+        return (adopt or data_paths.adopt_layout_if_new)(folder)
+    except OSError:
+        return False   # ממשיכים במבנה השטוח, כמו data_paths
+
+
+adopt_managed_layout(MANAGED_DIRS)
 
 
 def isolated_env(environ=None):
@@ -78,8 +104,48 @@ def start_failed_text(language, log_path):
     return f"ClipForge did not start within {WAIT_SECONDS} seconds.\nDetails: {log_path}"
 
 
+def package_version(root=ROOT):
+    try:
+        with open(os.path.join(root, "portable.json"), encoding="utf-8") as f:
+            return str(json.load(f).get("version") or "")
+    except (OSError, ValueError, AttributeError):
+        return ""
+
+
+def running_app(port=PORT, timeout=3):
+    """מי עונה בפורט: {"clipforge": bool, "version": str}. 17.11.2026: ב-2.0.0 ה-launcher פתח בדפדפן כל מה שענה בפורט -
+    גם תוכנה אחרת, וגם ClipForge ישן שנשאר לרוץ אחרי עדכון (ואז הגרסה החדשה לא עלתה לעולם)."""
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/manifest.json", timeout=timeout) as response:
+            data = json.loads(response.read().decode("utf-8", "replace"))
+        return {"clipforge": str(data.get("short_name") or "") == "ClipForge", "version": str(data.get("version") or "")}
+    except Exception:
+        return {"clipforge": False, "version": ""}
+
+
+def already_running_text(language, running, wanted):
+    """ההודעה כשבפורט רץ משהו שאינו הגרסה הזו, או None כשאפשר פשוט לפתוח אותו."""
+    if running["clipforge"] and (not wanted or running["version"] == wanted):
+        return None
+    if running["clipforge"]:
+        shown = running["version"] or ("קודמת" if language == "he" else "an earlier one")
+        if language == "he":
+            return f"גרסה אחרת של ClipForge ({shown}) עדיין רצה.\nסגור אותה מהאייקון במגש המערכת, והפעל שוב."
+        return f"Another version of ClipForge ({shown}) is still running.\nClose it from the tray icon, then start again."
+    if language == "he":
+        return f"פורט {PORT} תפוס על ידי תוכנה אחרת, ולכן ClipForge לא יכול לעלות."
+    return f"Port {PORT} is used by another program, so ClipForge cannot start."
+
+
 def main():
+    install_files.sync(ROOT, data_paths.DATA_DIR)   # קובצי החיבור (.env, יוטיוב) שורדים עדכון
     token_path = data_paths.path(data_paths.WEB_TOKEN)
+    if port_open():
+        from utils.shared import ui_language
+        problem = already_running_text(ui_language.current(), running_app(), package_version())
+        if problem:
+            _message(problem)
+            return 1
     if not port_open():
         log_dir = data_paths.path(data_paths.LOGS)
         os.makedirs(log_dir, exist_ok=True)

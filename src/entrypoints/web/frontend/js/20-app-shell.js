@@ -229,6 +229,7 @@ function selectScript(id) {
   document.getElementById("superManagerOptions").hidden = basename !== "super_manager.py";
   if (basename === "super_manager.py") updateSuperManagerModeVisibility();
   document.getElementById("superStreamerOptions").hidden = basename !== "super_streamer.py";
+  document.getElementById("longShortsOptions").hidden = basename !== "long_to_shorts.py";
   if (basename === "super_streamer.py") updateSuperStreamerModeVisibility();
   if (basename === "video_editor.py") {
     rebuildFavoritesBox();
@@ -600,6 +601,13 @@ function _collectRunOptions() {
       sm_export_html: document.getElementById("smExportHtml").checked,
       sm_keep_policy: document.getElementById("smKeepPolicy").value,
       sm_execute: document.getElementById("smExecute").checked,
+    };
+  }
+  if (basename === "long_to_shorts.py") {
+    const el = (id) => document.getElementById(id);
+    return {
+      ls_count: el("lsCount").value, ls_length: el("lsLength").value, ls_mic: el("lsMic").value, ls_threshold: el("lsThreshold").value,
+      ls_punch: el("lsPunch").checked, ls_slowmo: el("lsSlowmo").checked, ls_face: el("lsFace").checked,
     };
   }
   if (basename === "super_streamer.py") {

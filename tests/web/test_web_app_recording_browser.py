@@ -28,7 +28,7 @@ FAKE = """() => {
       if (u.endsWith('/settings')) return json({settings: Object.assign(settings, body)});
       return json(status());
     }
-    if (u === '/api/recording/settings') return json({settings, loopback: true, consoles});
+    if (u === '/api/recording/settings') return json({settings, loopback: true, consoles, obs_password: false});
     if (u === '/api/recording/devices') return json(devices);
     if (u === '/api/recording/status') return json(status());
     return realFetch(url, options);
@@ -75,3 +75,19 @@ def test_obs_engine_shows_the_scenes_section(editor_page):
     _open(page)
     page.select_option("#recEngine", "obs")
     assert page.is_visible("#recObsSection") and page.is_hidden("#recFfmpegFields")
+
+
+def test_the_obs_password_is_saved_from_the_screen_and_the_field_is_cleared(editor_page):
+    """18.11.2026: שדה לסיסמת ה-WebSocket של OBS. אחרי השמירה השדה מתרוקן, והמסך אומר רק שיש סיסמה שמורה."""
+    page = editor_page
+    _open(page)
+    page.select_option("#recEngine", "obs")
+    assert page.get_attribute("#recObsPassword", "type") == "password"
+    assert page.inner_text("#recObsPasswordState") == "עדיין לא נשמרה סיסמה"
+    page.click("#recObsPasswordSave")                                            # שדה ריק: לא נשלח כלום
+    assert not any(p[0].endswith("/obs/password") for p in page.evaluate("() => window.__posts"))
+    page.fill("#recObsPassword", "from-obs")
+    page.click("#recObsPasswordSave")
+    page.wait_for_function("() => document.getElementById('recObsPasswordState').textContent === 'יש סיסמה שמורה'")
+    sent = [p[1] for p in page.evaluate("() => window.__posts") if p[0] == "/api/recording/obs/password"]
+    assert sent == [{"password": "from-obs"}] and page.input_value("#recObsPassword") == ""

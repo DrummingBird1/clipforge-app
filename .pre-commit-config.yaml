@@ -45,6 +45,15 @@ repos:
         always_run: true
         stages: [pre-push]
 
+      # 17.11.2026: הריפו מפותח ישירות, וכל מה שנדחף ציבורי - סודות ופרטים אישיים במה שהענף מוסיף עוצרים את הדחיפה
+      - id: leak-check
+        name: leak check (secrets and personal details in what the branch adds)
+        entry: uv run python dev/leak_check.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
       # סריקת פגיעויות של התלויות הנעולות (אותו דבר כמו ב-CI). דורש רשת; לדחיפה בלי רשת: SKIP=pip-audit git push
       - id: pip-audit
         name: pip-audit (dependency vulnerabilities)

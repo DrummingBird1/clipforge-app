@@ -19,7 +19,8 @@ import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCREENS = ("studio", "simple", "branding", "dataviz", "outputs", "notifications", "phone")
+SCREENS = ("studio", "simple", "branding", "dataviz", "outputs", "notifications", "phone",
+           "recording", "recording_console", "encoders", "packages", "shorts")   # 17.11.2026: המסכים של 2.0
 DESKTOP = {"width": 1440, "height": 900}
 PHONE = {"width": 390, "height": 844}
 
@@ -42,6 +43,42 @@ PHONE_FAKE = """([he, clip]) => {
     if (u === '/api/render_queue') return json(queue);
     if (u === '/api/approvals') return json(approvals);
     if (u === '/api/video_editor/runs') return json(runs);
+    return realFetch(url, options);
+  };
+}"""
+
+# 17.11.2026 (2.0): מסך ההקלטה, הייבוא והמקודדים מציגים את החומרה והתיקיות של המחשב שמצלם (שמות התקנים, נתיבים עם שם
+# המשתמש). בצילומים הם מוחלפים בנתוני דוגמה, באותה שיטה כמו נתוני הטלפון. שום POST לא יוצא לשרת, ושום הקלטה לא מתחילה.
+RECORDING_FAKE = """([he, console]) => {
+  const realFetch = window.fetch;
+  const json = (body) => Promise.resolve(new Response(JSON.stringify(body), {status: 200, headers: {'Content-Type': 'application/json'}}));
+  const devices = {video: [{name: 'Game Capture HD60 X', alternative: ''}, {name: 'Facecam Pro', alternative: ''}],
+                   audio: [{name: 'Game Capture HD60 X Audio', alternative: ''}, {name: 'Microphone (USB)', alternative: ''}]};
+  const status = {engine: 'ffmpeg', recording_path: '', replay: !console, replay_buffered_seconds: 58, error: null,
+                  notice: console ? (he ? 'הכרטיס מכריז על 60 פריימים ב-1920x1080 אבל נותן 30. מקליט ב-1920x1080 ב-30 פריימים'
+                                           : 'הכרטיס מכריז על 60 פריימים ב-1920x1080 אבל נותן 30. מקליט ב-1920x1080 ב-30 פריימים') : null,
+                  recording: false, last_saved: console ? null : 'D:/ClipForge/imports/replay_20261117_203114.mp4'.replaceAll('/', String.fromCharCode(92)), hotkeys: !console, import: {}};
+  const sources = [{id: 'nvidia', label: 'NVIDIA App / ShadowPlay', new: 3}, {id: 'ps5:F:', label: 'PlayStation 5 (F:)', new: 5},
+                   {id: 'switch:G:', label: 'Nintendo Switch (G:)', new: 2}, {id: 'steam', label: 'Steam', new: 1},
+                   {id: 'obs', label: 'OBS', new: 0}];
+  const encoders = {setting: 'auto', env_override: false,
+                    choices: [{id: 'auto', label: he ? 'אוטומטי' : 'Automatic'}, {id: 'nvenc', label: 'NVIDIA (NVENC)'}, {id: 'amf', label: 'AMD (AMF)'},
+                              {id: 'qsv', label: 'Intel (Quick Sync)'}, {id: 'cpu', label: 'CPU'}],
+                    available: {nvenc: ['hevc', 'av1'], amf: [], qsv: ['hevc'], cpu: ['hevc', 'av1']}, effective: {hevc: 'nvenc', av1: 'nvenc'}};
+  window.fetch = async (url, options = {}) => {
+    const u = String(url).split('?')[0];
+    if ((options.method || 'GET') !== 'GET') return json({ok: true});
+    if (u === '/api/recording/devices') return json(devices);
+    if (u === '/api/recording/status') return json(status);
+    if (u === '/api/recording/import/sources') return json({sources});
+    if (u === '/api/encoders') return json(encoders);
+    if (u === '/api/recording/settings') {
+      const data = await (await realFetch(url, options)).json();
+      Object.assign(data.settings, {mic: 'Microphone (USB)', facecam: 'Facecam Pro', replay_seconds: 60, fps: 60, codec: 'hevc'},
+                    console ? {source: 'device', console: 'ps5', device_video: 'Game Capture HD60 X', device_audio: 'Game Capture HD60 X Audio'} : {});
+      data.loopback = true;
+      return json(data);
+    }
     return realFetch(url, options);
   };
 }"""
@@ -317,11 +354,54 @@ def shoot(browser, url, lang, demo, out_dir):
     page.wait_for_load_state("networkidle")
     shot(page, "outputs")
 
+    # 17.11.2026 (2.0): חבילת העלאה ושליחה לדיסקורד - תוצר נבחר, עם הפלטפורמות והכפתורים
+    page.evaluate("() => document.querySelector('#outputsList .output-card').click()")
+    page.wait_for_function("() => !document.getElementById('outputsPackageBtn').disabled", timeout=30000)
+    page.set_viewport_size({"width": 1440, "height": 1320})   # גבוה יותר: הנגן וכפתורי הפרסום שמתחתיו נכנסים יחד
+    # פריים מהסרטון בלי פקדי הנגן - בדפדפן headless הם נשארים עם סמל טעינה
+    page.evaluate("() => document.querySelectorAll('video').forEach(v => { v.muted = true; v.controls = false; v.preload = 'auto'; v.currentTime = 1; })")
+    page.wait_for_function("() => [...document.querySelectorAll('video')].some(v => v.readyState >= 2 && !v.seeking)", timeout=30000)
+    page.evaluate("() => document.getElementById('outputsPackageBtn').scrollIntoView({block: 'end'})")
+    page.wait_for_function("() => { const r = document.getElementById('outputsPackageBtn').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }", timeout=10000)
+    page.wait_for_load_state("networkidle")
+    shot(page, "packages")
+    page.set_viewport_size(DESKTOP)
+
     page.evaluate("() => toggleNotificationCenter(true)")
     page.wait_for_function("() => document.querySelectorAll('#notifList .notif-item').length >= 5", timeout=30000)
     page.wait_for_load_state("networkidle")
     shot(page, "notifications")
     context.close()
+
+    # 17.11.2026 (2.0): מסך ההקלטה (מחשב עם replay פעיל, ואז קונסולה דרך כרטיס לכידה), המקודד, ואפשרויות "הקלטה ארוכה לשורטס"
+    for name, console in (("recording", False), ("recording_console", True)):
+        context = _context(browser, lang, {"width": 1440, "height": 1180})
+        page = context.new_page()
+        _ready(page, url)
+        page.evaluate("() => closeVeEditor()")
+        page.evaluate(RECORDING_FAKE, [lang == "he", console])
+        page.evaluate("() => switchTab('recording')")
+        page.wait_for_function("() => document.querySelectorAll('#recImportSource option').length === 5", timeout=30000)
+        page.wait_for_function("() => document.getElementById('recMic').value === 'Microphone (USB)'", timeout=30000)
+        page.wait_for_function("(c) => document.getElementById('recDeviceFields').hidden === !c", arg=console, timeout=30000)
+        if console:
+            page.wait_for_function("() => document.getElementById('recConsoleNote').textContent.length > 10", timeout=30000)
+        page.wait_for_load_state("networkidle")
+        shot(page, name)
+        if not console:
+            page.set_viewport_size(DESKTOP)
+            page.evaluate("() => switchTab('globalsettings')")
+            page.wait_for_function("() => document.getElementById('gsEncoderInfo').textContent.includes('HEVC')", timeout=30000)
+            page.evaluate("() => document.getElementById('gsEncoder').closest('.tc-section').scrollIntoView({block: 'center'})")
+            page.wait_for_load_state("networkidle")
+            shot(page, "encoders")
+            page.evaluate("() => { switchTab('scripts'); selectScript(state.scripts.find(s => s.id.endsWith('long_to_shorts.py')).id); }")
+            page.wait_for_function("() => !document.getElementById('longShortsOptions').hidden", timeout=30000)
+            page.evaluate("(f) => { document.getElementById('folderInput').value = f; onFolderTyped(); }", clips)
+            page.evaluate("() => document.getElementById('longShortsOptions').scrollIntoView({block: 'center'})")
+            page.wait_for_load_state("networkidle")
+            shot(page, "shorts")
+        context.close()
 
     context = _context(browser, lang, PHONE)
     page = context.new_page()

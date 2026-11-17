@@ -180,7 +180,7 @@ if "_nvenc" in ENCODER:
     from utils.shared.subprocess_flags import NO_WINDOW_FLAGS as _NO_WINDOW
     _codec = ENCODER.split("_", 1)[0]
     _requested = _encoders.load_setting()
-    if _requested != "nvenc":
+    if _encoders.forced_by_env() != "nvenc":   # 17.11.2026: רק משתנה הסביבה (הטסטים) מדלג על הבדיקה, לא "NVIDIA" מההגדרות
         _available = _encoders.detect_backends(FFMPEG_EXE, creationflags=_NO_WINDOW)
         if _available is not None and not _available.get("nvenc"):   # אין NVIDIA שעובד בכלל
             if _codec in _encoders.GPU_CODECS:
