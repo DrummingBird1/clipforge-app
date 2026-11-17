@@ -142,6 +142,7 @@
           <div id="recDeviceFields" hidden>
             <div class="tc-row"><label for="recConsole">קונסולה</label><select id="recConsole" onchange="recShowConsoleNote()"></select></div>
             <div id="recConsoleNote" class="hint u-block"></div>
+            <div class="tc-row"><label for="recCardPrefer" title="כרטיסים רבים נותנים 60 פריימים רק ברזולוציה נמוכה. ClipForge מודד את הכרטיס לפני ההקלטה ובוחר לפי ההעדפה הזו">כשהכרטיס לא נותן 60 ברזולוציה המלאה</label><select id="recCardPrefer"><option value="resolution">חדות: הרזולוציה המלאה</option><option value="fps">תנועה חלקה: 60 פריימים</option></select></div>
             <div class="tc-row"><label for="recDeviceVideo">כרטיס לכידה</label><select id="recDeviceVideo"></select></div>
             <div class="tc-row"><label for="recDeviceAudio">שמע הכרטיס</label><select id="recDeviceAudio"></select></div>
           </div>
@@ -163,7 +164,7 @@
         <div class="tc-row"><label for="recHotkeyRecord">מקש להתחלה/עצירה של הקלטה</label><input id="recHotkeyRecord" dir="ltr"></div>
         <div class="tc-row">
           <button type="button" class="u-grow" onclick="saveRecSettings()">💾 שמור הגדרות</button>
-          <button type="button" onclick="loadRecDevices()">🔍 רענן התקנים</button>
+          <button type="button" onclick="loadRecDevices(true)">🔍 רענן התקנים</button>
         </div>
       </div>
 

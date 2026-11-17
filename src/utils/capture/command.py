@@ -32,6 +32,7 @@ class CaptureSpec:
     device_size: Optional[str] = None          # "1920x1080" ממצב שנבחר
     device_codec: Optional[str] = None         # pixel_format / vcodec של המצב
     device_fps: Optional[str] = None           # הקצב המדויק של המצב ("59.94") ל-dshow; fps נשאר שלם בשביל ה-GOP
+    note: str = ""                             # הערה למשתמש על המצב שנבחר (כרטיס שנותן פחות ממה שהכריז)
     game_audio_port: int = 0                   # loopback של המחשב (source=screen): ffmpeg מאזין ב-tcp://127.0.0.1:<port>
     game_audio_rate: int = PCM_RATE
     game_audio_channels: int = PCM_CHANNELS
@@ -40,6 +41,25 @@ class CaptureSpec:
     video_args: List[str] = field(default_factory=lambda: ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20"])
     audio_bitrate: str = "192k"
     segment_seconds: int = ring_buffer.DEFAULT_SEGMENT_SECONDS
+
+
+def stream_titles(spec: "CaptureSpec") -> tuple:
+    """(שמות ערוצי הווידאו, שמות ערוצי השמע) לפי הסדר שבו ההקלטה כותבת אותם."""
+    video = ["game"] + (["facecam"] if spec.facecam else [])
+    has_game_audio = bool(spec.device_audio) if spec.source == "device" else bool(spec.game_audio_port)
+    audio = (["game"] if has_game_audio else []) + (["mic"] if spec.mic else [])
+    return video, audio
+
+
+def title_args(spec: "CaptureSpec", key: str) -> List[str]:
+    """דגלי metadata לשמות הערוצים. key="title" ל-MKV; key="handler_name" ל-MP4 - שם ה-title של ערוץ לא נשמר ב-MP4
+    (17.11.2026: אחרי ההמרה ל-MP4 הערוצים נשארו בלי שם, והזיהוי האוטומטי של ערוץ המיקרופון לא מצא אותו)."""
+    video, audio = stream_titles(spec)
+    args: List[str] = []
+    for kind, titles in (("v", video), ("a", audio)):
+        for index, title in enumerate(titles):
+            args += [f"-metadata:s:{kind}:{index}", f"{key}={title}"]
+    return args
 
 
 def _dshow_device(kind: str, name: str) -> str:
@@ -104,16 +124,13 @@ def build_command(ffmpeg_exe: str, spec: CaptureSpec) -> List[str]:
     for stream in audio_maps:
         cmd += ["-map", stream]
     cmd += list(spec.video_args)
+    # 17.11.2026: קצב קבוע. חותמות הזמן של כרטיס לכידה (MJPEG ב-USB) קופצות, וקליפ ה-replay שלו דיווח 240 פריימים בשנייה
+    # במקום 30 - והסטודיו, ששומר על הקצב של המקור, היה מרנדר אותו ב-240.
+    cmd += ["-r", str(spec.fps), "-fps_mode", "cfr"]
     cmd += ["-g", str(spec.fps * spec.segment_seconds), "-keyint_min", str(spec.fps * spec.segment_seconds)]
     if audio_maps:
         cmd += ["-c:a", "aac", "-b:a", spec.audio_bitrate, "-ar", str(PCM_RATE)]
-    titles = ["game", "facecam"][:len(video_maps)]
-    for i, title in enumerate(titles):
-        cmd += [f"-metadata:s:v:{i}", f"title={title}"]
-    has_game_audio = bool(spec.device_audio) if spec.source == "device" else bool(spec.game_audio_port)
-    audio_titles = ["game", "mic"] if has_game_audio else ["mic"]
-    for i, title in enumerate(audio_titles[:len(audio_maps)]):
-        cmd += [f"-metadata:s:a:{i}", f"title={title}"]
+    cmd += title_args(spec, "title")
 
     if spec.mode == "record":
         return cmd + ["-f", "matroska", spec.output]
@@ -122,6 +139,7 @@ def build_command(ffmpeg_exe: str, spec: CaptureSpec) -> List[str]:
                   "-reset_timestamps", "1", pattern]
 
 
-def remux_command(ffmpeg_exe: str, mkv_path: str, mp4_path: str) -> List[str]:
-    """סוף הקלטה: MKV (עמיד לקריסה) -> MP4 בלי קידוד מחדש, עם כל הערוצים והשמות שלהם."""
-    return [ffmpeg_exe, "-hide_banner", "-y", "-i", mkv_path, "-map", "0", "-c", "copy", "-movflags", "+faststart", mp4_path]
+def remux_command(ffmpeg_exe: str, mkv_path: str, mp4_path: str, spec: Optional["CaptureSpec"] = None) -> List[str]:
+    """סוף הקלטה: MKV (עמיד לקריסה) -> MP4 בלי קידוד מחדש, עם כל הערוצים. עם spec - גם השמות שלהם (handler_name)."""
+    names = title_args(spec, "handler_name") if spec is not None else []
+    return [ffmpeg_exe, "-hide_banner", "-y", "-i", mkv_path, "-map", "0", "-c", "copy"] + names + ["-movflags", "+faststart", mp4_path]

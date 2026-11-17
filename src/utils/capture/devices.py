@@ -6,7 +6,7 @@
 # הפענוח טהור (טקסט -> רשימות), ונבדק מול פלט לדוגמה. פרופילי הקונסולות בוחרים מצב שמתאים לקונסולה מתוך מה שהכרטיס מציע.
 import re
 import subprocess
-from typing import Dict, List, NamedTuple, Optional
+from typing import Callable, Dict, List, NamedTuple, Optional
 
 _DEVICE_LINE = re.compile(r'\]\s+"(?P<name>.+)"\s+\((?P<kind>video|audio|none)\)\s*$')
 _ALT_LINE = re.compile(r'\]\s+Alternative name\s+"(?P<alt>.+)"\s*$')
@@ -83,8 +83,9 @@ def parse_device_options(stderr: str) -> List[Mode]:
     return modes
 
 
-def pick_mode(modes: List[Mode], width: int, height: int, fps: int) -> Optional[Mode]:
-    """המצב הקרוב ביותר ליעד: קודם רזולוציה שלא עוברת את היעד (הכי גדולה), אחר כך fps שמגיע ליעד, ואז העדפה לפורמט
+def pick_mode(modes: List[Mode], width: int, height: int, fps: int, prefer: str = "resolution") -> Optional[Mode]:
+    """המצב הקרוב ביותר ליעד, מתוך המצבים שלא עוברים אותו. prefer="resolution" (ברירת המחדל): קודם הרזולוציה הגדולה, אחר כך
+    קצב שמגיע ליעד. prefer="fps": קודם מצב שמגיע לקצב היעד (1080p60 לפני 4K30), אחר כך רזולוציה. בשניהם - העדפה לפורמט
     לא דחוס (yuyv422/nv12 - בלי פענוח MJPEG על ה-CPU). בלי מצבים - None (ffmpeg יבחר בעצמו)."""
     if not modes:
         return None
@@ -92,10 +93,62 @@ def pick_mode(modes: List[Mode], width: int, height: int, fps: int) -> Optional[
 
     def score(mode: Mode):
         uncompressed = mode.codec not in ("mjpeg", "h264", "hevc")
-        # 17.11.2026: קודם מצב שמגיע לקצב היעד - משחק ב-1080p60 עדיף על 4K30 (כרטיסים רבים נותנים 4K רק ב-30)
-        return (min(mode.max_fps, fps) >= fps - 0.5, mode.width * mode.height, min(mode.max_fps, fps), uncompressed)
+        reaches = min(mode.max_fps, fps) >= fps - 0.5
+        area = mode.width * mode.height
+        if prefer == "fps":
+            return (reaches, area, min(mode.max_fps, fps), uncompressed)
+        return (area, min(mode.max_fps, fps), uncompressed)
 
     return max(fitting, key=score)
+
+
+# 17.11.2026 (2.0.1), מבדיקה על כרטיס אמיתי: כרטיסי USB זולים מכריזים על 1080p ב-60 פריימים ונותנים 30 - חצי מהחבילות
+# מגיעות שבורות, וההקלטה יצאה ב-30 עם תווית של 60. לפני ההקלטה מודדים שנייה וחצי של המצב שנבחר; כשהכרטיס נותן פחות
+# ממה שהכריז, המצב מתוקן לקצב האמיתי ובוחרים שוב.
+MEASURE_SECONDS = 2.0
+COMMON_RATES = (24.0, 25.0, 30.0, 50.0, 60.0, 120.0)
+_FRAME_COUNT = re.compile(r"frame=\s*(\d+)")
+
+
+def real_rate(measured: float) -> float:
+    """הקצב הנפוץ הקרוב (29.6 -> 30), או המדידה עצמה כשהיא רחוקה מכולם."""
+    nearest = min(COMMON_RATES, key=lambda rate: abs(rate - measured))
+    return nearest if abs(nearest - measured) <= nearest * 0.08 else round(measured, 2)
+
+
+def measure_mode(ffmpeg_exe: str, device_name: str, mode: Mode, fps: float, creationflags: int = 0,
+                 seconds: float = MEASURE_SECONDS) -> Optional[float]:
+    """כמה פריימים תקינים בשנייה הכרטיס באמת נותן במצב הזה (פענוח ל-null, בלי קידוד). None כשאי אפשר למדוד."""
+    cmd = [ffmpeg_exe, "-hide_banner", "-loglevel", "error", "-stats", "-f", "dshow", "-rtbufsize", "256M",
+           "-video_size", f"{mode.width}x{mode.height}", "-vcodec" if mode.codec in ("mjpeg", "h264", "hevc") else "-pixel_format", mode.codec,
+           "-framerate", f"{fps:g}", "-i", f"video={device_name}", "-t", f"{seconds:g}", "-f", "null", "-"]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                timeout=_LIST_TIMEOUT_SECONDS, creationflags=creationflags)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    counts = _FRAME_COUNT.findall(result.stderr or "")
+    if result.returncode != 0 or not counts:
+        return None
+    return int(counts[-1]) / seconds
+
+
+def choose_mode(modes: List[Mode], width: int, height: int, fps: int, prefer: str,
+                measure: Callable[[Mode, float], Optional[float]]) -> tuple:
+    """(המצב, הקצב שבאמת מקליטים בו, הערה או None). measure(mode, fps) מחזיר את הקצב האמיתי או None."""
+    note = None
+    for _attempt in range(4):
+        mode = pick_mode(modes, width, height, fps, prefer)
+        if mode is None:
+            return None, float(fps), note
+        asked = min(float(fps), mode.max_fps)
+        measured = measure(mode, asked)
+        if measured is None or measured >= asked * 0.85:
+            return mode, asked, note
+        truth = real_rate(measured)
+        note = (mode, asked, truth) if note is None else note      # מה שהכרטיס הכריז ומה שנתן - להודעה
+        modes = [m._replace(max_fps=truth) if m == mode else m for m in modes]
+    return mode, min(float(fps), mode.max_fps), note
 
 
 def list_devices(ffmpeg_exe: str, creationflags: int = 0) -> List[Device]:

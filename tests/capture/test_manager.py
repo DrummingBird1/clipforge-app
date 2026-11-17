@@ -218,3 +218,39 @@ def test_a_double_click_starts_one_import(tmp_path):
     with pytest.raises(CaptureError):                      # מקור שלא קיים: הדגל משתחרר, אפשר לנסות שוב
         manager.start_import("missing", presets_fn=lambda: [])
     assert manager._import.get("running") is False
+
+
+def test_the_card_is_measured_once_and_the_user_is_told(tmp_path, monkeypatch):
+    manager = _manager(tmp_path)
+    manager.save_settings({"source": "device", "console": "ps5", "device_video": "usb video", "device_audio": "usb audio"})
+    full, small = dv.Mode("mjpeg", 1920, 1080, 10, 60.0), dv.Mode("mjpeg", 1280, 720, 10, 60.0)
+    monkeypatch.setattr(dv, "list_modes", lambda *a, **k: [full, small])
+    calls = []
+
+    def fake_measure(ffmpeg, device, mode, fps, creationflags=0, seconds=2.0):
+        calls.append((device, mode.height, round(fps)))
+        return 29.7 if mode.height == 1080 and fps > 31 else float(round(fps))
+
+    monkeypatch.setattr(dv, "measure_mode", fake_measure)
+    spec = mg.build_spec(manager.settings(), "ffmpeg", [], list_modes=dv.list_modes,
+                         measure=lambda mode, fps: manager._measure("usb video", mode, fps))
+    assert (spec.device_size, spec.fps, spec.device_fps) == ("1920x1080", 30, None)
+    assert spec.note == "הכרטיס מכריז על 60 פריימים ב-1920x1080 אבל נותן 30. מקליט ב-1920x1080 ב-30 פריימים"
+    assert calls == [("usb video", 1080, 60), ("usb video", 1080, 30)]
+    mg.build_spec(manager.settings(), "ffmpeg", [], list_modes=dv.list_modes, measure=lambda mode, fps: manager._measure("usb video", mode, fps))
+    assert len(calls) == 2                                   # מהמטמון - לא מודדים שוב בכל הקלטה
+    again = _manager(tmp_path)                               # גם אחרי הפעלה מחדש
+    assert again._measure("usb video", full, 60.0) == 29.7 and len(calls) == 2
+    again.forget_measurements()                              # "רענן התקנים"
+    assert again._measure("usb video", full, 60.0) == 29.7 and len(calls) == 3
+    manager.save_settings({"card_prefer": "fps"})
+    smooth = mg.build_spec(manager.settings(), "ffmpeg", [], list_modes=dv.list_modes,
+                           measure=lambda mode, fps: manager._measure("usb video", mode, fps))
+    assert (smooth.device_size, smooth.fps) == ("1280x720", 60) and "מקליט ב-1280x720 ב-60 פריימים" in smooth.note
+    assert mg.clean_settings({"card_prefer": "bogus"})["card_prefer"] == "resolution"
+
+
+def test_a_card_without_a_console_profile_still_gets_a_mode():
+    settings = mg.clean_settings({"source": "device", "device_video": "Card", "fps": 60})
+    spec = mg.build_spec(settings, "ffmpeg", [], list_modes=lambda *a: [dv.Mode("nv12", 1920, 1080, 5, 60.0), dv.Mode("nv12", 1280, 720, 5, 60.0)])
+    assert (spec.device_size, spec.device_codec, spec.fps, spec.note) == ("1920x1080", "nv12", 60, "")

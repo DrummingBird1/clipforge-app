@@ -61,8 +61,8 @@ function recShowConsoleNote() {
   document.getElementById("recConsoleNote").textContent = profile ? profile.note : "";
 }
 
-async function loadRecDevices() {
-  const devices = await _recGet("/api/recording/devices");
+async function loadRecDevices(refresh) {
+  const devices = await _recGet("/api/recording/devices" + (refresh ? "?refresh=1" : ""));   // refresh: גם מודדים את הכרטיס מחדש
   if (!devices || !_recSettings) return;
   _recOptions(document.getElementById("recDeviceVideo"), devices.video, _recSettings.device_video, "בחר כרטיס");
   _recOptions(document.getElementById("recDeviceAudio"), devices.audio, _recSettings.device_audio, "בלי שמע מהכרטיס");
@@ -75,6 +75,7 @@ function _fillRecForm(s) {
   document.getElementById("recSource").value = s.source;
   document.getElementById("recScreen").value = s.screen_index;
   document.getElementById("recGameAudio").checked = s.game_audio;
+  document.getElementById("recCardPrefer").value = s.card_prefer;
   document.getElementById("recCodec").value = s.codec;
   document.getElementById("recFps").value = s.fps;
   document.getElementById("recQuality").value = s.quality;
@@ -98,7 +99,7 @@ function _readRecForm() {
   const value = (id) => document.getElementById(id).value;
   return {
     engine: value("recEngine"), source: value("recSource"), screen_index: Number(value("recScreen")),
-    game_audio: document.getElementById("recGameAudio").checked, console: value("recConsole"),
+    game_audio: document.getElementById("recGameAudio").checked, console: value("recConsole"), card_prefer: value("recCardPrefer"),
     device_video: value("recDeviceVideo"), device_audio: value("recDeviceAudio"), mic: value("recMic"),
     facecam: value("recFacecam"), codec: value("recCodec"), fps: Number(value("recFps")), quality: Number(value("recQuality")),
     replay_seconds: Number(value("recReplaySeconds")), hotkey_save_replay: value("recHotkeySave"),

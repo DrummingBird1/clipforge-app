@@ -17,7 +17,7 @@ MIC_TITLES = ("mic", "microphone", "מיקרופון")
 def audio_titles(path: str, ffprobe_exe: str, timeout: float = 30.0) -> Optional[List[str]]:
     """רשימת הכותרות (באותיות קטנות) של ערוצי השמע, או None כש-ffprobe לא רץ."""
     try:
-        out = subprocess.run([ffprobe_exe, "-v", "error", "-select_streams", "a", "-show_entries", "stream=index:stream_tags=title",
+        out = subprocess.run([ffprobe_exe, "-v", "error", "-select_streams", "a", "-show_entries", "stream=index:stream_tags=title,handler_name",
                               "-of", "json", path], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
                              creationflags=NO_WINDOW_FLAGS)
         if out.returncode != 0:
@@ -25,7 +25,16 @@ def audio_titles(path: str, ffprobe_exe: str, timeout: float = 30.0) -> Optional
         streams = json.loads(out.stdout or "{}").get("streams") or []
     except (OSError, ValueError, subprocess.SubprocessError):
         return None
-    return [str((stream.get("tags") or {}).get("title") or "").strip().lower() for stream in streams]
+    return [_title(stream.get("tags") or {}) for stream in streams]
+
+
+def _title(tags) -> str:
+    """title (MKV), ואם אין - handler_name (MP4, שם title של ערוץ לא נשמר). "SoundHandler" הוא ברירת המחדל של ffmpeg, לא שם."""
+    title = str(tags.get("title") or "").strip().lower()
+    if title:
+        return title
+    handler = str(tags.get("handler_name") or "").strip().lower()
+    return "" if handler in ("soundhandler", "videohandler") else handler
 
 
 def usable_mic_track(titles: Optional[List[str]], requested: Optional[int], game_track: int = 0) -> Optional[int]:

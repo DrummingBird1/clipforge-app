@@ -93,12 +93,29 @@ def _is_usable_frame_rate(value):
         return False
 
 
+def _rate_value(value):
+    num_str, _, den_str = value.partition("/")
+    return float(num_str) / float(den_str or "1")
+
+
+_COMMON_RATES = ("24000/1001", "24/1", "25/1", "30000/1001", "30/1", "50/1", "60000/1001", "60/1", "120/1")
+
+
 def _pick_frame_rate(r_frame_rate, avg_frame_rate):
     """r_frame_rate (הקצב הנומינלי שהקונטיינר עצמו מצהיר עליו) קודם ל-
     avg_frame_rate (ממוצע נגזר ממספר-פריימים/משך - יכול לצאת לא-מדויק לקבצים
     קצרים/מוזרים) - נופלים לאחרון רק אם הראשון חסר/לא-שמיש (item: שימור FPS
     מקורי). מחזיר את המחרוזת כמות שהיא (למשל "30000/1001") - לא ממיר למספר
-    כאן, כדי לא לאבד דיוק על קצבים לא-שלמים כמו NTSC 29.97/59.94."""
+    כאן, כדי לא לאבד דיוק על קצבים לא-שלמים כמו NTSC 29.97/59.94.
+
+    17.11.2026: בקובץ עם קצב משתנה (הקלטה מכרטיס לכידה, טלפון) r_frame_rate הוא ניחוש של ffprobe ויכול לצאת פי כמה
+    מהאמת - קליפ של 30 פריימים בשנייה דיווח 240, והסטודיו היה מרנדר אותו ב-240. כשהוא גדול ביותר מפי 1.5 מהממוצע,
+    הולכים לפי הממוצע, מעוגל לקצב הנפוץ הקרוב."""
+    if _is_usable_frame_rate(r_frame_rate) and _is_usable_frame_rate(avg_frame_rate):
+        nominal, average = _rate_value(r_frame_rate), _rate_value(avg_frame_rate)
+        if nominal > average * 1.5:
+            nearest = min(_COMMON_RATES, key=lambda rate: abs(_rate_value(rate) - average))
+            return nearest if abs(_rate_value(nearest) - average) <= average * 0.04 else f"{round(average * 1000)}/1000"
     if _is_usable_frame_rate(r_frame_rate):
         return r_frame_rate
     if _is_usable_frame_rate(avg_frame_rate):

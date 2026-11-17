@@ -23,7 +23,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional
 
 from utils.capture import orphans, ring_buffer
-from utils.capture.command import CaptureSpec, build_command, remux_command
+from utils.capture.command import CaptureSpec, build_command, remux_command, title_args
 from utils.shared import child_guard
 
 ClipCallback = Callable[[str, str], None]
@@ -131,6 +131,7 @@ class FfmpegEngine:
         self._replay: Optional[FfmpegProcess] = None
         self._replay_dir = ""
         self._replay_spec: Optional[CaptureSpec] = None
+        self._record_spec: Optional[CaptureSpec] = None
         self._loopbacks: Dict[str, Any] = {}
         self._pruner_stop = threading.Event()
         self.last_error: Optional[str] = None
@@ -226,6 +227,7 @@ class FfmpegEngine:
             self._record_path = free_path(folder, name, ".mkv")
             spec.mode, spec.output = "record", self._record_path
             self._record = self._start(spec, "record")
+            self._record_spec = spec
             return self._record_path
 
     def stop_record(self) -> Optional[str]:
@@ -244,7 +246,7 @@ class FfmpegEngine:
         mp4 = free_path(os.path.dirname(mkv), os.path.splitext(os.path.basename(mkv))[0], ".mp4")
         final = mkv
         try:
-            result = subprocess.run(remux_command(self.ffmpeg_exe, mkv, mp4), capture_output=True, timeout=REMUX_TIMEOUT_SECONDS,
+            result = subprocess.run(remux_command(self.ffmpeg_exe, mkv, mp4, self._record_spec), capture_output=True, timeout=REMUX_TIMEOUT_SECONDS,
                                     creationflags=self.creationflags)
             if result.returncode == 0 and os.path.isfile(mp4) and os.path.getsize(mp4) > 0:
                 os.remove(mkv)
@@ -301,7 +303,8 @@ class FfmpegEngine:
             f.write(ring_buffer.concat_list([s.path for s in picked]))
         out = free_path(folder, name, ".mp4")
         try:
-            result = subprocess.run(ring_buffer.save_command(self.ffmpeg_exe, list_path, out), capture_output=True, timeout=600,
+            result = subprocess.run(ring_buffer.save_command(self.ffmpeg_exe, list_path, out, names=title_args(spec, "handler_name")),
+                                    capture_output=True, timeout=600,
                                     creationflags=self.creationflags)
             failure = result.stderr.decode("utf-8", errors="replace")[-300:] if result.returncode != 0 else ""
         except (OSError, subprocess.SubprocessError) as e:

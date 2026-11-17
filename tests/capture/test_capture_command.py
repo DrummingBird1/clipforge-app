@@ -100,3 +100,35 @@ def test_replay_segments_join_into_a_clip_with_both_audio_tracks(tmp_path):
     duration = float(next(p for p in probe if p.replace(".", "", 1).isdigit()))
     assert 4.0 <= duration <= 6.5
     assert os.path.getsize(out) > 0
+
+
+def test_track_names_survive_the_move_to_mp4():
+    # 2.0.1: שם ערוץ (title) לא נשמר ב-MP4. אחרי ההמרה מ-MKV הערוצים נשארו בלי שם, והזיהוי האוטומטי של המיקרופון לא מצא אותו.
+    from utils.capture.command import remux_command, stream_titles, title_args
+    from utils.capture.ring_buffer import save_command
+    from utils.media import audio_tracks
+    spec = CaptureSpec(game_audio_port=50123, mic="Mic (USB)", facecam="Cam")
+    assert stream_titles(spec) == (["game", "facecam"], ["game", "mic"])
+    assert stream_titles(CaptureSpec(mic="Mic (USB)")) == (["game"], ["mic"])              # בלי שמע משחק: המיקרופון הוא הערוץ היחיד
+    names = ["-metadata:s:v:0", "handler_name=game", "-metadata:s:v:1", "handler_name=facecam",
+             "-metadata:s:a:0", "handler_name=game", "-metadata:s:a:1", "handler_name=mic"]
+    assert title_args(spec, "handler_name") == names
+    remux = remux_command("ffmpeg", "a.mkv", "a.mp4", spec)
+    assert remux[remux.index("copy") + 1:remux.index("-movflags")] == names and remux[-1] == "a.mp4"
+    assert "handler_name=mic" not in remux_command("ffmpeg", "a.mkv", "a.mp4")
+    saved = save_command("ffmpeg", "list.txt", "out.mp4", names=names)
+    assert saved[saved.index("copy") + 1:saved.index("-movflags")] == names
+    assert audio_tracks._title({"handler_name": "mic"}) == "mic" and audio_tracks._title({"handler_name": "SoundHandler"}) == ""
+    assert audio_tracks._title({"title": "Game", "handler_name": "mic"}) == "game"
+
+
+def test_recordings_are_written_at_a_constant_frame_rate():
+    # 2.0.1: קליפ replay מכרטיס לכידה דיווח 240 פריימים בשנייה במקום 30 (חותמות זמן קופצות), והסטודיו היה מרנדר אותו ב-240
+    from utils.media.ffprobe_cache import _pick_frame_rate
+    cmd = build_command("ffmpeg", CaptureSpec(source="device", device_video="Card", fps=30, output="out.mkv"))
+    assert cmd[cmd.index("-r") + 1] == "30" and cmd[cmd.index("-fps_mode") + 1] == "cfr"
+    assert _pick_frame_rate("240/1", "9000000/307859") == "30000/1001"      # 29.23 בפועל: הקצב הנפוץ הקרוב, לא 240
+    assert _pick_frame_rate("60/1", "3600000/60691") == "60/1"               # 59.3 מול 60 - הנומינלי נכון
+    assert _pick_frame_rate("30000/1001", "30000/1001") == "30000/1001"
+    assert _pick_frame_rate("90/1", "41300/1000") == "41300/1000"            # ממוצע שלא קרוב לשום קצב נפוץ
+    assert _pick_frame_rate("0/0", "25/1") == "25/1" and _pick_frame_rate(None, None) is None

@@ -81,9 +81,12 @@ def api_recording_settings():
 
 
 @router.get("/api/recording/devices")
-def api_recording_devices():
-    """התקני DirectShow (כרטיסי לכידה, מצלמות, מיקרופונים). איטי (ffmpeg) - רק כשהמסך מבקש."""
+def api_recording_devices(refresh: int = 0):
+    """התקני DirectShow (כרטיסי לכידה, מצלמות, מיקרופונים). איטי (ffmpeg) - רק כשהמסך מבקש.
+    refresh=1 (הכפתור "רענן התקנים"): גם שוכחים את מה שנמדד על הכרטיס, והוא נמדד מחדש בהקלטה הבאה."""
     from utils.capture import devices as dv
+    if refresh:
+        get_manager().forget_measurements()
     return dv.as_dicts(dv.list_devices(W.get_ffmpeg_exe(), creationflags=W.NO_WINDOW_FLAGS))
 
 

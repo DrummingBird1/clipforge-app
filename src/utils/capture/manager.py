@@ -24,6 +24,7 @@ DEFAULTS: Dict[str, Any] = {
     "console": "",                 # ps5 / ps4 / xbox_series / xbox_one / switch2 / switch / "" (כרטיס בלי פרופיל)
     "device_video": "",
     "device_audio": "",
+    "card_prefer": "resolution",   # כשהכרטיס לא נותן 60 ברזולוציה המלאה: resolution (חדות) / fps (תנועה חלקה)
     "game_audio": True,            # במחשב: WASAPI loopback
     "mic": "",
     "facecam": "",
@@ -34,7 +35,7 @@ DEFAULTS: Dict[str, Any] = {
     "hotkey_save_replay": "ctrl+alt+s",
     "hotkey_toggle_record": "ctrl+alt+r",
 }
-CHOICES = {"engine": ("ffmpeg", "obs"), "source": ("screen", "device"), "codec": ("h264", "hevc", "av1"),
+CHOICES = {"engine": ("ffmpeg", "obs"), "source": ("screen", "device"), "codec": ("h264", "hevc", "av1"), "card_prefer": ("resolution", "fps"),
            "console": ("",) + tuple(p.id for p in dv.CONSOLE_PROFILES)}
 HOTKEY_DEBOUNCE_SECONDS = 1.0
 LIMITS = {"fps": (10, 240), "quality": (10, 40), "replay_seconds": (10, 600), "replay_max_gb": (1, 100), "screen_index": (0, 8)}
@@ -70,9 +71,20 @@ def video_args_for(codec: str, quality: int, backend_args: Optional[Callable[[st
     return ["-c:v", f"{codec}_nvenc", "-preset", "p4", "-cq", str(quality)]
 
 
+def card_note(found: Optional[tuple], mode: Optional[dv.Mode], rate: float) -> str:
+    """ההודעה למשתמש כשהכרטיס נותן פחות ממה שהכריז."""
+    if not found or mode is None:
+        return ""
+    claimed_mode, claimed, truth = found
+    return (f"הכרטיס מכריז על {claimed:g} פריימים ב-{claimed_mode.width}x{claimed_mode.height} אבל נותן {truth:g}. "
+            f"מקליט ב-{mode.width}x{mode.height} ב-{rate:g} פריימים")
+
+
 def build_spec(settings: Dict[str, Any], ffmpeg_exe: str, video_args: List[str], creationflags: int = 0,
                list_modes: Callable[..., List[dv.Mode]] = dv.list_modes,
-               audio_format: Callable[[], Optional[tuple]] = loopback.default_format) -> CaptureSpec:
+               audio_format: Callable[[], Optional[tuple]] = loopback.default_format,
+               measure: Optional[Callable[[dv.Mode, float], Optional[float]]] = None) -> CaptureSpec:
+    """measure(mode, fps): הקצב שהכרטיס באמת נותן במצב הזה, או None. בלי measure - סומכים על מה שהכרטיס מכריז."""
     spec = CaptureSpec(source=settings["source"], fps=settings["fps"], screen_index=settings["screen_index"],
                        mic=settings["mic"], facecam=settings["facecam"], video_args=video_args)
     if settings["source"] == "device":
@@ -80,13 +92,16 @@ def build_spec(settings: Dict[str, Any], ffmpeg_exe: str, video_args: List[str],
             raise CaptureError("לא נבחר כרטיס לכידה")
         spec.device_video, spec.device_audio = settings["device_video"], settings["device_audio"]
         profile = dv.console_profile(settings["console"])
-        if profile:
-            mode = dv.pick_mode(list_modes(ffmpeg_exe, settings["device_video"], creationflags), profile.width, profile.height, profile.fps)
-            if mode:
-                spec.device_size, spec.device_codec = f"{mode.width}x{mode.height}", mode.codec
-                rate = min(float(profile.fps), mode.max_fps)
-                spec.fps = max(1, int(round(rate)))                       # 59.94 -> 60 (קודם 59)
-                spec.device_fps = f"{rate:g}" if abs(rate - round(rate)) > 0.001 else None
+        # 17.11.2026: גם בלי פרופיל קונסולה בוחרים מצב (הטוב ביותר עד 4K, בקצב שבהגדרות) - אחרת dshow בוחר לבד, ולרוב לא ב-60
+        width, height, fps = (profile.width, profile.height, profile.fps) if profile else (3840, 2160, settings["fps"])
+        modes = list_modes(ffmpeg_exe, settings["device_video"], creationflags)
+        mode, rate, found = dv.choose_mode(modes, width, height, fps, settings.get("card_prefer", "resolution"),
+                                           measure or (lambda _mode, _fps: None))
+        if mode:
+            spec.device_size, spec.device_codec = f"{mode.width}x{mode.height}", mode.codec
+            spec.fps = max(1, int(round(rate)))                       # 59.94 -> 60 (קודם 59)
+            spec.device_fps = f"{rate:g}" if abs(rate - round(rate)) > 0.001 else None
+            spec.note = card_note(found, mode, rate)
     elif settings["game_audio"]:
         fmt = audio_format()
         if fmt:
@@ -115,6 +130,7 @@ class RecorderManager:
         self._lock = threading.RLock()
         self.last_saved: Optional[str] = None
         self._import: Dict[str, Any] = {}
+        self._measured: Optional[Dict[str, float]] = None   # מה שכל כרטיס באמת נותן בכל מצב (נשמר גם ב-.cache)
 
     # --- הגדרות ---
     def settings(self) -> Dict[str, Any]:
@@ -177,13 +193,50 @@ class RecorderManager:
         if replay and codec == "av1":
             codec = "hevc"                       # 17.11.2026: AV1 לא עובר במקטעי MPEG-TS של ה-replay (הקליפ יצא פגום)
         args = video_args_for(codec, settings["quality"], self.backend_args)
-        return build_spec(settings, self.ffmpeg_exe, args, self.creationflags)
+        device = settings["device_video"]
+        return build_spec(settings, self.ffmpeg_exe, args, self.creationflags,
+                          measure=lambda mode, fps: self._measure(device, mode, fps))
+
+    def _measure_path(self) -> str:
+        return os.path.join(self.workspace_dir, ".cache", "capture_modes.json")
+
+    def _measure(self, device: str, mode: dv.Mode, fps: float) -> Optional[float]:
+        """הקצב האמיתי של הכרטיס במצב הזה. נמדד פעם אחת לכל כרטיס ומצב (כ-3 שניות), ונשמר."""
+        if self._measured is None:
+            try:
+                with open(self._measure_path(), encoding="utf-8") as f:
+                    loaded = json.load(f)
+                self._measured = {k: float(v) for k, v in loaded.items()} if isinstance(loaded, dict) else {}
+            except (OSError, ValueError, TypeError):
+                self._measured = {}
+        key = f"{device}|{mode.width}x{mode.height}|{mode.codec}|{fps:g}"
+        if key not in self._measured:
+            measured = dv.measure_mode(self.ffmpeg_exe, device, mode, fps, self.creationflags)
+            if measured is None:
+                return None
+            self._measured[key] = round(measured, 2)
+            try:
+                os.makedirs(os.path.dirname(self._measure_path()), exist_ok=True)
+                atomic_write_json(self._measure_path(), self._measured, indent=1, ensure_ascii=False)
+            except OSError:
+                pass
+        return self._measured[key]
+
+    def forget_measurements(self) -> None:
+        """"רענן התקנים": מודדים את הכרטיס מחדש בהקלטה הבאה (כרטיס אחר, כבל אחר, יציאת USB אחרת)."""
+        self._measured = {}
+        try:
+            os.remove(self._measure_path())
+        except OSError:
+            pass
 
     # --- פעולות ---
     def start_record(self) -> Dict[str, Any]:
         engine = self.engine()
         if isinstance(engine, FfmpegEngine):
-            engine.start_record(self._spec(), time.strftime("recording_%Y%m%d_%H%M%S"))   # ל-record_dir (workspace/recordings)
+            spec = self._spec()
+            engine.start_record(spec, time.strftime("recording_%Y%m%d_%H%M%S"))   # ל-record_dir (workspace/recordings)
+            engine.notice = engine.notice or spec.note or None
         else:
             engine.start_record()
         if not self._hotkey_handles:
@@ -208,9 +261,11 @@ class RecorderManager:
         settings = self.settings()
         engine = self.engine()
         if isinstance(engine, FfmpegEngine):
-            engine.start_replay(self._spec(replay=True), settings["replay_seconds"], settings["replay_max_gb"] * 1024 ** 3)
+            spec = self._spec(replay=True)
+            engine.start_replay(spec, settings["replay_seconds"], settings["replay_max_gb"] * 1024 ** 3)
             if settings["codec"] == "av1":
                 engine.notice = "ה-replay מוקלט ב-HEVC, כי AV1 לא נתמך במקטעים של ה-replay"
+            engine.notice = engine.notice or spec.note or None
         else:
             engine.start_replay()
         self._register_hotkeys(settings)
