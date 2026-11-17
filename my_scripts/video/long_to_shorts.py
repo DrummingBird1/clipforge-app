@@ -1,10 +1,11 @@
 # Name: ✂️ הקלטה ארוכה לכמה שורטס
 # Name (EN): ✂️ Long Recording to Several Shorts
-# Description: מוצא את הרגעים החזקים בהקלטה ארוכה או VOD (לפי שיאי השמע) וחותך מכל אחד Short אנכי - עם Facecam למעלה כשיש מצלמה בקובץ, וזום קצר על השיא.
-# Description (EN): Finds the strongest moments in a long recording or VOD (by audio peaks) and cuts a vertical Short from each - with the facecam on top when the file has a camera track, and a quick zoom on the peak.
+# Description: מוצא את הרגעים החזקים בהקלטה ארוכה או VOD (לפי שיאי השמע) וחותך מכל אחד Short אנכי - עם Facecam למעלה שעוקב אחרי הפנים כשיש מצלמה בקובץ, וזום והילוך איטי על השיא.
+# Description (EN): Finds the strongest moments in a long recording or VOD (by audio peaks) and cuts a vertical Short from each - with a facecam on top that follows the face when the file has a camera track, and a zoom and slow motion on the peak.
 # Safety: read-only
 #
 # 16.11.2026 (ClipForge 2.0). הבחירה: utils/media/moment_finder.py. הפקודה: utils/media/shorts_layout.py. הקבצים המקוריים לא משתנים;
+# 17.11.2026 (2.0.1): הילוך איטי על השיא (--no-slowmo מבטל) ומסגרת Facecam שעוקבת אחרי הפנים (utils/media/face_track.py; --no-face-track מבטל).
 # הפלט ב-<תיקיית הייצוא / workspace>/long_to_shorts/vertical/<שם>_short_<n>.mp4.
 import argparse
 import os
@@ -22,7 +23,7 @@ SRC_DIR = os.path.join(BASE_DIR, "src")
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from utils.media import moment_finder, shorts_layout  # noqa: E402
+from utils.media import face_track, moment_finder, shorts_layout  # noqa: E402
 from utils.media.ffprobe_cache import probe_video  # noqa: E402
 from utils.media.timelapse import find_video_files  # noqa: E402
 from utils.shared.export_dir import output_dir  # noqa: E402
@@ -42,6 +43,8 @@ def parse_args(argv=None):
     parser.add_argument("--layout", choices=["auto", "center", "facecam"], default="auto",
                         help="auto: Facecam למעלה כשיש מצלמה בקובץ, אחרת מרכז")
     parser.add_argument("--no-punch-in", action="store_true", help="בלי זום על השיא")
+    parser.add_argument("--no-slowmo", action="store_true", help="בלי הילוך איטי על השיא")
+    parser.add_argument("--no-face-track", action="store_true", help="מסגרת ה-Facecam חתוכה למרכז ולא עוקבת אחרי הפנים")
     parser.add_argument("--mic-track", type=int, default=None, help="ערוץ מיקרופון לערבוב מעל המשחק (הקלטה של ClipForge / OBS)")
     parser.add_argument("--threshold", type=float, default=highlight_detect.DEFAULT_THRESHOLD_OFFSET_DB,
                         help="כמה dB מעל הממוצע נחשב שיא (נמוך = יותר רגעים)")
@@ -51,13 +54,29 @@ def parse_args(argv=None):
 
 
 def video_streams(path, ffprobe_exe):
+    """(רוחב, גובה) של כל stream וידאו בקובץ, לפי הסדר. כשל = stream אחד בגודל לא ידוע."""
     try:
-        out = subprocess.run([ffprobe_exe, "-v", "error", "-select_streams", "v", "-show_entries", "stream=index", "-of", "csv=p=0", path],
+        out = subprocess.run([ffprobe_exe, "-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height", "-of", "csv=p=0", path],
                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30,
                              creationflags=NO_WINDOW_FLAGS).stdout
-        return len([line for line in out.split() if line.strip()])
+        sizes = []
+        for line in out.splitlines():
+            parts = [p for p in line.strip().split(",") if p.strip().isdigit()]
+            if len(parts) >= 2:
+                sizes.append((int(parts[0]), int(parts[1])))
+        return sizes or [(0, 0)]
     except (OSError, subprocess.SubprocessError):
-        return 1
+        return [(0, 0)]
+
+
+def source_fps(info):
+    """קצב הפריימים מ-probe_video ("60/1", "30000/1001") כמספר, או None."""
+    try:
+        top, _, bottom = str(info.get("fps") or "").partition("/")
+        value = float(top) / float(bottom or 1)
+        return value if 1 <= value <= 240 else None
+    except (ValueError, ZeroDivisionError):
+        return None
 
 
 def process_file(path, args, ffmpeg_exe, ffprobe_exe, dest):
@@ -73,7 +92,8 @@ def process_file(path, args, ffmpeg_exe, ffprobe_exe, dest):
     if not moments:
         print(f"ℹ️ {os.path.basename(path)}: לא נמצאו רגעים חזקים (נסה --threshold נמוך יותר)")
         return 0
-    has_cam = video_streams(path, ffprobe_exe) > 1
+    streams = video_streams(path, ffprobe_exe)
+    has_cam = len(streams) > 1
     layout = ("facecam" if has_cam else "center") if args.layout == "auto" else args.layout
     stem = os.path.splitext(os.path.basename(path))[0]
     made = 0
@@ -82,9 +102,15 @@ def process_file(path, args, ffmpeg_exe, ffprobe_exe, dest):
         print(f"🎬 {stem} #{n}: {moment.start:.0f}-{moment.end:.0f} שניות (שיא ב-{moment.peak:.0f}, +{moment.score:.0f}dB) -> {os.path.basename(out)}")
         if args.dry_run:
             continue
-        cmd = shorts_layout.build_command(ffmpeg_exe, path, moment.start, moment.end - moment.start, out, layout=layout,
+        length = moment.end - moment.start
+        cam_track = None
+        if layout == "facecam" and has_cam and not args.no_face_track:
+            cam_track = face_track.track(path, moment.start, length, ffmpeg_exe, *streams[1])
+            print("   👤 המסגרת עוקבת אחרי הפנים" if cam_track else "   👤 לא זוהו פנים במצלמה - חיתוך למרכז")
+        cmd = shorts_layout.build_command(ffmpeg_exe, path, moment.start, length, out, layout=layout,
                                           has_cam=has_cam, punch_at=None if args.no_punch_in else moment.peak_in_clip,
-                                          mic_track=args.mic_track)
+                                          mic_track=args.mic_track, cam_track=cam_track,
+                                          slowmo_at=None if args.no_slowmo else moment.peak_in_clip, fps=source_fps(info))
         result = subprocess.run(cmd, capture_output=True, timeout=1800, creationflags=NO_WINDOW_FLAGS)
         if result.returncode != 0:
             print(f"❌ {os.path.basename(out)}: " + result.stderr.decode("utf-8", errors="replace")[-400:])

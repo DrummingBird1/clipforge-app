@@ -1009,6 +1009,7 @@
   "הכיתוב הועתק": "Caption copied",
   "הקלטה ארוכה לכמה שורטס": "Long recording to several Shorts",
   "מוצא את הרגעים החזקים בהקלטה ארוכה או VOD (לפי שיאי השמע) וחותך מכל אחד Short אנכי - עם Facecam למעלה כשיש מצלמה בקובץ, וזום קצר על השיא.": "Finds the strongest moments in a long recording or VOD (by audio peaks) and cuts a vertical Short from each - with the facecam on top when the file has a camera track, and a quick zoom on the peak.",
+  "מוצא את הרגעים החזקים בהקלטה ארוכה או VOD (לפי שיאי השמע) וחותך מכל אחד Short אנכי - עם Facecam למעלה שעוקב אחרי הפנים כשיש מצלמה בקובץ, וזום והילוך איטי על השיא.": "Finds the strongest moments in a long recording or VOD (by audio peaks) and cuts a vertical Short from each - with a facecam on top that follows the face when the file has a camera track, and a zoom and slow motion on the peak.",
   "ערוץ מיקרופון": "Mic track",
   "עוצמת מיקרופון": "Mic volume",
   "ניקוי רעשים במיקרופון": "Mic noise reduction",
