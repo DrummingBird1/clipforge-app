@@ -12,6 +12,12 @@
 # - מקודד שנבחר במפורש ולא קיים במחשב: הבא בתור שקיים, עם הודעה (resolve_backend מחזיר גם את הסיבה).
 # - h264 נשאר libx264 בכל מקרה: במסך הוא "תאימות מקסימלית (CPU)", ומי שבחר בו בחר CPU.
 # - nvenc מחזיר בדיוק את CODEC_ARGS הקיים, בייט-בבייט (קובץ הזהב של עורך-העל).
+# 17.11.2026 (2.0.1), מהבדיקה המעמיקה:
+# - av1_amf: ה-QP שלו בסולם 0-255 (hevc_amf: 0-51). נשלח אותו ערך כמו ל-hevc, והקבצים יצאו כמעט בלי דחיסה. עכשיו כפול 4.
+# - AV1 ב-CPU: libsvtav1 לא קיים ב-build של ffmpeg שהחבילה מביאה (essentials); שם יש libaom-av1. הבדיקה בוחרת את מי שעובד.
+# - המטמון: נשמר גם לפי כרטיסי המסך והדרייברים שלהם (דרייבר חדש או כרטיס אחר = בדיקה מחדש), בדיקה שנגמר לה הזמן לא נשמרת,
+#   ו-use_cache=False (הכפתור "בדוק את הכרטיס") באמת בודק מחדש. הבדיקה מריצה את הדגלים האמיתיים של הקידוד, לא רק את שם המקודד.
+# - forced_by_env: רק משתנה הסביבה מדלג על הבדיקה (הטסטים). "NVIDIA" שנבחר בהגדרות במחשב בלי NVIDIA עובר למקודד שקיים.
 import json
 import os
 import subprocess
@@ -34,19 +40,35 @@ _ENCODER_NAMES = {
     ("qsv", "hevc"): "hevc_qsv", ("qsv", "av1"): "av1_qsv",
     ("cpu", "hevc"): "libx265", ("cpu", "av1"): "libsvtav1",
 }
+CPU_AV1_ENCODERS = ("libsvtav1", "libaom-av1")   # לפי סדר העדיפות: SVT מהיר בהרבה, aom קיים בכל build
+_cpu_av1 = CPU_AV1_ENCODERS[0]                   # detect_backends מעדכן לפי מה שעובד ב-ffmpeg הזה
+AMF_AV1_QP_SCALE = 4                             # av1_amf: 0-255, מול 0-51 בשאר
 # ברירות המחדל של הסטודיו: preset p5 ו-cq 19 (hevc) / 24 (av1) ב-NVENC. בשאר המקודדים - הערך המקביל באיכות.
 _DEFAULT_CQ = {("nvenc", "hevc"): 19, ("nvenc", "av1"): 24, ("amf", "hevc"): 20, ("amf", "av1"): 26,
                ("qsv", "hevc"): 21, ("qsv", "av1"): 26, ("cpu", "hevc"): 22, ("cpu", "av1"): 32}
 _AMF_QUALITY = {"p1": "speed", "p2": "speed", "p3": "speed", "p4": "balanced", "p5": "balanced", "p6": "quality", "p7": "quality"}
 _X_PRESET = {"p1": "veryfast", "p2": "faster", "p3": "fast", "p4": "medium", "p5": "slow", "p6": "slower", "p7": "veryslow"}
 _SVT_PRESET = {"p1": "12", "p2": "10", "p3": "8", "p4": "7", "p5": "6", "p6": "4", "p7": "2"}
+_AOM_CPU_USED = {"p1": "8", "p2": "7", "p3": "6", "p4": "5", "p5": "4", "p6": "3", "p7": "2"}
 
 _PROBE_SIZE = "256x144"   # מעל המינימום של NVENC/AMF/QSV (ראו nvenc_probe)
 _PROBE_TIMEOUT_SECONDS = 20
 
 
 def encoder_name(codec: str, backend: str) -> str:
+    if (backend, codec) == ("cpu", "av1"):
+        return _cpu_av1
     return _ENCODER_NAMES[(backend, codec)]
+
+
+def forced_by_env() -> Optional[str]:
+    """המקודד שמשתנה הסביבה כופה (הטסטים, או מי שהגדיר ידנית), או None."""
+    env = os.environ.get(ENV_VAR, "").strip().lower()
+    return env if env in CHOICES else None
+
+
+def _amf_qp(codec: str, quality: str) -> str:
+    return str(min(255, int(quality) * AMF_AV1_QP_SCALE)) if codec == "av1" else quality
 
 
 def codec_args(codec: str, backend: str = "nvenc", preset: Optional[str] = None, cq: Optional[int] = None) -> List[str]:
@@ -60,11 +82,14 @@ def codec_args(codec: str, backend: str = "nvenc", preset: Optional[str] = None,
     if backend == "nvenc":
         return ["-c:v", name, "-preset", level, "-cq", quality]
     if backend == "amf":
-        return ["-c:v", name, "-quality", _AMF_QUALITY.get(level, "balanced"), "-rc", "cqp", "-qp_i", quality, "-qp_p", quality]
+        qp = _amf_qp(codec, quality)
+        return ["-c:v", name, "-quality", _AMF_QUALITY.get(level, "balanced"), "-rc", "cqp", "-qp_i", qp, "-qp_p", qp]
     if backend == "qsv":
         return ["-c:v", name, "-preset", _X_PRESET.get(level, "slow"), "-global_quality", quality]
     if codec == "hevc":
         return ["-c:v", name, "-preset", _X_PRESET.get(level, "slow"), "-crf", quality]
+    if name == "libaom-av1":
+        return ["-c:v", name, "-cpu-used", _AOM_CPU_USED.get(level, "4"), "-row-mt", "1", "-crf", quality, "-b:v", "0"]
     return ["-c:v", name, "-preset", _SVT_PRESET.get(level, "6"), "-crf", quality]
 
 
@@ -83,6 +108,8 @@ def bitrate_args(codec: str, backend: str, bitrate_kbps: int, preset: Optional[s
         return ["-c:v", name, "-preset", _X_PRESET.get(level, "slow"), "-b:v", rate, "-maxrate", peak]
     if codec == "hevc":
         return ["-c:v", name, "-preset", _X_PRESET.get(level, "slow"), "-b:v", rate, "-maxrate", peak, "-bufsize", peak]
+    if name == "libaom-av1":
+        return ["-c:v", name, "-cpu-used", _AOM_CPU_USED.get(level, "4"), "-row-mt", "1", "-b:v", rate]
     return ["-c:v", name, "-preset", _SVT_PRESET.get(level, "6"), "-b:v", rate]
 
 
@@ -93,8 +120,8 @@ def settings_path() -> str:
 
 
 def load_setting(path: Optional[str] = None) -> str:
-    env = os.environ.get(ENV_VAR, "").strip().lower()
-    if env in CHOICES:
+    env = forced_by_env()
+    if env:
         return env
     try:
         with open(path or settings_path(), encoding="utf-8") as f:
@@ -120,29 +147,60 @@ def _cache_path() -> str:
     return os.path.join(workspace, ".cache", "encoders.json")
 
 
+def _gpu_signature() -> str:
+    """שמות כרטיסי המסך וגרסאות הדרייברים שלהם (מהרישום, בלי תהליך נוסף). "" כשאי אפשר לקרוא."""
+    try:
+        import winreg
+    except ImportError:
+        return ""
+    found = []
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}") as root:
+            for index in range(64):
+                try:
+                    with winreg.OpenKey(root, f"{index:04d}") as key:
+                        found.append(f"{winreg.QueryValueEx(key, 'DriverDesc')[0]}@{winreg.QueryValueEx(key, 'DriverVersion')[0]}")
+                except OSError:
+                    continue
+    except OSError:
+        return ""
+    return ";".join(sorted(found))
+
+
 def _ffmpeg_key(ffmpeg_exe: str) -> Optional[str]:
     try:
         st = os.stat(ffmpeg_exe)
     except OSError:
         return None   # "ffmpeg" מה-PATH - בלי מטמון, הבדיקה רצה בכל פעם
-    return f"{os.path.normcase(os.path.abspath(ffmpeg_exe))}|{st.st_size}|{int(st.st_mtime)}"
+    return f"{os.path.normcase(os.path.abspath(ffmpeg_exe))}|{st.st_size}|{int(st.st_mtime)}|{_gpu_signature()}"
 
 
-def _probe(ffmpeg_exe: str, encoder: str, creationflags: int) -> Optional[bool]:
-    """True/False - הקידוד הצליח או לא. None - ffmpeg לא רץ בכלל (לא מותקן / לא נמצא)."""
-    cmd = [ffmpeg_exe, "-hide_banner", "-loglevel", "error", "-f", "lavfi",
-           "-i", f"color=black:size={_PROBE_SIZE}:duration=0.4:rate=10", "-frames:v", "3", "-c:v", encoder, "-f", "null", "-"]
+def _probe(ffmpeg_exe: str, args: List[str], creationflags: int) -> Optional[bool]:
+    """True/False - הקידוד הצליח או לא. None - אי אפשר לדעת: ffmpeg לא רץ בכלל, או שהזמן נגמר (מחשב עמוס)."""
+    cmd = ([ffmpeg_exe, "-hide_banner", "-loglevel", "error", "-f", "lavfi",
+            "-i", f"color=black:size={_PROBE_SIZE}:duration=0.4:rate=10", "-frames:v", "3"] + args + ["-f", "null", "-"])
     try:
         result = subprocess.run(cmd, capture_output=True, timeout=_PROBE_TIMEOUT_SECONDS, creationflags=creationflags)
-    except FileNotFoundError:
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return None
     except (OSError, subprocess.SubprocessError):
         return False
     return result.returncode == 0
 
 
+def _probe_args(codec: str, backend: str, name: Optional[str] = None) -> List[str]:
+    """הדגלים האמיתיים של הקידוד (לא רק שם המקודד): מקודד שלא מכיר דגל שאנחנו שולחים נופל כבר בבדיקה."""
+    args = codec_args(codec, backend)
+    if name is not None and args[1] != name:      # AV1 ב-CPU: בודקים כל מקודד בשמו, לא את זה שנבחר כרגע
+        args = ["-c:v", name] + (["-cpu-used", "4", "-row-mt", "1", "-crf", "32", "-b:v", "0"] if name == "libaom-av1"
+                                 else ["-preset", "6", "-crf", "32"])
+    return args
+
+
 def detect_backends(ffmpeg_exe: str, creationflags: int = 0, use_cache: bool = True) -> Optional[Dict[str, List[str]]]:
     """{מקודד: [קודקים שעובדים]} לכל מקודד חומרה, ו-"cpu" עם מה ש-ffmpeg הזה מכיר. None - ffmpeg לא רץ."""
+    global _cpu_av1
     key = _ffmpeg_key(ffmpeg_exe)
     cache = _cache_path()
     if use_cache and key:
@@ -150,22 +208,31 @@ def detect_backends(ffmpeg_exe: str, creationflags: int = 0, use_cache: bool = T
             with open(cache, encoding="utf-8") as f:
                 stored = json.load(f)
             if stored.get("key") == key and isinstance(stored.get("backends"), dict):
+                if stored.get("cpu_av1") in CPU_AV1_ENCODERS:
+                    _cpu_av1 = stored["cpu_av1"]
                 return {b: list(c) for b, c in stored["backends"].items()}
         except (OSError, ValueError, AttributeError):
             pass
-    pairs = [(b, c) for b in BACKENDS for c in GPU_CODECS]
+    pairs = ([(b, c, None) for b in HARDWARE for c in GPU_CODECS] + [("cpu", "hevc", None)]
+             + [("cpu", "av1", name) for name in CPU_AV1_ENCODERS])
     with ThreadPoolExecutor(max_workers=len(pairs)) as pool:
-        results = list(pool.map(lambda pair: _probe(ffmpeg_exe, encoder_name(pair[1], pair[0]), creationflags), pairs))
+        results = list(pool.map(lambda pair: _probe(ffmpeg_exe, _probe_args(pair[1], pair[0], pair[2]), creationflags), pairs))
     if all(r is None for r in results):
         return None
     found: Dict[str, List[str]] = {b: [] for b in BACKENDS}
-    for (backend, codec), ok in zip(pairs, results):
-        if ok:
+    cpu_av1 = None
+    for (backend, codec, name), ok in zip(pairs, results):
+        if not ok:
+            continue
+        if name is not None:
+            cpu_av1 = cpu_av1 or name      # הראשון שעובד, לפי סדר העדיפות
+        if codec not in found[backend]:
             found[backend].append(codec)
-    if key:
+    _cpu_av1 = cpu_av1 or CPU_AV1_ENCODERS[0]
+    if key and not any(r is None for r in results):   # בדיקה שנגמר לה הזמן לא נשמרת - בפעם הבאה בודקים שוב
         try:
             os.makedirs(os.path.dirname(cache), exist_ok=True)
-            atomic_write_json(cache, {"key": key, "backends": found}, indent=1)
+            atomic_write_json(cache, {"key": key, "backends": found, "cpu_av1": _cpu_av1}, indent=1)
         except OSError:
             pass
     return found

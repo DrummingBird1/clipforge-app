@@ -271,7 +271,7 @@ async function loadEncoders(probe) {
   const select = document.getElementById("gsEncoder");
   if (!select) return;
   try {
-    _renderEncoders(await (await fetch(`/api/encoders?probe=${probe ? 1 : 0}`)).json());
+    _renderEncoders(await (await fetch(`/api/encoders?probe=${probe ? 2 : 0}`)).json());
   } catch (e) {
     console.warn(e);
   }

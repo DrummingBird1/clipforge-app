@@ -263,9 +263,9 @@ CODEC = args.codec
 ENCODER_BACKEND = "nvenc"
 if CODEC in encoders.GPU_CODECS:
     _requested_backend = args.encoder_backend or encoders.load_setting()
-    if _requested_backend == "nvenc":
-        ENCODER_BACKEND = "nvenc"   # בלי בדיקה - בדיוק כמו קודם
-    else:
+    if encoders.forced_by_env() == "nvenc" and _requested_backend == "nvenc":
+        ENCODER_BACKEND = "nvenc"   # משתנה הסביבה (הטסטים): בלי בדיקה - בדיוק כמו קודם
+    else:                           # 17.11.2026: גם "NVIDIA" שנבחר בהגדרות נבדק - במחשב בלי NVIDIA עוברים למקודד שקיים
         ENCODER_BACKEND, _backend_note = encoders.resolve_backend(
             _requested_backend, CODEC, encoders.detect_backends(FFMPEG_EXE, creationflags=NO_WINDOW_FLAGS))
         if _backend_note:
