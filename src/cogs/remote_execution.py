@@ -9,6 +9,7 @@ import sqlite3
 import subprocess
 import sys
 
+EMBED_FIELD_TAIL = 990   # 1,024 פחות המסגרת של בלוק הקוד
 from utils.shared.render_lock import CALLER_HOLDS_LOCK_ENV_VAR, HEARTBEAT_SECONDS as RENDER_LOCK_HEARTBEAT_SECONDS
 from utils.shared.render_lock import acquire as acquire_render_lock, release as release_render_lock, touch as touch_render_lock
 from utils.shared.subprocess_flags import NO_WINDOW_FLAGS
@@ -215,8 +216,13 @@ class RemoteExecution(commands.Cog):
                 description=f"הקובץ נכשל עם קוד יציאה `{process.returncode}`.",
                 color=discord.Color.red()
             )
-            embed.add_field(name="📁 סוף הפלט", value=f"```\n{tail if tail else 'אין פלט'}\n```", inline=False)
-            await status_msg.edit(content=None, embed=embed)
+            # 17.11.2026: שדה ב-embed מוגבל ל-1,024 תווים. זנב ארוך יותר הפיל את העריכה, וההודעה נשארה על "רץ" בלי התרעה.
+            shown = (tail[-EMBED_FIELD_TAIL:] if tail else "אין פלט").replace("`", "'")
+            embed.add_field(name="📁 סוף הפלט", value=f"```\n{shown}\n```", inline=False)
+            try:
+                await status_msg.edit(content=None, embed=embed)
+            except discord.HTTPException:
+                await status_msg.edit(content=f"💥 הסקריפט `{safe_name}` נכשל עם קוד יציאה `{process.returncode}`.")
         else:
             await status_msg.edit(content=f"✅ הסקריפט `{safe_name}` הסתיים בהצלחה!\n```\n{tail}\n```")
 

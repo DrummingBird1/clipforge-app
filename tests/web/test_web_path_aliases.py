@@ -51,3 +51,20 @@ def test_a_drive_root_is_a_valid_root_and_a_sibling_prefix_is_not(tmp_path):
     drive = os.path.splitdrive(str(tmp_path))[0] + "\\"
     assert path_safety.is_within(str(tmp_path / "a.mp4"), drive)
     assert not path_safety.is_within(str(tmp_path) + "2\\a.mp4", str(tmp_path))
+
+
+@pytest.mark.parametrize("name", [".env", ".ENV", ".env.local", "client_secret.json", "youtube_token.json", "tiktok_cookies.txt",
+                                  "YouTube_Token.JSON"])
+def test_secret_files_in_the_install_folder_are_not_served(secret, tmp_path, name):
+    # 2.0.0 חסם רק את data/. הטוקן של הבוט (.env) והטוקן של יוטיוב יושבים בתיקיית ההתקנה, ומכשיר מצומד יכול היה להוריד אותם.
+    path = tmp_path / name
+    path.write_text("TOKEN=abc", encoding="utf-8")
+    assert client.get("/api/download", params={"path": str(path)}).status_code == 403
+    assert client.get("/api/download", params={"path": "\\\\?\\" + str(path)}).status_code == 403
+
+
+def test_secret_names_are_matched_exactly(tmp_path):
+    assert path_safety.is_secret_name("C:/app/.env") and path_safety.is_secret_name("C:/app/.env::$DATA")
+    assert path_safety.is_secret_name("C:/app/youtube_token.json. ")
+    for ordinary in ("C:/clips/env.mp4", "C:/app/.env.example", "C:/clips/my_youtube_token.json.mp4", "C:/clips/token.json"):
+        assert not path_safety.is_secret_name(ordinary), ordinary

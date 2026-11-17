@@ -64,3 +64,31 @@ def test_platforms_without_a_package_are_refused(tmp_path, platform_id):
     video.write_bytes(b"v")
     with pytest.raises(ValueError):
         upload_package.build(str(video), platform_id, str(tmp_path / "p"))
+
+
+def test_two_packages_in_one_second_never_touch_each_others_source(tmp_path):
+    # 2.0.0: שני סרטונים באותו שם (GameA/goal.mp4, GameB/goal.mp4) שנארזו באותה שנייה חלקו תיקייה; השני נכתב על הקישור
+    # הקשיח של הראשון, וסרטון המקור של הראשון קיבל את התוכן של השני.
+    for game, content in (("GameA", b"A" * 64), ("GameB", b"B" * 64)):
+        (tmp_path / game).mkdir()
+        (tmp_path / game / "goal.mp4").write_bytes(content)
+    first = upload_package.build(str(tmp_path / "GameA" / "goal.mp4"), "tiktok", str(tmp_path / "out"))
+    second = upload_package.build(str(tmp_path / "GameB" / "goal.mp4"), "tiktok", str(tmp_path / "out"))
+    assert first["folder"] != second["folder"]
+    assert (tmp_path / "GameA" / "goal.mp4").read_bytes() == b"A" * 64
+    assert (tmp_path / "GameB" / "goal.mp4").read_bytes() == b"B" * 64
+    assert open(first["video"], "rb").read() == b"A" * 64 and open(second["video"], "rb").read() == b"B" * 64
+
+
+def test_a_link_never_lands_on_an_existing_file(tmp_path):
+    from utils.shared import path_safety
+    one, two = tmp_path / "a" / "clip.mp4", tmp_path / "b" / "clip.mp4"
+    for path, content in ((one, b"first"), (two, b"second")):
+        path.parent.mkdir()
+        path.write_bytes(content)
+    batch = tmp_path / "batch"
+    batch.mkdir()
+    made = [path_safety.link_or_copy_new(str(src), str(batch / "clip.mp4")) for src in (one, two)]
+    assert [os.path.basename(p) for p in made] == ["clip.mp4", "clip_2.mp4"]
+    assert one.read_bytes() == b"first" and two.read_bytes() == b"second"
+    assert open(made[0], "rb").read() == b"first" and open(made[1], "rb").read() == b"second"

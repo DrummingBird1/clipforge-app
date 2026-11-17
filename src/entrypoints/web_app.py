@@ -31,7 +31,6 @@ import os
 import queue
 import re  # noqa: F401
 import secrets
-import shutil
 import string
 import subprocess
 import sys
@@ -70,6 +69,7 @@ if SRC_DIR not in sys.path:
 
 from utils.shared.data_dir import DATA_DIR  # data/ האמיתית, או תיקייה זמנית בטסטים (CLIPFORGE_DATA_DIR)
 from utils.shared import data_paths  # שמות הקבצים ב-data/ (23.10.2026)
+from utils.shared.path_safety import link_or_copy_new as _link_or_copy_new  # קישור שלא דורס קובץ קיים (17.11.2026)
 from utils.media.timelapse import VIDEO_EXTENSIONS as _TIMELAPSE_VIDEO_EXTENSIONS
 
 SCRIPTS_DIR = os.path.join(BASE_DIR, "my_scripts")
@@ -818,11 +818,9 @@ def _prepare_publish_batch(outputs):
     batch = os.path.join(PUBLISH_BATCHES_DIR, time.strftime("%Y%m%d_%H%M%S") + "_" + secrets.token_hex(2))
     os.makedirs(batch, exist_ok=True)
     for src in outputs:
-        dst = os.path.join(batch, os.path.basename(src))
-        try:
-            os.link(src, dst)
-        except OSError:
-            shutil.copy2(src, dst)
+        # 17.11.2026: שני פלטים באותו שם (פלט כפול בלי סיומת, תתי-תיקיות) - שם פנוי לכל אחד. קודם השני נכתב על הקישור של
+        # הראשון ודרס את הקובץ המרונדר שלו.
+        _link_or_copy_new(src, os.path.join(batch, os.path.basename(src)))
     return batch
 
 

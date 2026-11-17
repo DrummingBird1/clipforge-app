@@ -18,7 +18,8 @@ def _is_under_data_dir(path):
     מלאה לדיסק המקומי מאחורי אותו טוקן), אבל watermark ותוצרי-רינדור אף פעם
     לא יושבים תחת data/ - אין שום סיבה לגיטימית לאפשר להוריד/להציג משם דרך
     ה-endpoints האלה, אז זה נחסם באופן ספציפי."""
-    return path_safety.is_inside_protected(path, W.DATA_DIR)   # 16.11.2026: גם \?\ ו-\localhost\E$
+    # 17.11.2026: גם קובצי הסודות שיושבים בתיקיית ההתקנה (.env, הטוקן וההרשאות של יוטיוב, העוגיות של TikTok) - לפי השם
+    return path_safety.is_inside_protected(path, W.DATA_DIR) or path_safety.is_secret_name(path)   # 16.11.2026: גם \?\ ו-\localhost\E$
 
 
 def _validate_clip_path(path):

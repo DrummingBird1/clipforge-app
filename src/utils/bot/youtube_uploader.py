@@ -19,6 +19,7 @@
 # ה-scope הנדרש לקריאת נתונים. זה קורה פעם אחת בלבד, אותו עיקרון בדיוק
 # כמו ההסכמה הראשונית.
 
+import json
 import os
 
 from utils.shared.retry import call_with_retry
@@ -36,6 +37,11 @@ READONLY_SCOPE = "https://www.googleapis.com/auth/youtube.readonly"
 # טוקן ישן יעבור הסכמה מחודשת אוטומטית, כמו כשנוסף READONLY_SCOPE
 ANALYTICS_SCOPE = "https://www.googleapis.com/auth/yt-analytics.readonly"
 SCOPES = [UPLOAD_SCOPE, READONLY_SCOPE, ANALYTICS_SCOPE]
+# 17.11.2026 (2.0.1): העלאת כתוביות (captions.insert) דורשת את ה-scope הזה. ב-2.0.0 הוא לא התבקש בכלל, כך שכל העלאת
+# כתוביות נכשלה ב-403 והעלאת הסרטון דווחה כהצלחה. הוא לא חלק מ-SCOPES: טוקן קיים ממשיך לעבוד להעלאות ולאנליטיקס בלי
+# הסכמה מחודשת (חשוב לבוט ולהעלאות מתוזמנות, שאין מי שיאשר בהן חלון דפדפן). הוא מתבקש בהסכמה חדשה, וכשמעלים סרטון שיש
+# לידו קובץ כתוביות (need_captions) - שם המשתמש מול המסך.
+CAPTIONS_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 
 # קודי HTTP שכדאי לנסות שוב עליהם (עומס/תקלה זמנית בצד השרת) - זהה לרשימה
 # המומלצת בדוגמת ההעלאה הרזומבלית הרשמית של Google.
@@ -56,7 +62,7 @@ def is_configured():
     return os.path.exists(CLIENT_SECRETS_FILE)
 
 
-def _get_credentials():
+def _get_credentials(need_captions=False):
     """מבקש תמיד את איחוד ה-scopes המלא (SCOPES, upload+readonly) - כך שהעלאה
     ואנליטיקס חולקים טוקן יחיד, בלי שתי הסכמות נפרדות. טוקן ישן (מלפני
     שנוסף READONLY_SCOPE) לא כולל את ה-scope הזה - google.oauth2.credentials
@@ -72,13 +78,14 @@ def _get_credentials():
     if os.path.exists(TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
 
-    has_all_scopes = bool(creds) and set(SCOPES) <= set(creds.scopes or [])
+    wanted = SCOPES + [CAPTIONS_SCOPE] if need_captions else SCOPES
+    has_all_scopes = bool(creds) and set(wanted) <= set(creds.scopes or [])
 
     if not creds or not creds.valid or not has_all_scopes:
         if creds and creds.expired and creds.refresh_token and has_all_scopes:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES + [CAPTIONS_SCOPE])
             creds = flow.run_local_server(port=0)
         with open(TOKEN_FILE, "w", encoding="utf-8") as f:
             f.write(creds.to_json())
@@ -86,7 +93,17 @@ def _get_credentials():
     return creds
 
 
-def upload_video(file_path, title, description="", tags=None, privacy_status="private", progress_callback=None, publish_at=None):
+def can_upload_captions():
+    """True כשהטוקן השמור כולל את הרשאת הכתוביות (בלי לפתוח חלון הסכמה)."""
+    try:
+        with open(TOKEN_FILE, encoding="utf-8") as f:
+            return CAPTIONS_SCOPE in (json.load(f).get("scopes") or [])
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def upload_video(file_path, title, description="", tags=None, privacy_status="private", progress_callback=None, publish_at=None,
+                 need_captions=False):
     """
     מעלה סרטון ל-YouTube ומחזיר את ה-video_id.
     progress_callback(percent:int) נקרא תוך כדי ההעלאה, אם סופק.
@@ -95,7 +112,7 @@ def upload_video(file_path, title, description="", tags=None, privacy_status="pr
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
 
-    creds = _get_credentials()
+    creds = _get_credentials(need_captions=need_captions)
     youtube = build("youtube", "v3", credentials=creds)
 
     body = {

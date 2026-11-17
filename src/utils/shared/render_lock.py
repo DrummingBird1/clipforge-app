@@ -67,8 +67,9 @@ def _is_pid_alive(pid: Optional[int]) -> bool:
 
 def _is_stale(lock_path: str) -> bool:
     data = _read_lock_data(lock_path)
-    acquired_at = data.get("acquired_at")
-    if acquired_at is not None and (time.time() - acquired_at) > MAX_LOCK_AGE_SECONDS:
+    # 17.11.2026: ההתיישנות לפי הדופק האחרון (heartbeat_at), לא לפי רגע התפיסה. מנעול ישן בלי heartbeat_at - לפי acquired_at.
+    alive_at = data.get("heartbeat_at", data.get("acquired_at"))
+    if alive_at is not None and (time.time() - alive_at) > MAX_LOCK_AGE_SECONDS:
         return True
     return not _is_pid_alive(data.get("pid"))
 
@@ -248,7 +249,7 @@ def acquire(
 
 
 def touch(lock_path: str = LOCK_PATH) -> None:
-    """מרעיש את acquired_at ל"עכשיו" (בלי לשנות את ה-pid) - נועד לתהליך
+    """רושם דופק (heartbeat_at) "עכשיו", בלי לשנות את ה-pid ואת acquired_at - נועד לתהליך
     שמחזיק את המנעול ומריץ ריצה שהושהתה (Pause, ראו utils/shared/worker.py) ממושכת:
     בלי זה, MAX_LOCK_AGE_SECONDS היה גורם ל-_is_stale() להחשיב את המנעול
     "תקוע" ולתת לתהליך אחר לתפוס אותו בטעות בזמן שהריצה המקורית רק קפואה,
@@ -259,7 +260,9 @@ def touch(lock_path: str = LOCK_PATH) -> None:
         return
     try:
         with open(lock_path, "w", encoding="utf-8") as f:
-            json.dump({"pid": data["pid"], "acquired_at": time.time()}, f)
+            # 17.11.2026: acquired_at נשאר. קודם הדופק איפס אותו כל 10 דקות - הגיל שמוצג היה שגוי, והאזהרה על רינדור
+            # תקוע (45 דקות) לא יכלה לקפוץ לעולם.
+            json.dump({"pid": data["pid"], "acquired_at": data.get("acquired_at", time.time()), "heartbeat_at": time.time()}, f)
     except OSError:
         pass
 

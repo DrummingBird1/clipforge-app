@@ -11,13 +11,19 @@ import time
 from typing import Any, Dict, List, Optional
 
 from utils.bot import platforms
+from utils.shared import path_safety
 
 
-def _link_or_copy(src: str, dst: str) -> None:
-    try:
-        os.link(src, dst)
-    except OSError:
-        shutil.copy2(src, dst)
+def _new_folder(path: str) -> str:
+    """תיקייה חדשה בשם path, או path_2, path_3... - שתי חבילות באותה שנייה לא חולקות תיקייה (17.11.2026: בתיקייה משותפת
+    סרטון שני באותו שם נכתב על הקישור של הראשון ודרס את סרטון המקור שלו)."""
+    candidate, n = path, 2
+    while True:
+        try:
+            os.makedirs(candidate)
+            return candidate
+        except FileExistsError:
+            candidate, n = f"{path}_{n}", n + 1
 
 
 def hashtags(tags: List[str]) -> str:
@@ -54,10 +60,9 @@ def build(video_path: str, platform_id: str, out_root: str, title: str = "", des
     if not os.path.isfile(video_path):
         raise FileNotFoundError(video_path)
     stem = os.path.splitext(os.path.basename(video_path))[0]
-    folder = os.path.join(out_root, platform.id, f"{stem}_{time.strftime('%Y%m%d_%H%M%S')}")
-    os.makedirs(folder, exist_ok=True)
-    video = os.path.join(folder, os.path.basename(video_path))
-    _link_or_copy(video_path, video)
+    os.makedirs(os.path.join(out_root, platform.id), exist_ok=True)
+    folder = _new_folder(os.path.join(out_root, platform.id, f"{stem}_{time.strftime('%Y%m%d_%H%M%S')}"))
+    video = path_safety.link_or_copy_new(video_path, os.path.join(folder, os.path.basename(video_path)))
     text = caption(platform, title or stem, description, tags or [])
     with open(os.path.join(folder, "caption.txt"), "w", encoding="utf-8") as f:
         f.write((text["title"] + "\n\n" if text["title"] else "") + text["caption"] + "\n")

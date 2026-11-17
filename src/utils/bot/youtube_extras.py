@@ -91,19 +91,35 @@ def parse_publish_at(value: str, now: Optional[datetime.datetime] = None) -> str
 def sidecar_srt(video_path: str) -> Optional[str]:
     stem = os.path.splitext(video_path)[0]
     for candidate in (stem + ".srt", stem + ".he.srt", stem + ".en.srt"):
-        if os.path.isfile(candidate):
+        if os.path.isfile(candidate) and os.path.getsize(candidate) > 0:
             return candidate
     return None
 
 
-def upload_captions(video_id: str, srt_path: str, language: str = "he", name: str = "") -> None:
+def srt_language(srt_path: str) -> str:
+    """שפת הכתוביות: לפי השם (clip.en.srt / clip.he.srt), ואחרת לפי התוכן - אותיות עבריות = "he", בלעדיהן "en".
+    ב-2.0.0 כל קובץ הועלה כ"עברית", גם כתוביות שתורגמו לאנגלית."""
+    name = os.path.basename(srt_path).lower()
+    for code in ("he", "en"):
+        if name.endswith(f".{code}.srt"):
+            return code
+    try:
+        with open(srt_path, encoding="utf-8-sig", errors="replace") as f:
+            sample = f.read(20000)
+    except OSError:
+        return "en"
+    return "he" if any("\u0590" <= ch <= "\u05ff" for ch in sample) else "en"
+
+
+def upload_captions(video_id: str, srt_path: str, language: str = "", name: str = "") -> None:
     """מסלול כתוביות לסרטון שכבר עלה (YouTube Data API, captions.insert). זורק על כשל - הקורא רושם ולא מפיל את ההעלאה."""
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
 
     from utils.bot.youtube_uploader import _get_credentials
 
-    youtube = build("youtube", "v3", credentials=_get_credentials())
+    language = language or srt_language(srt_path)
+    youtube = build("youtube", "v3", credentials=_get_credentials(need_captions=True))
     body = {"snippet": {"videoId": video_id, "language": language, "name": name or language, "isDraft": False}}
     youtube.captions().insert(part="snippet", body=body,
                               media_body=MediaFileUpload(srt_path, mimetype="application/octet-stream")).execute()

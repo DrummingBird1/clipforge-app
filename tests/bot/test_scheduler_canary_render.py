@@ -165,3 +165,24 @@ def test_run_canary_render_fails_gracefully_when_clip_generation_fails(monkeypat
     assert success is False
     assert "קליפ הבדיקה" in tail
     assert calls == []  # video_editor.py לא אמור לרוץ בכלל בלי קליפ קלט
+
+
+def test_a_script_started_under_the_bots_lock_is_told_the_lock_is_held(tmp_path, monkeypatch):
+    # 2.0.0 (וגם 1.2.0): הסקריפט חיכה למנעול שההורה שלו מחזיק עד שנהרג אחרי 120 שניות - רינדור הקנרית נכשל בכל יום
+    import contextlib
+
+    from utils.shared.render_lock import CALLER_HOLDS_LOCK_ENV_VAR
+    seen = {}
+
+    class _Result:
+        returncode, stdout, stderr = 0, "", ""
+
+    def fake_run(cmd, **kwargs):
+        seen.update(kwargs.get("env") or {})
+        return _Result()
+
+    monkeypatch.setattr(scheduler_cog, "render_lock", contextlib.nullcontext)
+    monkeypatch.setattr(scheduler_cog.subprocess, "run", fake_run)
+    monkeypatch.delenv(CALLER_HOLDS_LOCK_ENV_VAR, raising=False)
+    scheduler_cog._run_script_blocking("video/video_editor.py", [], 30)
+    assert seen.get(CALLER_HOLDS_LOCK_ENV_VAR) == "1"
