@@ -281,6 +281,22 @@ def test_winget_is_recognised_in_a_custom_location_too():
         "CLIPFORGE_WORKSPACE_DIR": r"C:\Users\me\AppData\Local\ClipForge\workspace"}
 
 
+def test_a_new_winget_data_folder_starts_in_the_layout_by_topic(tmp_path):
+    """17.11.2026: data_paths לא מאמץ את המבנה לפי נושא כש-CLIPFORGE_DATA_DIR מוגדר, ובהתקנת winget הלאנצ'ר הוא שמגדיר אותו -
+    התקנה חדשה התחילה במבנה השטוח. הלאנצ'ר מסמן את התיקייה שבחר; תיקייה שהמשתמש קבע, או אחת עם קבצים ישנים, לא משתנה."""
+    from utils.shared import data_paths
+    new = tmp_path / "ClipForge" / "data"
+    assert launcher.adopt_managed_layout({"CLIPFORGE_DATA_DIR": str(new)}) is True
+    assert data_paths.migrated(str(new)) and (new / "security").is_dir()
+    assert launcher.adopt_managed_layout({"CLIPFORGE_DATA_DIR": str(new)}) is False          # כבר מסומנת
+    assert launcher.adopt_managed_layout({"CLIPFORGE_WORKSPACE_DIR": str(tmp_path / "w")}) is False   # את data קבע המשתמש
+    old = tmp_path / "old"
+    old.mkdir()
+    (old / "web_app_token.txt").write_text("t", encoding="utf-8")                           # קובץ במבנה השטוח הישן
+    assert launcher.adopt_managed_layout({"CLIPFORGE_DATA_DIR": str(old)}) is False
+    assert not data_paths.migrated(str(old))
+
+
 def test_scoop_is_recognised_in_a_custom_root_too(tmp_path):
     from utils.shared import install_where, update_checker
     app = tmp_path / "MyScoop" / "apps" / "clipforge" / "2.0.1"

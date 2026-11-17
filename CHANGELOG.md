@@ -78,6 +78,8 @@ was missing and fixes what a deep check of the new code found. If you are coming
 - Your connections survive an update: `.env`, the YouTube sign-in and the TikTok cookies are kept when Scoop or winget
   replaces the install folder.
 - Starting ClipForge while an older version is still running now says so, instead of opening the old one.
+- A new winget install keeps its data in the same folders by topic as every other install (it started in the old flat
+  layout).
 
 ### Fixed since 2.0.0
 - Recording: the computer's audio ran 0.3 seconds ahead of the picture, and a microphone or camera drifted by however

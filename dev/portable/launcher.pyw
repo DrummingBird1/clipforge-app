@@ -38,9 +38,27 @@ def managed_data_dirs(root, environ, is_winget=None):
     return {key: value for key, value in wanted.items() if not environ.get(key)}
 
 
-os.environ.update(managed_data_dirs(ROOT, os.environ))   # לפני data_paths - הוא קורא את התיקייה בייבוא
+MANAGED_DIRS = managed_data_dirs(ROOT, os.environ)
+os.environ.update(MANAGED_DIRS)   # לפני data_paths - הוא קורא את התיקייה בייבוא
 from utils.shared import data_paths  # noqa: E402 - אחרי src ב-sys.path
 from utils.shared import install_files  # noqa: E402
+
+
+def adopt_managed_layout(managed, adopt=None):
+    """17.11.2026: data_paths מדלג על המבנה לפי נושא כש-CLIPFORGE_DATA_DIR מוגדר (טסטים ושרת בדיקה בוחרים מבנה בעצמם). בהתקנת
+    winget המשתנה מגיע מכאן ולא מהמשתמש, ולכן התקנה חדשה התחילה במבנה השטוח הישן. כשהלאנצ'ר בחר את התיקייה - הוא גם מסמן
+    אותה כמבנה לפי נושא (רק כשהיא חדשה; תיקייה עם קבצים במבנה הישן לא משתנה). מחזיר True אם סומנה עכשיו."""
+    folder = managed.get("CLIPFORGE_DATA_DIR")
+    if not folder:
+        return False
+    try:
+        os.makedirs(folder, exist_ok=True)
+        return (adopt or data_paths.adopt_layout_if_new)(folder)
+    except OSError:
+        return False   # ממשיכים במבנה השטוח, כמו data_paths
+
+
+adopt_managed_layout(MANAGED_DIRS)
 
 
 def isolated_env(environ=None):
