@@ -181,6 +181,13 @@ class RecorderManager:
                 pass
             self._engine = None
 
+    def forget_engine(self) -> None:
+        """סוגר את החיבור למנוע, כך שהקריאה הבאה בונה אותו מחדש (סיסמת OBS חדשה). לא באמצע הקלטה או replay."""
+        with self._lock:
+            if self.busy():
+                raise CaptureError("עצור את ההקלטה וה-replay לפני שינוי הסיסמה")
+            self._drop_engine()
+
     def busy(self) -> bool:
         if self._engine is None:
             return False

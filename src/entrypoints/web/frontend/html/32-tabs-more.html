@@ -181,7 +181,12 @@
 
       <div id="recObsSection" class="tc-section" hidden>
         <h3>🎬 סצנות OBS</h3>
-        <div class="hint u-block">OBS צריך להיות פתוח, עם obs-websocket מופעל (Tools &gt; WebSocket Server Settings). הסיסמה נשמרת בכספת (OBS_WEBSOCKET_PASSWORD).</div>
+        <div class="hint u-block">OBS צריך להיות פתוח, עם השרת שלו מופעל: Tools &gt; WebSocket Server Settings &gt; Enable WebSocket server. את הסיסמה מעתיקים משם (Show Connect Info) ושומרים כאן פעם אחת. היא נשמרת בכספת של Windows ולא מוצגת שוב.</div>
+        <div class="tc-row">
+          <input type="password" id="recObsPassword" autocomplete="new-password" placeholder="סיסמת ה-WebSocket של OBS" aria-label="סיסמת ה-WebSocket של OBS">
+          <button type="button" id="recObsPasswordSave" onclick="saveRecObsPassword()">💾 שמור סיסמה</button>
+          <span id="recObsPasswordState" class="hint"></span>
+        </div>
         <div id="recScenes" class="rec-scenes"></div>
       </div>
     </div>

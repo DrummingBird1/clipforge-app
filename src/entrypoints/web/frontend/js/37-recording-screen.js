@@ -14,6 +14,7 @@ async function loadRecordingScreen() {
     _recSettings = data.settings;
     _recConsoles = data.consoles || [];
     document.getElementById("recLoopbackHint").hidden = !!data.loopback;
+    _renderRecObsPassword(!!data.obs_password);
     _fillRecConsoles();
     _fillRecForm(_recSettings);
   }
@@ -156,6 +157,28 @@ function _renderRecStatus(s) {
   document.getElementById("recReplayStop").disabled = !s.replay;
   document.getElementById("recRecordStart").disabled = !!s.recording;
   document.getElementById("recRecordStop").disabled = !s.recording;
+}
+
+// 18.11.2026: סיסמת ה-WebSocket של OBS נשמרת מכאן לכספת של Windows (routes/recording.py). הדפדפן יודע רק אם יש סיסמה שמורה.
+function _renderRecObsPassword(saved) {
+  document.getElementById("recObsPasswordState").textContent = saved ? "יש סיסמה שמורה" : "עדיין לא נשמרה סיסמה";
+}
+
+async function saveRecObsPassword() {
+  const input = document.getElementById("recObsPassword");
+  if (!input.value) {
+    uiToast("הדבק כאן את הסיסמה מ-OBS", "warn");
+    return;
+  }
+  try {
+    await _recPost("/api/recording/obs/password", {password: input.value});
+    input.value = "";
+    _renderRecObsPassword(true);
+    uiToast("הסיסמה נשמרה", "ok");
+    loadRecScenes();
+  } catch (e) {
+    uiToast(e.message, "warn");
+  }
 }
 
 async function loadRecScenes() {
