@@ -98,7 +98,7 @@ def main():
 
     # ניסיון ראשון: concat מהיר בלי רה-קידוד (-c copy) - עובד רק אם כל הקליפים חולקים פרמטרים זהים
     cmd_copy = [FFMPEG_EXE, "-y", "-f", "concat", "-safe", "0", "-i", concat_list_path, "-c", "copy", output_path]
-    result = subprocess.run(cmd_copy, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS)
+    result = subprocess.run(cmd_copy, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS)
 
     success = result.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 0
 
@@ -109,7 +109,7 @@ def main():
             FFMPEG_EXE, "-y", "-f", "concat", "-safe", "0", "-i", concat_list_path,
             "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-c:a", "aac", output_path
         ]
-        result = subprocess.run(cmd_reencode, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS)
+        result = subprocess.run(cmd_reencode, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS)
         success = result.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 0
 
     os.remove(concat_list_path)  # safe: temp ffmpeg concat-list file this script wrote itself, not user input

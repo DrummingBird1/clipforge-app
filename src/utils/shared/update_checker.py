@@ -28,6 +28,23 @@ _REQUEST_TIMEOUT_SECONDS = 5
 PORTABLE_UPDATE_REFUSAL = "בחבילה הניידת מעדכנים בהורדת הגרסה החדשה מעמוד ההורדה."
 
 
+UPDATE_COMMANDS = {"scoop": "scoop update clipforge", "winget": "winget upgrade DrummingBird1.ClipForge"}
+
+
+def install_kind(base_dir):
+    """16.11.2026 (2.0): scoop / winget / portable (ה-zip) / git / unknown - כדי להציג את דרך העדכון הנכונה."""
+    path = os.path.normcase(os.path.abspath(base_dir)) + os.sep
+    if os.sep + "scoop" + os.sep + "apps" + os.sep in path:
+        return "scoop"
+    if os.sep + "winget" + os.sep + "packages" + os.sep in path:
+        return "winget"
+    if is_portable(base_dir):
+        return "portable"
+    if os.path.isdir(os.path.join(base_dir, ".git")):
+        return "git"
+    return "unknown"
+
+
 def is_portable(base_dir):
     """True כשהאפליקציה רצה מתוך החבילה הניידת (zip), לא משכפול git."""
     return os.path.isfile(os.path.join(base_dir, PORTABLE_MARKER))
@@ -81,7 +98,7 @@ def apply_update(repo_dir, timeout=300):
     מחזיר (ok: bool, message: str) - message מיועד להצגה ישירה למשתמש."""
     try:
         status = subprocess.run(
-            ["git", "status", "--porcelain"], cwd=repo_dir, capture_output=True, text=True, timeout=15
+            ["git", "status", "--porcelain"], cwd=repo_dir, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15
         )
     except Exception as e:
         return False, f"בדיקת מצב ה-git נכשלה: {e}"
@@ -92,7 +109,7 @@ def apply_update(repo_dir, timeout=300):
 
     try:
         pull = subprocess.run(
-            ["git", "pull", "--ff-only"], cwd=repo_dir, capture_output=True, text=True, timeout=timeout
+            ["git", "pull", "--ff-only"], cwd=repo_dir, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout
         )
     except Exception as e:
         return False, f"git pull נכשל: {e}"
@@ -100,7 +117,7 @@ def apply_update(repo_dir, timeout=300):
         return False, f"git pull נכשל: {pull.stderr.strip() or pull.stdout.strip()}"
 
     try:
-        sync = subprocess.run(["uv", "sync"], cwd=repo_dir, capture_output=True, text=True, timeout=timeout)
+        sync = subprocess.run(["uv", "sync"], cwd=repo_dir, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout)
     except Exception as e:
         return False, f"קוד המקור עודכן (git pull הצליח), אבל uv sync נכשל להרצה: {e}. הרץ 'uv sync' ידנית."
     if sync.returncode != 0:

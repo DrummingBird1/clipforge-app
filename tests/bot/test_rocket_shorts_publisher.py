@@ -155,3 +155,60 @@ def test_a_new_install_renders_at_the_source_resolution(tmp_path):
     assert "crop=1080:1920" in tt
     assert "scale=iw*0.5000:-2" in yt and "H-h-60" in yt   # הלוגו והמרווח מוקטנים באותו יחס
     assert "YouTube (1080p" in proc.stdout
+
+
+def _batch_dir(tmp_path):
+    """תיקיית אצווה כמו ש-web_app._prepare_publish_batch יוצר - תחת <workspace>/.publish_batches."""
+    workspace = os.environ.get("CLIPFORGE_WORKSPACE_DIR") or str(tmp_path / "ws")
+    batch = os.path.join(workspace, ".publish_batches", f"test_{tmp_path.name}")
+    os.makedirs(batch, exist_ok=True)
+    with open(os.path.join(batch, "fresh_output.mp4"), "wb") as f:
+        f.write(b"\x00" * 1024)
+    return batch
+
+
+def test_a_publish_batch_from_the_server_is_what_gets_published(tmp_path):
+    """16.11.2026: "פרסם אחרי העריכה" ושרשור אוטומטי מעבירים תיקיית אצווה ב---input_dir, ו-Rocket התעלם ממנה
+    ועיבד את input_dir מההגדרות (פלטים ישנים במקום הפלט החדש)."""
+    data_dir, _ = _setup(tmp_path)
+    proc = _run(tmp_path, data_dir, "--dry-run", "--input_dir", _batch_dir(tmp_path))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "fresh_output" in proc.stdout
+    assert "clip1" not in proc.stdout
+
+
+def test_a_folder_from_the_scripts_screen_does_not_replace_the_rocket_settings_folder(tmp_path):
+    """תיקייה שאינה אצווה של השרת (מסך הסקריפטים מעביר תמיד --input_dir) - ההגדרות של Rocket נשארות הקובעות."""
+    data_dir, _ = _setup(tmp_path)
+    other = tmp_path / "picked"
+    other.mkdir()
+    (other / "other_clip.mp4").write_bytes(b"\x00" * 1024)
+    proc = _run(tmp_path, data_dir, "--dry-run", "--input_dir", str(other))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "clip1" in proc.stdout and "other_clip" not in proc.stdout
+
+
+def test_an_nvenc_choice_on_an_amd_machine_renders_with_amf(tmp_path):
+    """16.11.2026 (2.0): "hevc_nvenc" בהגדרות של Rocket במחשב בלי NVIDIA - hevc_amf (לפי ההגדרה הכללית "auto").
+    המחשב "AMD" דרך המטמון של הבדיקה (workspace/.cache/encoders.json) - בלי ffmpeg אמיתי."""
+    import pytest
+    from utils.media import encoders
+    from utils.shared.ffmpeg_locator import get_ffmpeg_exe
+    key = encoders._ffmpeg_key(get_ffmpeg_exe())
+    if not key:
+        pytest.skip("אין ffmpeg בקובץ - אין מפתח למטמון")
+    data_dir, _ = _setup(tmp_path)
+    settings_file = data_dir / "rocket_settings.json"
+    settings = json.loads(settings_file.read_text(encoding="utf-8"))
+    settings.update({"encoder": "hevc_nvenc", "ffmpeg_preset": "p5"})
+    settings_file.write_text(json.dumps(settings), encoding="utf-8")
+    workspace = tmp_path / "ws"
+    (workspace / ".cache").mkdir(parents=True)
+    (workspace / ".cache" / "encoders.json").write_text(json.dumps(
+        {"key": key, "backends": {"nvenc": [], "amf": ["hevc", "av1"], "qsv": [], "cpu": ["hevc", "av1"]}}), encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k not in ("RENDER_LOCK_HELD_BY_CALLER", encoders.ENV_VAR)}
+    env.update({"CLIPFORGE_DATA_DIR": str(data_dir), "CLIPFORGE_WORKSPACE_DIR": str(workspace)})
+    proc = subprocess.run([sys.executable, SCRIPT, "--dry-run"], cwd=str(tmp_path), env=env, capture_output=True,
+                          text=True, encoding="utf-8", timeout=120)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "hevc_amf" in proc.stdout and "hevc_nvenc" not in proc.stdout.split("לא זמין")[1]

@@ -68,7 +68,10 @@ def build_parser():
     )
     parser.add_argument("--keep-audio", action="store_true", help="שומר אודיו (מואץ אם יש timelapse) - כבוי כברירת מחדל.")
     parser.add_argument("--loudnorm", action="store_true", help="מנרמל את עוצמת השמע (זהה ל-rocket_shorts_publisher.py) - רלוונטי רק עם --keep-audio.")
-    parser.add_argument("--codec", type=str, default="h264", choices=list(CODEC_ARGS.keys()), help="קידוד יצוא: h264 (CPU, תאימות מקסימלית), hevc או av1 (NVENC, דורש GPU של NVIDIA).")
+    parser.add_argument("--codec", type=str, default="h264", choices=list(CODEC_ARGS.keys()), help="קידוד יצוא: h264 (CPU, תאימות מקסימלית), hevc או av1 (בכרטיס המסך - ראו --encoder-backend).")
+    parser.add_argument("--encoder-backend", type=str, default=None, choices=["auto", "nvenc", "amf", "qsv", "cpu"],
+                        help="מקודד ל-hevc/av1: auto (לפי הכרטיס), nvenc (NVIDIA), amf (AMD), qsv (Intel), cpu. בלי הדגל - "
+                             "ההגדרה הכללית (data/encoder_settings.json / CLIPFORGE_ENCODER_BACKEND).")
     parser.add_argument(
         "--hwaccel", action="store_true",
         help="פענוח מואץ ב-GPU (NVIDIA CUDA/NVDEC) לפני הקידוד - מפחית עומס CPU משמעותית "
@@ -446,6 +449,11 @@ def build_parser():
     parser.add_argument("--deinterlace", action="store_true", help="item: deinterlace (bwdif) לחומר משודר/ישן עם פסים.")
     parser.add_argument("--pad-color", type=str, default="black", help="item: צבע השוליים (letterbox) - שם צבע או #RRGGBB.")
     parser.add_argument("--audio-track", type=int, default=None, help="item: אינדקס ערוץ-השמע (0 = הראשון) לקבצים עם כמה ערוצים (משחק+מיקרופון).")
+    # 16.11.2026 (2.0): ערוץ מיקרופון נפרד מעורבב מעל המשחק
+    parser.add_argument("--mic-track", type=int, default=None, help="ערוץ המיקרופון (0 = הראשון) - מעורבב מעל ערוץ המשחק (--audio-track).")
+    parser.add_argument("--mic-gain", type=float, default=1.0, help="עוצמת המיקרופון בערבוב (1.0 = כמו שהוא, 0-3).")
+    parser.add_argument("--mic-denoise", action="store_true", help="ניקוי רעשי רקע במיקרופון (afftdn).")
+    parser.add_argument("--duck-game", action="store_true", help="מנמיך את המשחק בכל פעם שמדברים במיקרופון.")
     parser.add_argument("--caption-style", type=str, default="classic", choices=["classic", "bold", "outline", "box", "karaoke"],
                         help="item: סגנון כתוביות - classic/bold (טיקטוק)/outline/box (רקע)/karaoke (מילה-מילה).")
     parser.add_argument("--captions-language", type=str, default="", help="item: שפת התמלול (he/en/...) - ריק = זיהוי אוטומטי.")

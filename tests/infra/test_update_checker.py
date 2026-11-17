@@ -174,3 +174,17 @@ def test_apply_update_handles_git_status_exception_gracefully(monkeypatch):
 
     assert ok is False
     assert "git" in message.lower()
+
+# --- 16.11.2026 (2.0): איך הותקן, ופקודת העדכון ---
+
+def test_install_kind_tells_scoop_winget_portable_and_git_apart(tmp_path):
+    from utils.shared import update_checker as uc
+    scoop = tmp_path / "scoop" / "apps" / "clipforge" / "current"
+    winget = tmp_path / "WinGet" / "Packages" / "DrummingBird1.ClipForge_x" / "ClipForge-2.0.0-win64"
+    portable = tmp_path / "portable"
+    git = tmp_path / "repo"
+    for folder in (scoop, winget, portable, git / ".git"):
+        folder.mkdir(parents=True)
+    (portable / uc.PORTABLE_MARKER).write_text("{}", encoding="utf-8")
+    assert [uc.install_kind(str(p)) for p in (scoop, winget, portable, git, tmp_path)] == ["scoop", "winget", "portable", "git", "unknown"]
+    assert uc.UPDATE_COMMANDS["winget"] == "winget upgrade DrummingBird1.ClipForge"

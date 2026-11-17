@@ -78,6 +78,21 @@ SCENARIOS: List[Dict[str, Any]] = [
      "overrides": {"trim_start": 1.0, "trim_duration": 8.0, "watermark_x": 0.2, "watermark_y": 0.3,
                    "layers": [{"type": "text", "text": "כותרת", "start": 0, "end": 3}]}},
     {"name": "clip_ranges", "flags": [], "overrides": {"remove_ranges": [[1.0, 2.0], [5.0, 6.0]]}},
+    # 16.11.2026 (2.0): ערוץ מיקרופון נפרד מעל המשחק - עוצמה, ניקוי רעשים, הנמכת המשחק בזמן דיבור; ועם מהירות (הזמן של שניהם)
+    {"name": "mic_mix_duck", "flags": ["--keep-audio", "--audio-track", "0", "--mic-track", "1", "--mic-gain", "1.5",
+                                       "--mic-denoise", "--duck-game", "--loudnorm"]},
+    {"name": "mic_mix_speed", "flags": ["--keep-audio", "--mic-track", "1", "--speed", "1.5", "--fade-in-seconds", "1"]},
+    # 16.11.2026 (2.0): מקודדי AMD / Intel / CPU - "backends" = מה שהבדיקה "מצאה" (במקום להריץ ffmpeg)
+    {"name": "hevc_amf", "flags": ["--codec", "hevc", "--encoder-backend", "amf", "--nvenc-preset", "p7", "--nvenc-cq", "23"],
+     "backends": {"nvenc": [], "amf": ["hevc", "av1"], "qsv": [], "cpu": ["hevc", "av1"]}},
+    {"name": "av1_qsv", "flags": ["--codec", "av1", "--encoder-backend", "qsv"],
+     "backends": {"nvenc": [], "amf": [], "qsv": ["hevc", "av1"], "cpu": ["hevc", "av1"]}},
+    {"name": "hevc_auto_cpu_hwaccel_ignored", "flags": ["--codec", "hevc", "--encoder-backend", "auto", "--hwaccel"],
+     "backends": {"nvenc": [], "amf": [], "qsv": [], "cpu": ["hevc", "av1"]}},
+    {"name": "target_size_hevc_amf", "flags": ["--codec", "hevc", "--encoder-backend", "amf", "--target-size-mb", "20"],
+     "backends": {"nvenc": [], "amf": ["hevc"], "qsv": [], "cpu": ["hevc", "av1"]}},
+    {"name": "hdr_passthrough_qsv", "flags": ["--codec", "hevc", "--encoder-backend", "qsv"], "probe": HDR,
+     "backends": {"nvenc": [], "amf": [], "qsv": ["hevc"], "cpu": ["hevc"]}},
 ]
 
 _LAYERS = [{"type": "text", "text": "שכבה", "position": "bottom", "start": 1, "end": 4, "animation": "fade"},
@@ -99,16 +114,21 @@ def _prepare_files(tmp: str) -> None:
         json.dump([{"type": "filename", "position": "bottom-left", "font_size": 28, "box": True}], f)
 
 
-def _load(tmp: str, flags: List[str], index: int) -> Any:
+def _load(tmp: str, flags: List[str], index: int, backends: Any = None) -> Any:
+    if os.path.join(BASE_DIR, "src") not in sys.path:   # "python -m tests.video_editor_golden" - בלי pythonpath של pytest
+        sys.path.insert(0, os.path.join(BASE_DIR, "src"))
+    from utils.media import encoders
     argv = ["video_editor.py", "--input_dir", tmp] + [f.replace("{tmp}", tmp) for f in flags]
-    saved = sys.argv
+    saved, saved_detect = sys.argv, encoders.detect_backends
     sys.argv = argv
+    if backends is not None:   # בדיקת המקודדים בזמן טעינת הסקריפט - בלי ffmpeg אמיתי
+        encoders.detect_backends = lambda *a, **k: {b: list(c) for b, c in backends.items()}
     try:
         spec = importlib.util.spec_from_file_location(f"ve_golden_{index}", SCRIPT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     finally:
-        sys.argv = saved
+        sys.argv, encoders.detect_backends = saved, saved_detect
     return module
 
 
@@ -127,7 +147,7 @@ def _normalize(value: str, tmp: str, ffmpeg: str) -> str:
 def run_scenario(scenario: Dict[str, Any], tmp: str, index: int = 0, stderr: str = "", loaded: Any = None) -> List[List[str]]:
     """stderr: מה שהקידוד "מדפיס" (on_stderr - למשל הסיכום של loudnorm); loaded: רשימה שמקבלת את המודול (ה-run manifest)."""
     _prepare_files(tmp)
-    module = _load(tmp, scenario["flags"], index)
+    module = _load(tmp, scenario["flags"], index, scenario.get("backends"))
     if loaded is not None:
         loaded.append(module)
     captured: List[List[str]] = []

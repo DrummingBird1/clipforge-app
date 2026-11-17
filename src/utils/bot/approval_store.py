@@ -16,6 +16,7 @@
 import datetime
 import json
 import os
+import shutil
 import sqlite3
 
 from utils.shared import db
@@ -99,17 +100,35 @@ def validate_pending_video_path(path):
     return real_path
 
 
+def free_destination(dest_dir, name):
+    """<תיקייה>/<שם>, ואם תפוס - <שם>_2, _3... (לא דורסים קליפ שכבר ממתין ב-Import או בנדחים)."""
+    stem, ext = os.path.splitext(name)
+    candidate = os.path.join(dest_dir, name)
+    number = 2
+    while os.path.exists(candidate):
+        candidate = os.path.join(dest_dir, f"{stem}_{number}{ext}")
+        number += 1
+    return candidate
+
+
+def move_decided_clip(video_path, dest_dir):
+    """16.11.2026: מעביר קליפ שהוחלט עליו ל-Import של Rocket (אושר) או לנדחים. shutil.move ולא os.replace - Import בכונן
+    אחר מ-workspace נכשל ב-WinError 17 (500, והקליפ נשאר ממתין); ושם פנוי - קודם קליפ באותו שם נדרס בשקט.
+    מחזיר את היעד, או None כשהקובץ כבר לא שם. OSError עולה לקורא - ה-DB לא מתעדכן כשההעברה נכשלה."""
+    os.makedirs(dest_dir, exist_ok=True)
+    if not os.path.exists(video_path):
+        return None
+    dest = free_destination(dest_dir, os.path.basename(video_path))
+    shutil.move(video_path, dest)
+    return dest
+
+
 def resolve_pending(pending_id, video_path, approved):
     """זהה בעיקרון ל-cogs/approval_cog.py's ApprovalCog.resolve_pending - אותה
     לוגיקה בדיוק (העברת קובץ ל-Import/נדחים + עדכון status/resolved_at), רק
     סינכרוני (sqlite3, לא aiosqlite) כדי לרוץ מתהליך הדסקטופ/הווב."""
     _ensure_table()
-    dest_dir = get_rocket_input_dir() if approved else REJECTED_DIR
-    os.makedirs(dest_dir, exist_ok=True)
-    dest = os.path.join(dest_dir, os.path.basename(video_path))
-
-    if os.path.exists(video_path):
-        os.replace(video_path, dest)
+    move_decided_clip(video_path, get_rocket_input_dir() if approved else REJECTED_DIR)
 
     with db.connect(DB_PATH) as conn:
         conn.execute(

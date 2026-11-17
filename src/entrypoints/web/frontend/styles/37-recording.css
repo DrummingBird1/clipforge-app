@@ -1,0 +1,13 @@
+/* מסך "🔴 הקלטה" (37-recording-screen.js, LAZY_CSS["recording"]): עמודה אחת, כפתורים גדולים */
+  @layer shell {
+    .rec-screen { display: flex; flex-direction: column; gap: var(--sp-3); max-inline-size: 720px; margin-inline: auto; }
+    .rec-screen > .tc-section { margin: 0; }
+    .rec-actions { display: flex; gap: var(--sp-2); margin-block-start: var(--sp-2); }
+    .rec-btn { flex: 1; min-block-size: 44px; font-size: var(--fs-md); }
+    .rec-danger { color: var(--color-danger); border-color: var(--color-danger); }
+    .rec-status { display: flex; flex-direction: column; gap: var(--sp-1); }
+    .rec-live { color: var(--color-danger); font-weight: var(--fw-semibold); }
+    .rec-error { color: var(--color-danger); overflow-wrap: anywhere; }
+    .rec-scenes { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-block-start: var(--sp-2); }
+    .rec-scene.active { border-color: var(--color-accent); font-weight: var(--fw-semibold); }
+  }

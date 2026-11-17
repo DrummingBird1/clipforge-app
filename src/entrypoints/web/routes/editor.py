@@ -388,7 +388,7 @@ def api_video_editor_source_frame(path: str = "", t: str = "0"):
     W._cleanup_old_previews()
     out_path = os.path.join(W.PREVIEWS_DIR, f"source_{int(time.time() * 1000)}_{secrets.token_hex(3)}.png")
     cmd = [W.get_ffmpeg_exe(), "-y", "-ss", f"{seconds:.3f}", "-i", path, "-frames:v", "1", "-vf", "scale='min(1280,iw)':-2", out_path]
-    result = media_pool.run(cmd, lane="interactive", capture_output=True, text=True, timeout=60, creationflags=W.NO_WINDOW_FLAGS)
+    result = media_pool.run(cmd, lane="interactive", capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60, creationflags=W.NO_WINDOW_FLAGS)
     if result.returncode != 0 or not os.path.exists(out_path):
         return JSONResponse({"error": "חילוץ הפריים נכשל.", "detail": result.stderr[-400:]}, status_code=500)
     return {"url": "/api/watermark_image?path=" + urllib.parse.quote(out_path), "width": info.get("width"), "height": info.get("height"), "time": seconds}

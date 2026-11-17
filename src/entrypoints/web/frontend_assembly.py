@@ -73,6 +73,8 @@ LAZY_JS: Dict[str, Tuple[str, ...]] = {
     "frame": ("js/35-ui-frame.js",),
     # 23.10.2026: מסך "📱 בטלפון" - מה רץ, התור, אישור קליפים והרצה חוזרת (גם ה-HTML שלו, lazy-html:phone)
     "phone": ("js/36-phone-screen.js",),
+    # 16.11.2026 (2.0): מסך "🔴 הקלטה" - replay, הקלטה, קונסולות ו-OBS (גם ה-HTML שלו, lazy-html:recording)
+    "recording": ("js/37-recording-screen.js",),
     # 24.10.2026: תוספות לסטודיו מסיור השימושיות (בחירת תיקייה ועוד) - נטען כשהסטודיו נפתח (setVeFocus), כדי לא להגדיל את הראשי
     "studio_more": ("js/89-studio-more.js",),
 }
@@ -85,6 +87,7 @@ LAZY_CSS: Dict[str, Tuple[str, ...]] = {
     "notifications": ("styles/34-notifications.css",),
     "frame": ("styles/35-ui-frame.css",),
     "phone": ("styles/36-phone.css",),
+    "recording": ("styles/37-recording.css",),
     "studio_more": ("styles/89-studio-more.css",),
 }
 

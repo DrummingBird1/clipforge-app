@@ -8,7 +8,7 @@
 import os
 from typing import Dict, List, NamedTuple, Optional
 
-from utils.shared import export_dir, workspace_dir
+from utils.shared import export_dir, path_safety, workspace_dir
 
 VIDEO_EXTENSIONS = (".mp4", ".mov", ".mkv", ".webm")
 # תיקיות פנימיות בתוך תיקיות התוצרים: חתימות, גרסאות קודמות, תיקיות לסטודיו, סטילס ושיתוף
@@ -101,7 +101,8 @@ def locate(path: str, workspace: str) -> Optional[dict]:
         return None
     for root in roots(workspace):
         real_root = os.path.realpath(root.path)
-        if os.path.normcase(real).startswith(os.path.normcase(real_root) + os.sep):
+        # 16.11.2026: path_safety - תיקייה שהיא שורש כונן (F:\) לא נכשלת על "F:\\" + sep
+        if real != real_root and path_safety.is_within(real, real_root):
             parts = os.path.relpath(os.path.dirname(real), real_root).split(os.sep)
             if any(_skip_dir(part) for part in parts if part != "."):
                 return None

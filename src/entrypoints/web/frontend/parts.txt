@@ -17,6 +17,7 @@ styles/33-outputs.css
 styles/34-notifications.css
 styles/35-ui-frame.css
 styles/36-phone.css
+styles/37-recording.css
 styles/89-studio-more.css
 styles/30-editor-waves.css
 styles/90-utilities.css
@@ -41,6 +42,7 @@ js/33-outputs-screen.js
 js/34-notification-center.js
 js/35-ui-frame.js
 js/36-phone-screen.js
+js/37-recording-screen.js
 js/40-gallery-publishing.js
 js/41-dataviz-packages.js
 js/42-dataviz-screen.js

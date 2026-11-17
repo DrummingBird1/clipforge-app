@@ -91,3 +91,24 @@ def test_sequential_acquisitions_both_succeed(tmp_path):
         pass
     with file_lock(lock_path):
         pass  # השני לא אמור להיתקע - הראשון שוחרר כראוי
+
+
+def test_release_retries_while_a_waiter_has_the_file_open(tmp_path, monkeypatch):
+    """16.11.2026: ב-Windows os.remove נכשל כל עוד ממתין קורא את ה-PID - קודם המנעול נשאר תפוס (עם PID חי) ~10 שניות."""
+    lock_path = str(tmp_path / "x.lock")
+    real_remove = os.remove
+    failures = {"left": 3}
+
+    def flaky_remove(path):
+        if path == lock_path and failures["left"]:
+            failures["left"] -= 1
+            raise PermissionError(13, "in use")
+        real_remove(path)
+
+    monkeypatch.setattr(file_lock_module.os, "remove", flaky_remove)
+    with file_lock(lock_path):
+        pass
+    assert not os.path.exists(lock_path)
+    with file_lock(lock_path, timeout=0.2):   # הבא נכנס מיד, בלי לחכות שהמנעול "יתיישן"
+        pass
+

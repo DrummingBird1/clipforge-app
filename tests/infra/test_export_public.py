@@ -112,6 +112,22 @@ def test_private_files_stay_behind_and_public_labels_come_from_the_local_file(tm
     assert (dest / "docs" / "web_ui.md").read_text(encoding="utf-8") == "effects (Airhorn, Public Name, Game Over)\n"
 
 
+def test_the_owners_watermarks_never_reach_the_public_copy(tmp_path):
+    """16.11.2026: סימני המים נכנסו בטעות למעקב (f92c0c8). גם אם יחזרו - הייצוא לא מוציא אותם."""
+    marks = ("assets/PShorts Watermark.png", "assets/RLShorts Watermark.png", "assets/watermark-820x180.png")
+    repo = _repo(tmp_path, {**{m: "png\n" for m in marks}, "assets/icon.png": "png\n"})
+    dest = tmp_path / "public"
+    assert _export(repo, dest) == 0
+    assert (dest / "assets" / "icon.png").is_file()
+    assert not any((dest / m).exists() for m in marks)
+
+
+def test_the_watermarks_stay_out_of_git():
+    out = subprocess.run(["git", "-C", PROJECT_ROOT, "ls-files", "assets"], capture_output=True, text=True,
+                         encoding="utf-8", check=True).stdout
+    assert "Watermark" not in out and "watermark-820x180" not in out
+
+
 def test_a_rewrite_that_no_longer_matches_stops_the_export(tmp_path):
     import pytest
     repo = _repo(tmp_path, {"docs/web_ui.md": "the label was renamed\n"})
@@ -184,3 +200,22 @@ def test_update_refuses_a_clone_with_unsaved_work(tmp_path, capsys):
     assert _export(repo, tmp_path / "unused", "--update", str(clone)) == 1
     assert (clone / "notes.txt").exists() and _commit_count(clone) == 1
     assert _export(repo, tmp_path / "unused", "--update", str(tmp_path / "not_a_repo")) == 1
+
+
+def test_update_keeps_the_public_repos_own_agents_and_claude_files(tmp_path):
+    """הריפו הציבורי מחזיק AGENTS.md ו-CLAUDE.md כלליים משלו; הפרטיים (EXCLUDE) לא יוצאים, וה---update לא מוחק ולא דורס."""
+    repo, clone = _published(tmp_path)
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        (clone / name).write_bytes(f"public {name}\n".encode("utf-8"))
+    _git(clone, "add", "-A")
+    _git(clone, "commit", "-q", "-m", "the public repo's own agent files")
+    (repo / "README.md").write_text("# ClipForge 2\n", encoding="utf-8")   # בריפו הפרטי יש AGENTS.md פנימי
+    _git(repo, "add", "README.md")   # לא את untracked.txt של _repo
+    _git(repo, "commit", "-q", "-m", "private change")
+
+    assert _export(repo, tmp_path / "unused", "--update", str(clone)) == 0
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        assert (clone / name).read_bytes() == f"public {name}\n".encode("utf-8")
+    assert _commit_count(clone) == 3
+    assert _git(clone, "diff", "--name-status", "HEAD~1", "HEAD").split() == ["M", "README.md"]   # רק מה שהשתנה בפועל
+    assert _git(clone, "status", "--porcelain") == ""

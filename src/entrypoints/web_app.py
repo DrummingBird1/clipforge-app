@@ -70,6 +70,7 @@ if SRC_DIR not in sys.path:
 
 from utils.shared.data_dir import DATA_DIR  # data/ האמיתית, או תיקייה זמנית בטסטים (CLIPFORGE_DATA_DIR)
 from utils.shared import data_paths  # שמות הקבצים ב-data/ (23.10.2026)
+from utils.media.timelapse import VIDEO_EXTENSIONS as _TIMELAPSE_VIDEO_EXTENSIONS
 
 SCRIPTS_DIR = os.path.join(BASE_DIR, "my_scripts")
 TOKEN_PATH = data_paths.path(data_paths.WEB_TOKEN)
@@ -675,7 +676,7 @@ PREVIEWS_DIR = os.path.join(WORKSPACE_DIR, WORKSPACE_SUBDIRS["PREVIEWS_DIR"])
 # חייב להיות אותו נתיב כמו RUN_MANIFESTS_DIR ב-my_scripts/video/video_editor.py (הסקריפט כותב, השרת קורא)
 RUN_MANIFESTS_DIR = os.path.join(WORKSPACE_DIR, WORKSPACE_SUBDIRS["RUN_MANIFESTS_DIR"])
 PREVIEW_MAX_AGE_SECONDS = 86400
-EDITOR_VIDEO_EXTENSIONS = (".mp4", ".mkv", ".mov", ".avi", ".webm")
+EDITOR_VIDEO_EXTENSIONS = _TIMELAPSE_VIDEO_EXTENSIONS  # אותה רשימה כמו הסקריפטים והמאזינים
 
 # דגלי "מצב-ריצה" שלא רלוונטיים לתצוגה מקדימה/בדיקה של פריים בודד (רינדור
 # מחדש/קונטקט-שיט/מקבילות/דוחות/מספור/GPU/יעד-גודל) - מוסרים מה-payload לפני
@@ -1022,12 +1023,13 @@ from entrypoints.web.routes import (  # noqa: E402 - חייב לבוא אחרי 
     automation as _routes_automation,
     system as _routes_system,
     devices as _routes_devices,
+    recording as _routes_recording,
     outputs as _routes_outputs,
     notifications as _routes_notifications,
     page as _routes_page,
 )
 
-ROUTE_MODULES = (_routes_workspace, _routes_player, _routes_pro, _routes_editor_profiles, _routes_editor, _routes_clips, _routes_dataviz, _routes_dataviz_plus, _routes_runs, _routes_bot, _routes_automation, _routes_system, _routes_devices, _routes_outputs, _routes_notifications, _routes_page)
+ROUTE_MODULES = (_routes_workspace, _routes_player, _routes_pro, _routes_editor_profiles, _routes_editor, _routes_clips, _routes_dataviz, _routes_dataviz_plus, _routes_runs, _routes_bot, _routes_automation, _routes_system, _routes_devices, _routes_recording, _routes_outputs, _routes_notifications, _routes_page)
 for _routes_module in ROUTE_MODULES:
     app.include_router(_routes_module.router)
     # תאימות: פונקציות ה-endpoint נשארות נגישות גם כ-web_app.<שם> (טסטים/קוד ישן)

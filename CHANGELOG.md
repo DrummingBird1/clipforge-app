@@ -2,6 +2,62 @@
 
 What changed in each ClipForge release, by topic. Dates are release dates (YYYY-MM-DD).
 
+## 2.0.0 - 2026-11-16
+
+### Recording
+- A Recording screen. Record the screen or a PC game with the built-in recorder, or a console (PlayStation 5 and 4, Xbox
+  Series and One, Nintendo Switch and Switch 2) through a capture card. Each console has a profile that picks the best
+  mode the card offers, with a note about HDCP or the dock where it matters.
+- A replay buffer: keep the last 10 seconds to 10 minutes in the background and save them as a clip with a button or a
+  global hotkey. The saved clip goes to the Import folder and on to the Shorts auto chain.
+- The computer's audio (the game) and the microphone are recorded as separate tracks, and a webcam as a second video
+  track. A full recording is saved as MKV while recording, so a crash doesn't lose it, and becomes an MP4 when you stop.
+- Control OBS from the same screen instead of the built-in recorder: start and stop recording, the replay buffer, and
+  switching scenes.
+- Import clips from other recorders and consoles with one click: NVIDIA App / ShadowPlay, AMD ReLive, Xbox Game Bar,
+  Steam recordings, OBS, Elgato, a PS5 or PS4 USB drive, a Switch SD card, and Xbox captures in OneDrive. Only new clips
+  are copied, and the source is never changed.
+
+### Graphics cards
+- HEVC and AV1 now encode on AMD (AMF) and Intel (Quick Sync) cards as well as NVIDIA, and on the CPU when there is no
+  suitable card. ClipForge detects the card; Global settings has an encoder choice. On NVIDIA nothing changes.
+  AMD and Intel encoding was checked against the ffmpeg commands only, not on real hardware.
+
+### Platforms
+- Upload packages for TikTok, Instagram Reels, Twitch and Kick, from the Outputs screen: a folder with the video, a
+  caption that fits the platform's limit, and the thumbnail. The caption is copied and the upload page opens.
+- YouTube uploads get chapters (from the chapters in the file), `#Shorts` for vertical clips up to 3 minutes, scheduled
+  publishing, and captions from an `.srt` file next to the video.
+- Send to Discord: the bot posts the video to the channel you set with `/clip_channel`.
+- New studio targets: Twitch, Kick and Discord up to 50MB.
+
+### New in the studio
+- Mix a separate microphone track over the game track, with its own volume, noise reduction on the microphone only,
+  and the game lowered while you talk.
+- A new script, "Long recording to several Shorts": finds the strongest moments in a long recording or VOD and cuts a
+  vertical Short from each, with the facecam on top when the file has one, and a quick zoom on the peak.
+- `.ts`, `.flv` and `.m4v` files are picked up everywhere.
+
+### Install and update
+- Ready for winget, next to Scoop and the zip: the zip now has a `ClipForge.exe`, and a winget install keeps your data
+  in `%LOCALAPPDATA%\ClipForge`, so an upgrade doesn't touch it. The package is not in the winget catalog yet.
+- The update banner shows the command that fits how ClipForge was installed (Scoop, winget, zip or git).
+
+### Fixes
+- Security: a file under `data/` (the access token, the settings) could be downloaded through a `\\?\` or
+  `\\localhost\C$` path. Path checks now see through these forms.
+- "Publish after editing" and the auto chain published the folder from the Shorts settings instead of the new outputs.
+- The gallery shows clips in the per-game folders.
+- A file name with Hebrew letters made silence trimming do nothing.
+- Discord `/run_script` failed in the middle of a long render and left it running without the render lock.
+- Approving a clip failed when the Import folder was on another drive, and could overwrite a clip with the same name.
+- A render longer than 4 hours could lose the render lock to another process.
+- Importing settings, and saving the Shorts settings, could leave a broken file if interrupted.
+- An export folder that is the root of a drive (`F:\`) was refused.
+
+### Security
+- opentelemetry-api 1.45.2 (CVE-2026-126360).
+
 ## 1.2.0 - 2026-11-08
 
 ### New in the studio

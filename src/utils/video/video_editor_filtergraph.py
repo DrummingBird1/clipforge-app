@@ -122,6 +122,10 @@ def build_edit_filter_complex(
     eq_filter: str = "",
     lut_intensity: float = 1.0,
     audio_stream_index: Optional[int] = None,
+    mic_stream_index: Optional[int] = None,
+    mic_gain: float = 1.0,
+    mic_denoise: bool = False,
+    duck_game: bool = False,
     layers: Optional[List[Dict[str, Any]]] = None,
     layer_text_files: Optional[Dict[int, List[str]]] = None,
     layer_image_inputs: Optional[Dict[int, int]] = None,
@@ -500,7 +504,28 @@ def build_edit_filter_complex(
         if fade_out_seconds > 0 and output_duration_seconds is not None:
             fade_out_start = max(0.0, output_duration_seconds - fade_out_seconds)
             audio_filters.append(f"afade=t=out:st={fade_out_start:.3f}:d={fade_out_seconds:.3f}")
-        if pip_audio_input_index is not None:
+        if mic_stream_index is not None and replace_audio_input_index is None and pip_audio_input_index is None:
+            # 16.11.2026 (2.0): ערוץ מיקרופון נפרד (הקלטה של ClipForge / OBS: משחק בערוץ אחד, מיקרופון באחר) - מעורבב מעל
+            # המשחק עם עוצמה משלו; ניקוי רעשים (afftdn) רק למיקרופון; duck_game מנמיך את המשחק בזמן דיבור (sidechain).
+            # פילטרי הזמן (חיתוך שקט, מהירות, fade) עוברים גם על המיקרופון - אחרת הוא יוצא מסנכרון.
+            timing = [f for f in (silence_audio_filter, build_atempo_chain(speed_factor) if speed_factor else None) if f]
+            if fade_in_seconds > 0:
+                timing.append(f"afade=t=in:st=0:d={fade_in_seconds:.3f}")
+            if fade_out_seconds > 0 and output_duration_seconds is not None:
+                timing.append(f"afade=t=out:st={max(0.0, output_duration_seconds - fade_out_seconds):.3f}:d={fade_out_seconds:.3f}")
+            mic_chain = timing + (["afftdn=nf=-25"] if mic_denoise else []) + [f"volume={mic_gain:g}", "aresample=async=1"]
+            parts.append(f"[{audio_selector}]{','.join(audio_filters) or 'anull'}[__game_a]")
+            parts.append(f"[0:a:{mic_stream_index}]{','.join(mic_chain)}[__mic_a]")
+            if duck_game:
+                parts += [
+                    "[__mic_a]asplit=2[__mic_sc][__mic_mix]",
+                    "[__game_a][__mic_sc]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=500[__game_ducked]",
+                    "[__game_ducked][__mic_mix]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[outa]",
+                ]
+            else:
+                parts.append("[__game_a][__mic_a]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[outa]")
+            maps += ["-map", "[outa]"]
+        elif pip_audio_input_index is not None:
             # item 88: שמע ה-PiP (למשל פרשנות/מצלמת-פנים) מעורבב מעל הסאונד הראשי;
             # pip_duck מנמיך את הראשי (sidechain) בכל פעם שמדברים ב-PiP.
             main_chain = ",".join(audio_filters) or "anull"

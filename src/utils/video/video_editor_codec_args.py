@@ -2,10 +2,11 @@
 
 from typing import List, Optional
 
+from utils.media import encoders
 from utils.video.video_editor_effort import CODEC_ARGS
 
 
-def get_codec_args(codec: str, preset: Optional[str] = None, cq: Optional[int] = None) -> List[str]:
+def get_codec_args(codec: str, preset: Optional[str] = None, cq: Optional[int] = None, backend: str = "nvenc") -> List[str]:
     """מחזיר את דגלי ffmpeg (-c:v ...) עבור קידוד נתון. ValueError על קידוד לא מוכר -
     עדיף כישלון מיידי וברור מאשר ffmpeg שנכשל מאוחר יותר עם שגיאה עמומה.
 
@@ -16,6 +17,9 @@ def get_codec_args(codec: str, preset: Optional[str] = None, cq: Optional[int] =
     הריצה הכולל; עם hwaccel המקודד עצמו יכול להיות ה-bottleneg, ואז p1 (מהיר)
     מול p7 (איכות מרבית) הוא טרייד-אוף אמיתי. cq מיושם על "-cq" (NVENC) או
     "-crf" (h264) - מה שקיים בפועל ב-CODEC_ARGS של הקודק הזה."""
+    # 16.11.2026: backend - מקודד החומרה ל-hevc/av1 (utils/media/encoders.py). nvenc = הקוד הקיים בלי שינוי.
+    if backend != "nvenc" and codec in encoders.GPU_CODECS:
+        return encoders.codec_args(codec, backend, preset=preset, cq=cq)
     try:
         args = list(CODEC_ARGS[codec])
     except KeyError:
@@ -44,7 +48,8 @@ def compute_target_bitrate_kbps(target_size_mb: float, duration_seconds: float, 
     return max(100, int(total_kbps - audio_kbps))
 
 
-def get_two_pass_codec_args(codec: str, bitrate_kbps: int, pass_num: int, passlog_path: str, preset: Optional[str] = None) -> List[str]:
+def get_two_pass_codec_args(codec: str, bitrate_kbps: int, pass_num: int, passlog_path: str, preset: Optional[str] = None,
+                            backend: str = "nvenc") -> List[str]:
     """
     ארגומנטי ffmpeg לקידוד VBR עם יעד ביטרייט קונקרטי (bitrate_kbps) - חלופה
     ל-get_codec_args() הרגיל (CQ/CRF, יעד איכות בלי גודל קובץ צפוי) כשיש יעד
@@ -62,6 +67,8 @@ def get_two_pass_codec_args(codec: str, bitrate_kbps: int, pass_num: int, passlo
         raise ValueError(f"קידוד לא מוכר: {codec!r} (אפשרויות: {', '.join(CODEC_ARGS)})")
     if pass_num not in (1, 2):
         raise ValueError("pass_num חייב להיות 1 או 2")
+    if backend != "nvenc" and codec in encoders.GPU_CODECS:
+        return encoders.bitrate_args(codec, backend, bitrate_kbps, preset=preset)   # קריאה אחת, כמו NVENC
     bitrate_arg = f"{bitrate_kbps}k"
     maxrate_arg = f"{int(bitrate_kbps * 1.5)}k"
     if codec == "h264":

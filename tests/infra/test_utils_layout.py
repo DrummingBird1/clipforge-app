@@ -14,7 +14,7 @@ import sys
 
 ROOT = PROJECT_ROOT
 UTILS = os.path.join(ROOT, "src", "utils")
-GROUPS = ("video", "media", "bot", "shared")
+GROUPS = ("video", "media", "bot", "shared", "capture")  # capture: 16.11.2026, הקלטה (2.0)
 
 
 def _moved():

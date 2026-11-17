@@ -182,7 +182,7 @@ def probe_media(path):
         "-of", "json", path,
     ]
     try:
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30, creationflags=NO_WINDOW_FLAGS)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", timeout=30, creationflags=NO_WINDOW_FLAGS)
         if result.returncode != 0 or not result.stdout.strip():
             return None
         data = json.loads(result.stdout)

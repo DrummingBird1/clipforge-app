@@ -8,7 +8,7 @@ import re
 
 from tests import PROJECT_ROOT, TESTS_DIR
 
-AREAS = {"dataviz", "studio", "bot", "web", "gui", "infra"}
+AREAS = {"dataviz", "studio", "bot", "web", "gui", "infra", "capture"}
 
 
 def _areas():

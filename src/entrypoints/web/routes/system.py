@@ -4,7 +4,6 @@
 # גל 11: הועבר כמו שהוא מ-web_app.py - המצב המשותף (נתיבים, helpers, מנעולים) נשאר
 # שם ונגיש כ-W.<שם>, כך ש-monkeypatch.setattr(web_app, ...) חל גם על ה-endpoints כאן.
 
-import json
 import os
 import shutil
 from datetime import datetime
@@ -14,6 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from utils.shared import docs_sections, encrypted_backup
 from utils.media.clip_stats import get_clips_captured_by_day
 from utils.shared.credential_health import CREDENTIAL_NAMES
+from utils.shared.atomic_write import atomic_write_json
 from utils.shared.file_lock import file_lock
 from utils.shared.state import CONFIG_LOCK_FILE, DEFAULT_CUSTOM_ACCENT, THEMES, derive_theme_from_accent
 from utils.shared.ui_language import ensure_language
@@ -126,6 +126,38 @@ async def api_export_dir_set(request: Request):
     return _export_dir_status()
 
 
+def _encoders_status(probe: bool):
+    """16.11.2026 (2.0): מקודד hevc/av1 - ההגדרה, מה נמצא במחשב (probe=True מריץ את הבדיקה, או קורא אותה מהמטמון),
+    ומה ייבחר בפועל לכל קודק."""
+    from utils.media import encoders
+    setting = encoders.load_setting()
+    available = encoders.detect_backends(W.get_ffmpeg_exe(), creationflags=W.NO_WINDOW_FLAGS) if probe else None
+    effective = {codec: encoders.resolve_backend(setting, codec, available)[0] if available is not None else None
+                 for codec in encoders.GPU_CODECS}
+    return {"setting": setting, "choices": [{"id": c, "label": encoders.LABELS[c]} for c in encoders.CHOICES],
+            "available": available, "effective": effective, "env_override": encoders.ENV_VAR in os.environ}
+
+
+@router.get("/api/encoders")
+def api_encoders(probe: int = 0):
+    return _encoders_status(bool(probe))
+
+
+@router.post("/api/encoders")
+async def api_encoders_set(request: Request):
+    if not W._is_same_origin(request):
+        return JSONResponse({"error": "הבקשה נדחתה (Origin לא תואם)."}, status_code=403)
+    from utils.media import encoders
+    payload = await request.json()
+    backend = str(payload.get("backend") or "").lower()
+    if backend not in encoders.CHOICES:
+        return JSONResponse({"error": "מקודד לא מוכר."}, status_code=400)
+    encoders.save_setting(backend)
+    W.audit_log.record_action("web", "encoder_backend", details=backend,
+                              username=request.client.host if request.client else None)
+    return _encoders_status(False)
+
+
 @router.get("/api/scripts")
 def api_scripts():
     favorite_names = W._get_favorite_script_names(W._load_raw_config())
@@ -214,6 +246,16 @@ async def api_credentials_rotate(request: Request):
     return {"ok": True}
 
 
+def _install_kind():
+    from utils.shared import update_checker
+    return update_checker.install_kind(W.BASE_DIR)
+
+
+def _update_command():
+    from utils.shared import update_checker
+    return update_checker.UPDATE_COMMANDS.get(_install_kind(), "")
+
+
 @router.get("/api/update_check")
 def api_update_check(request: Request):
     """זהה ל-gui_manager.pyw's check_for_updates_async - אותו utils/shared/update_checker.py
@@ -227,6 +269,9 @@ def api_update_check(request: Request):
         "latest_version": W.check_for_update(W.APP_VERSION),
         "releases_url": W.RELEASES_PAGE_URL,
         "portable": W.is_portable(W.BASE_DIR),   # 30.10.2026: בחבילה הניידת - רק קישור להורדה, בלי git pull
+        # 16.11.2026 (2.0): Scoop / winget - הפקודה שמעדכנת (הכפתור "עדכן עכשיו" רק בשכפול git)
+        "install": _install_kind(),
+        "update_command": _update_command(),
         "can_rotate_token": W._is_local_computer(request),
     }
 
@@ -241,8 +286,9 @@ def api_update_apply(request: Request):
     יותר מכמה שניות. לעולם לא רץ אוטומטית - רק על-פי אישור מפורש בצד הלקוח."""
     if not W._is_same_origin(request):
         return JSONResponse({"error": "הבקשה נדחתה (Origin לא תואם)."}, status_code=403)
-    if W.is_portable(W.BASE_DIR):
-        return JSONResponse({"error": W.PORTABLE_UPDATE_REFUSAL}, status_code=400)
+    if W.is_portable(W.BASE_DIR) or _install_kind() in ("scoop", "winget"):
+        command = _update_command()
+        return JSONResponse({"error": f"מעדכנים בפקודה: {command}" if command else W.PORTABLE_UPDATE_REFUSAL}, status_code=400)
     ok, message = W.apply_update(W.BASE_DIR)
     W.audit_log.record_action("web", "update_apply", details=f"ok={ok}", username=request.client.host if request.client else None)
     return {"ok": ok, "message": message}
@@ -529,11 +575,13 @@ async def api_settings_import(request: Request):
         return JSONResponse({"error": "תוכן ה-JSON חייב להיות אובייקט (dict), לא רשימה/ערך בודד."}, status_code=400)
 
     try:
-        if os.path.exists(W.CONFIG_FILE):
-            shutil.copy2(W.CONFIG_FILE, W.CONFIG_FILE + ".bak")
-        os.makedirs(os.path.dirname(W.CONFIG_FILE), exist_ok=True)
-        with open(W.CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=4)
+        # 16.11.2026: כמו שאר הכותבים של config.json (הדסקטופ, /api/settings/*) - תחת המנעול, ובכתיבה אטומית: קריסה באמצע
+        # השאירה קובץ קטוע, וקורא שראה JSON שבור התחיל מהגדרות ריקות
+        with file_lock(CONFIG_LOCK_FILE):
+            if os.path.exists(W.CONFIG_FILE):
+                shutil.copy2(W.CONFIG_FILE, W.CONFIG_FILE + ".bak")
+            os.makedirs(os.path.dirname(W.CONFIG_FILE), exist_ok=True)
+            atomic_write_json(W.CONFIG_FILE, payload, ensure_ascii=False, indent=4)
     except Exception as e:
         return JSONResponse({"error": f"הייבוא נכשל: {e}"}, status_code=500)
     W.audit_log.record_action("web", "settings_import", username=request.client.host if request.client else None)

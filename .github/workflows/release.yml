@@ -56,8 +56,12 @@ jobs:
           curl -fsSL -o ffmpeg.zip "$FFMPEG_URL"
           echo "$FFMPEG_SHA256  ffmpeg.zip" | sha256sum -c -
 
+      # 16.11.2026 (2.0): winget מתקין zip רק עם exe בתוכו - launcher קטן שמריץ את launcher.pyw (dev/portable/clipforge_exe.py)
+      - name: Build ClipForge.exe (the launcher winget needs)
+        run: uvx --from pyinstaller==6.22.3 pyinstaller --onefile --noconsole --name ClipForge --icon ${{ github.workspace }}/assets/app_icon.ico --distpath build/launcher --workpath build/launcher-work --specpath build dev/portable/clipforge_exe.py
+
       - name: Build the portable package
-        run: python dev/build_portable.py --ffmpeg ffmpeg.zip
+        run: python dev/build_portable.py --ffmpeg ffmpeg.zip --launcher-exe build/launcher/ClipForge.exe
 
       - name: Check the zip against SHA256SUMS.txt
         shell: bash

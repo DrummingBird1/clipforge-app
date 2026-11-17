@@ -50,7 +50,7 @@ for _area, _fields in {
                "pip_x", "pip_y", "layers", "text", "text_position", "text_font", "text_font_size", "text_color", "timestamp_overlay",
                "progress_bar", "progress_bar_color", "progress_bar_position", "progress_bar_height", "frame_thickness", "frame_color",
                "frame_radius", "remove_watermark_position", "remove_watermark_width_fraction", "remove_watermark_height_fraction", "remove_watermark_region"),
-    "sound": ("keep_audio", "replace_audio_path", "audio_track", "loudnorm", "loudnorm_target", "noise_gate", "pip_audio", "pip_duck",
+    "sound": ("keep_audio", "replace_audio_path", "audio_track", "mic_track", "mic_gain", "mic_denoise", "duck_game", "loudnorm", "loudnorm_target", "noise_gate", "pip_audio", "pip_duck",
               "captions", "captions_translate", "captions_language", "captions_model", "caption_style", "caption_font", "caption_font_size",
               "caption_color", "caption_position", "caption_max_chars", "captions_export", "captions_no_burn",
               "audio_highpass", "audio_eq_low", "audio_eq_mid", "audio_eq_mid_freq", "audio_eq_high", "audio_compressor", "audio_denoise",
@@ -178,6 +178,14 @@ TARGET_PRESETS: Dict[str, Dict[str, Any]] = {
                "fields": {"vertical": False, "aspect": "1:1", "dual_output": False}},
     "discord": {"label": "דיסקורד (עד 10MB)", "icon": "💬", "safe_zone": "", "subdir": "discord",
                 "fields": {"vertical": False, "aspect": "", "dual_output": False, "codec": "h264", "container": "mp4", "target_size_mb": 9.5}},
+    # 16.11.2026 (2.0): Nitro / שרת מוגבר - עד 50MB
+    "discord_50": {"label": "דיסקורד (עד 50MB)", "icon": "💬", "safe_zone": "", "subdir": "discord_50",
+                   "fields": {"vertical": False, "aspect": "", "dual_output": False, "codec": "h264", "container": "mp4", "target_size_mb": 49}},
+    # 16.11.2026 (2.0): היילייטים להעלאה ל-Twitch ול-Kick - 1080p H.264 (ההעלאה עצמה ידנית, חבילת העלאה - utils/bot/platforms.py)
+    "twitch": {"label": "Twitch", "icon": "🟣", "safe_zone": "", "subdir": "twitch",
+               "fields": {"vertical": False, "aspect": "", "dual_output": False, "codec": "h264", "container": "mp4", "resolution": "1080p"}},
+    "kick": {"label": "Kick", "icon": "🟢", "safe_zone": "", "subdir": "kick",
+             "fields": {"vertical": False, "aspect": "", "dual_output": False, "codec": "h264", "container": "mp4", "resolution": "1080p"}},
     "archive": {"label": "ארכיון (איכות מלאה)", "icon": "🗄️", "safe_zone": "", "subdir": "archive",
                 "fields": {"vertical": False, "aspect": "", "dual_output": False, "codec": "hevc", "nvenc_cq": 18, "target_size_mb": None}},
 }

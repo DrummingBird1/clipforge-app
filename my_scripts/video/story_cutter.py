@@ -173,7 +173,7 @@ def extract_keyframes(video_path, num_frames=3):
     frames = []
     duration_cmd = [FFPROBE_EXE, "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path]
     try:
-        duration = float(subprocess.run(duration_cmd, stdout=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS).stdout.strip())
+        duration = float(subprocess.run(duration_cmd, stdout=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS).stdout.strip())
     except:
         return frames
 
@@ -346,7 +346,7 @@ for video_path in video_files:
     print("[INFO] 1. מחלץ אודיו לצורך ניתוח דינמי...")
     sys.stdout.flush()
     extract_cmd = [FFMPEG_EXE, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", TEMP_AUDIO]
-    result = subprocess.run(extract_cmd, capture_output=True, text=True, creationflags=NO_WINDOW_FLAGS)
+    result = subprocess.run(extract_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS)
 
     if result.returncode != 0:
         print(f"[ERROR] חילוץ האודיו עבור {filename} נכשל! מדלג...")
@@ -382,7 +382,7 @@ for video_path in video_files:
     # קבלת אורך הוידאו - מחושב לפני בדיקת "אין נקודות עניין" כי OCR (אם מופעל)
     # סורק את הסרטון כולו בלי תלות בשיאי שמע, ועלול למצוא נקודות גם כשהשמע ריק
     video_duration_cmd = [FFPROBE_EXE, "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path]
-    video_duration = float(subprocess.run(video_duration_cmd, stdout=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS).stdout.strip())
+    video_duration = float(subprocess.run(video_duration_cmd, stdout=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS).stdout.strip())
 
     if USE_OCR:
         print("[INFO] מריץ זיהוי OCR נוסף על פני כל הסרטון (מילות מפתח כמו Victory/Kill/Eliminated)...")

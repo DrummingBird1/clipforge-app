@@ -43,7 +43,7 @@ def _extract_frames(video_path, count=3):
     try:
         duration = float(subprocess.run(
             [ffprobe_exe, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", video_path],
-            stdout=subprocess.PIPE, text=True, timeout=15, creationflags=NO_WINDOW_FLAGS
+            stdout=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", timeout=15, creationflags=NO_WINDOW_FLAGS
         ).stdout.strip())
     except Exception:
         duration = 10.0

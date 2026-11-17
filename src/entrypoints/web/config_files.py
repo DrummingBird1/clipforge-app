@@ -7,6 +7,7 @@
 import json
 import os
 
+
 from entrypoints import web_app as W
 
 
@@ -61,8 +62,8 @@ def _load_rocket_settings():
 
 def _save_rocket_settings(data):
     os.makedirs(os.path.dirname(W.ROCKET_SETTINGS_PATH), exist_ok=True)
-    with open(W.ROCKET_SETTINGS_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    # 16.11.2026: אטומי - קריסה באמצע השאירה קובץ קטוע, ו-_load_rocket_settings החזיר {} (כל ההגדרות של Rocket "התאפסו")
+    W.atomic_write_json(W.ROCKET_SETTINGS_PATH, data, ensure_ascii=False, indent=4)
 
 
 def _get_rocket_counter():

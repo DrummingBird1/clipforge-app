@@ -45,6 +45,7 @@ CALLER_HOLDS_LOCK_ENV_VAR = "RENDER_LOCK_HELD_BY_CALLER"
 # התפיסה הבא. נמצא בפועל בסשן הזה - Web App ישן שנשכח פתוח החזיק את המנעול
 # שעות, וחסם כל רינדור אחר במערכת בלי שום סימן למה.
 MAX_LOCK_AGE_SECONDS = 4 * 3600
+HEARTBEAT_SECONDS = 600
 
 
 def _read_lock_data(lock_path: str) -> Dict[str, Any]:
@@ -267,6 +268,11 @@ def release(lock_path: str = LOCK_PATH) -> None:
     # ב-Windows os.remove נכשל (PermissionError) כל עוד מישהו אחר מחזיק את הקובץ פתוח - וממתין קורא אותו
     # (_is_stale) בכל סבב. קודם השגיאה נבלעה והמנעול נשאר תפוס בשקט עד שהמחזיק מת או עד MAX_LOCK_AGE_SECONDS;
     # הקריאה אורכת מיקרו-שניות, אז מנסים שוב עד שהיא נגמרת (עד שנייה בערך).
+    # 16.11.2026: רק מנעול של התהליך הזה. ריצה ארוכה שהמנעול שלה "התיישן" ונתפס ע"י תהליך אחר (הבוט) מחקה בסופה את
+    # המנעול של הבוט - ורינדור שלישי יכול היה להתחיל במקביל.
+    holder = _read_lock_data(lock_path).get("pid")
+    if holder is not None and holder != os.getpid():
+        return
     for _attempt in range(50):
         try:
             os.remove(lock_path)
@@ -292,9 +298,19 @@ def render_lock(
     (remote_execution.py) לא יכול להשתמש בזה ישירות כי acquire() חוסם עם
     time.sleep - שם קוראים ל-acquire()/release() בנפרד דרך run_in_executor."""
     acquire(poll_interval=poll_interval, timeout=timeout, on_wait=on_wait, lock_path=lock_path, priority=priority, label=label, waiters_path=waiters_path)
+    # 16.11.2026: touch() כל 10 דקות כל עוד מחזיקים - ריצה של יותר מ-4 שעות לא "מתיישנת" ולא נגנבת באמצע
+    stop = threading.Event()
+
+    def _heartbeat():
+        while not stop.wait(HEARTBEAT_SECONDS):
+            touch(lock_path)
+
+    beat = threading.Thread(target=_heartbeat, name="render-lock-heartbeat", daemon=True)
+    beat.start()
     try:
         yield
     finally:
+        stop.set()
         release(lock_path=lock_path)
 
 

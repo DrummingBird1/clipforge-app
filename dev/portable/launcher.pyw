@@ -18,6 +18,19 @@ WAIT_SECONDS = 120
 CREATE_NO_WINDOW = 0x08000000
 CREATE_NEW_PROCESS_GROUP = 0x00000200
 
+
+
+def managed_data_dirs(root, environ):
+    """16.11.2026 (2.0): התקנת winget מחליפה את כל תיקיית ההתקנה בכל עדכון - data/ ו-workspace/ לידה היו נמחקים. שם הם עוברים
+    ל-%LOCALAPPDATA%\\ClipForge. משתנה שכבר מוגדר (המשתמש, טסטים) גובר. Scoop שומר אותם בעצמו (persist), וה-zip הרגיל - לידו."""
+    if "\\winget\\packages\\" not in os.path.normcase(root) + "\\":
+        return {}
+    base = os.path.join(environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "ClipForge")
+    wanted = {"CLIPFORGE_DATA_DIR": os.path.join(base, "data"), "CLIPFORGE_WORKSPACE_DIR": os.path.join(base, "workspace")}
+    return {key: value for key, value in wanted.items() if not environ.get(key)}
+
+
+os.environ.update(managed_data_dirs(ROOT, os.environ))   # לפני data_paths - הוא קורא את התיקייה בייבוא
 sys.path.insert(0, os.path.join(ROOT, "src"))
 from utils.shared import data_paths  # noqa: E402 - אחרי src ב-sys.path
 

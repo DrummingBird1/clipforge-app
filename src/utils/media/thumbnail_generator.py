@@ -19,7 +19,7 @@ CANDIDATE_TIMESTAMPS_PCT = [0.15, 0.35, 0.55, 0.75, 0.9]
 def get_video_duration_via_ffprobe(video_path, ffprobe_exe):
     cmd = [ffprobe_exe, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", video_path]
     try:
-        out = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, timeout=15, creationflags=NO_WINDOW_FLAGS).stdout.strip()
+        out = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", timeout=15, creationflags=NO_WINDOW_FLAGS).stdout.strip()
         return float(out)
     except Exception:
         return 10.0

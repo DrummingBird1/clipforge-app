@@ -171,3 +171,41 @@ def test_get_rocket_input_dir_falls_back_to_base_dir_when_missing(tmp_path, monk
     monkeypatch.setattr(approval_store, "BASE_DIR", str(tmp_path))
 
     assert approval_store.get_rocket_input_dir() == str(tmp_path)
+
+
+# --- 16.11.2026: העברה בין כוננים, ושם תפוס ---
+
+def test_an_approved_clip_does_not_overwrite_one_already_waiting_in_import(tmp_path, monkeypatch):
+    clips_dir = _setup(tmp_path, monkeypatch)
+    clips_dir.mkdir()
+    clip = clips_dir / "goal.mp4"
+    clip.write_bytes(b"new")
+    waiting = tmp_path / "rocket_input"
+    waiting.mkdir()
+    (waiting / "goal.mp4").write_bytes(b"old")
+    pending_id = _insert_pending(approval_store.DB_PATH, str(clip))
+
+    resolve_pending(pending_id, str(clip), approved=True)
+
+    assert (waiting / "goal.mp4").read_bytes() == b"old"
+    assert (waiting / "goal_2.mp4").read_bytes() == b"new"
+
+
+def test_approving_into_another_drive_moves_the_file(tmp_path, monkeypatch):
+    """os.replace בין כוננים נכשל ב-WinError 17 - shutil.move מעתיק ומוחק."""
+    clips_dir = _setup(tmp_path, monkeypatch)
+    clips_dir.mkdir()
+    clip = clips_dir / "clip.mp4"
+    clip.write_bytes(b"fake")
+    pending_id = _insert_pending(approval_store.DB_PATH, str(clip))
+
+    def cross_drive(src, dst):
+        raise OSError(18, "Invalid cross-device link")
+
+    monkeypatch.setattr(approval_store.os, "rename", cross_drive)
+    monkeypatch.setattr(approval_store.os, "replace", cross_drive)
+    resolve_pending(pending_id, str(clip), approved=True)
+
+    assert not clip.exists()
+    assert (tmp_path / "rocket_input" / "clip.mp4").read_bytes() == b"fake"
+

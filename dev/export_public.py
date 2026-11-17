@@ -18,6 +18,7 @@
 # מה שב-.gitignore לא נוגעים בהם. clone עם שינויים לא שמורים = מסרב (קוד 1). אין הבדל = אין commit. לא דוחף - push, ‏tag
 # ו-Release הם צעד ידני (docs/development.md, "Releasing a new version"). ה-commit: "ClipForge <גרסה>" ו-"Source: <hash מקוצר>"
 # של הריפו הפרטי (או <קודם>..<חדש>) - בלי הודעות commit פרטיות.
+# AGENTS.md ו-CLAUDE.md של הריפו הציבורי (גרסאות כלליות משלו) לא נמחקים ולא נדרסים ב---update: PROTECT_IN_PUBLIC.
 #
 #   uv run python dev/export_public.py                          # origin/master -> clipforge-public, ליד תיקיית הריפו
 #   uv run python dev/export_public.py --ref HEAD --dest <תיקייה>
@@ -42,7 +43,12 @@ EXCLUDE = ("AGENTS.md", "CLAUDE.md", "HANDOFF.local.md", "docs/handoff/", "docs/
            # הקוד מגיע לריפו הציבורי רק מהייצוא - PRs של Dependabot שם לא ימוזגו; עדכוני ספריות נעשים בריפו הפרטי
            ".github/dependabot.yml",
            # כלי פיתוח פרטיים (הסתרת משחקי Steam בלי הישגים, מאתר מיקום עכבר) - נשארים בריפו הפרטי
-           "my_scripts/steam/steam_check.py", "my_scripts/tools/check_pos.py")
+           "my_scripts/steam/steam_check.py", "my_scripts/tools/check_pos.py",
+           # 16.11.2026: סימני המים של המשתמש - מחוץ לגיט (.gitignore), וגם כאן למקרה שיחזרו למעקב (f92c0c8 הכניס אותם)
+           "assets/PShorts Watermark.png", "assets/RLShorts Watermark.png", "assets/watermark-820x180.png")
+# קבצים שהריפו הציבורי מחזיק בגרסה כללית משלו (ה-AGENTS.md וה-CLAUDE.md הפרטיים ב-EXCLUDE ולא יוצאים): --update לא מוחק
+# אותם ולא דורס אותם, גם כשאין להם מקבילה ביצוא.
+PROTECT_IN_PUBLIC = frozenset({"AGENTS.md", "CLAUDE.md"})
 LOCAL_PATTERNS_NAME = os.path.join("dev", "export_public.local.json")
 
 SECRET_PATTERNS = {
@@ -204,9 +210,10 @@ def check_clone(clone):
 
 def sync_into(clone, staged, files):
     """הקבצים המיוצאים (staged) -> clone: מוחלפים ונוספים, ומה שבמעקב ב-clone ולא יוצא עוד - נמחק (עם תיקיות שהתרוקנו).
-    .git וקבצים שלא במעקב (dist/, מה שב-.gitignore) לא נוגעים בהם. מחזיר את הנתיבים שנמחקו."""
+    .git וקבצים שלא במעקב (dist/, מה שב-.gitignore) לא נוגעים בהם, וגם לא בקבצי PROTECT_IN_PUBLIC. מחזיר את הנתיבים שנמחקו."""
+    files = [rel for rel in files if rel not in PROTECT_IN_PUBLIC]
     tracked = {rel for rel in _git_out(clone, "ls-files", "-z").split("\0") if rel}
-    removed = sorted(tracked - set(files))
+    removed = sorted(tracked - set(files) - PROTECT_IN_PUBLIC)
     for rel in removed:
         path = os.path.join(clone, *rel.split("/"))
         if os.path.isfile(path):

@@ -791,3 +791,23 @@ def test_api_credentials_rotate_rejects_mismatched_origin(monkeypatch):
     )
 
     assert resp.status_code == 403
+
+
+def test_api_settings_import_never_leaves_a_truncated_config(tmp_path, monkeypatch):
+    """16.11.2026: open("w") + json.dump - כתיבה שנפלה באמצע השאירה קובץ קטוע, ו-config.json "התאפס". עכשיו אטומי."""
+    config_path = tmp_path / "config.json"
+    config_path.write_text('{"theme": "Green"}', encoding="utf-8")
+    monkeypatch.setattr(web_app, "CONFIG_FILE", str(config_path))
+    real_dump = json.dump
+
+    def dump_then_crash(obj, fp, **kw):
+        fp.write('{"theme": ')
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(json, "dump", dump_then_crash)
+    resp = client.post("/api/settings/import", json={"theme": "Pink"})
+    monkeypatch.setattr(json, "dump", real_dump)
+
+    assert resp.status_code == 500
+    assert json.loads(config_path.read_text(encoding="utf-8")) == {"theme": "Green"}
+

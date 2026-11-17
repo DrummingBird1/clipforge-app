@@ -408,6 +408,14 @@ its history never needs a force-push:
    manifest's `autoupdate`. To check it, run `scoop update` (it fetches the bucket), then `scoop update clipforge`.
    Once GitHub Actions runs again (from November 1), an Excavator workflow in the bucket can do this step on a
    schedule.
+6. winget (from 2.0.0): the zip has a `ClipForge.exe` (built in `release.yml` from `dev/portable/clipforge_exe.py`), which
+   is what winget needs to install a zip. Write the three manifests with the zip's SHA-256 from `SHA256SUMS.txt`:
+   ```bash
+   uv run python dev/make_winget_manifest.py --version 2.0.0 --sha256 <hash>
+   ```
+   Check them with `winget validate build\winget\manifests\d\DrummingBird1\ClipForge\2.0.0`, then open a pull request
+   with that folder to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs). The `ClipForge.exe` is not
+   code-signed, so SmartScreen may warn on the first run.
 
 `dev/build_portable.py` writes `dist/SHA256SUMS.txt` next to the zip (`sha256sum -c SHA256SUMS.txt` checks it). For a
 Release made by hand, upload `SHA256SUMS.txt` together with the zip.

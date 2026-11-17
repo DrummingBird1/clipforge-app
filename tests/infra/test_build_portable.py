@@ -229,3 +229,35 @@ def test_the_launcher_error_follows_the_install_language():
     assert launcher.start_failed_text("en", "C:/x/log.txt").startswith("ClipForge did not start within")
     assert launcher.start_failed_text("he", "C:/x/log.txt").startswith("ClipForge לא עלה תוך")
     assert "C:/x/log.txt" in launcher.start_failed_text("he", "C:/x/log.txt")
+
+# --- 16.11.2026 (2.0): winget ---
+
+def test_a_winget_install_keeps_its_data_outside_the_install_folder():
+    root = r"C:\Users\me\AppData\Local\Microsoft\WinGet\Packages\DrummingBird1.ClipForge_Microsoft.Winget.Source_8wekyb3d8bbwe\ClipForge-2.0.0-win64"
+    dirs = launcher.managed_data_dirs(root, {"LOCALAPPDATA": r"C:\Users\me\AppData\Local"})
+    assert dirs == {"CLIPFORGE_DATA_DIR": r"C:\Users\me\AppData\Local\ClipForge\data",
+                    "CLIPFORGE_WORKSPACE_DIR": r"C:\Users\me\AppData\Local\ClipForge\workspace"}
+    assert launcher.managed_data_dirs(root, {"LOCALAPPDATA": "x", "CLIPFORGE_DATA_DIR": "D:/mine"}) == {
+        "CLIPFORGE_WORKSPACE_DIR": "x\\ClipForge\\workspace"}                       # מה שהמשתמש קבע גובר
+    assert launcher.managed_data_dirs(r"D:\Apps\ClipForge-2.0.0-win64", {"LOCALAPPDATA": "x"}) == {}   # zip רגיל - ליד
+
+
+def test_the_exe_runs_the_launcher_with_the_packages_pythonw():
+    exe = _load("clipforge_exe", "dev/portable/clipforge_exe.py")
+    assert exe.command("C:\\CF") == ["C:\\CF\\python\\pythonw.exe", "C:\\CF\\launcher.pyw"]
+
+
+def test_the_release_builds_the_exe_and_puts_it_in_the_zip():
+    workflow = open(os.path.join(PROJECT_ROOT, ".github", "workflows", "release.yml"), encoding="utf-8").read()
+    assert "pyinstaller==" in workflow and "--launcher-exe build/launcher/ClipForge.exe" in workflow
+
+def test_winget_manifests_point_at_the_release_zip_and_its_exe(tmp_path):
+    wm = _load("make_winget_manifest", "dev/make_winget_manifest.py")
+    assert wm.main(["--version", "2.0.0", "--sha256", "ab" * 32, "--out", str(tmp_path)]) == 0
+    folder = tmp_path / "manifests" / "d" / "DrummingBird1" / "ClipForge" / "2.0.0"
+    installer = (folder / "DrummingBird1.ClipForge.installer.yaml").read_text(encoding="utf-8")
+    assert "InstallerSha256: " + "AB" * 32 in installer
+    assert "releases/download/v2.0.0/ClipForge-2.0.0-win64.zip" in installer
+    assert "RelativeFilePath: ClipForge-2.0.0-win64\\ClipForge.exe" in installer
+    assert sorted(p.name for p in folder.iterdir()) == ["DrummingBird1.ClipForge.installer.yaml",
+                                                        "DrummingBird1.ClipForge.locale.en-US.yaml", "DrummingBird1.ClipForge.yaml"]

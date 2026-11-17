@@ -71,7 +71,18 @@ def file_lock(lock_path, timeout=5.0, poll_interval=0.05):
     try:
         yield
     finally:
+        _remove_with_retry(lock_path)
+
+
+def _remove_with_retry(lock_path, attempts=50, delay=0.02):
+    """16.11.2026: ב-Windows os.remove נכשל (PermissionError) כל עוד ממתין פתח את הקובץ לקרוא את ה-PID (_read_holder_pid).
+    קודם השגיאה נבלעה, והמנעול נשאר עם ה-PID של השרת (חי) עד _STALE_SECONDS - וכל שמירת הגדרות בינתיים נכשלה ב-
+    TimeoutError (500). הקריאה של הממתין אורכת מיקרו-שניות - מנסים שוב, כמו render_lock.release()."""
+    for _attempt in range(attempts):
         try:
             os.remove(lock_path)
+            return
+        except PermissionError:
+            time.sleep(delay)
         except OSError:
-            pass
+            return

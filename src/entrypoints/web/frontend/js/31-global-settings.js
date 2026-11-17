@@ -5,6 +5,7 @@ async function loadGlobalSettings() {
   loadRemoteAccess();
   loadPairedDevices();
   loadExportDir();
+  loadEncoders(false);
   const res = await fetch("/api/settings/global");
   const data = await res.json();
   document.getElementById("gsWebhook").value = data.webhook;
@@ -262,6 +263,42 @@ async function saveDevicesExpire() {
     await _gsDevicesPost("/api/devices/settings", { expire_unused: document.getElementById("gsDevicesExpire").checked });
   } catch (e) {
     uiToast(e.message, "warn");
+  }
+}
+
+// 16.11.2026 (2.0): מקודד HEVC/AV1 לפי הכרטיס (utils/media/encoders.py)
+async function loadEncoders(probe) {
+  const select = document.getElementById("gsEncoder");
+  if (!select) return;
+  try {
+    _renderEncoders(await (await fetch(`/api/encoders?probe=${probe ? 1 : 0}`)).json());
+  } catch (e) {
+    console.warn(e);
+  }
+}
+
+function _renderEncoders(data) {
+  const select = document.getElementById("gsEncoder");
+  select.replaceChildren(...data.choices.map((c) => new Option(c.label, c.id, false, c.id === data.setting)));
+  const info = document.getElementById("gsEncoderInfo");
+  info.replaceChildren();
+  if (data.env_override) _infoLine(info, "נקבע ע\"י משתנה סביבה:", "CLIPFORGE_ENCODER_BACKEND");
+  if (!data.available) return;
+  const found = data.choices.filter((c) => (data.available[c.id] || []).length && c.id !== "cpu").map((c) => c.label);
+  _infoLine(info, "נמצא במחשב:", found.length ? found.join(", ") : "אין מקודד בכרטיס - CPU בלבד");
+  const label = (id) => (data.choices.find((c) => c.id === id) || {}).label || id;
+  _infoLine(info, "בפועל:", `HEVC - ${label(data.effective.hevc)}, AV1 - ${label(data.effective.av1)}`);
+}
+
+async function saveEncoder() {
+  const resp = await fetch("/api/encoders", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ backend: document.getElementById("gsEncoder").value }) });
+  const data = await resp.json();
+  if (resp.ok) {
+    _renderEncoders(data);
+    uiToast("המקודד נשמר", "ok");
+  } else {
+    uiToast(data.error || "השמירה נכשלה", "warn");
   }
 }
 
