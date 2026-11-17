@@ -36,6 +36,7 @@ DEFAULTS: Dict[str, Any] = {
 }
 CHOICES = {"engine": ("ffmpeg", "obs"), "source": ("screen", "device"), "codec": ("h264", "hevc", "av1"),
            "console": ("",) + tuple(p.id for p in dv.CONSOLE_PROFILES)}
+HOTKEY_DEBOUNCE_SECONDS = 1.0
 LIMITS = {"fps": (10, 240), "quality": (10, 40), "replay_seconds": (10, 600), "replay_max_gb": (1, 100), "screen_index": (0, 8)}
 
 
@@ -83,7 +84,9 @@ def build_spec(settings: Dict[str, Any], ffmpeg_exe: str, video_args: List[str],
             mode = dv.pick_mode(list_modes(ffmpeg_exe, settings["device_video"], creationflags), profile.width, profile.height, profile.fps)
             if mode:
                 spec.device_size, spec.device_codec = f"{mode.width}x{mode.height}", mode.codec
-                spec.fps = int(min(profile.fps, mode.max_fps))
+                rate = min(float(profile.fps), mode.max_fps)
+                spec.fps = max(1, int(round(rate)))                       # 59.94 -> 60 (קודם 59)
+                spec.device_fps = f"{rate:g}" if abs(rate - round(rate)) > 0.001 else None
     elif settings["game_audio"]:
         fmt = audio_format()
         if fmt:
@@ -133,6 +136,8 @@ class RecorderManager:
     # --- מנוע ---
     def _clip_saved(self, path: str, source: str) -> None:
         self.last_saved = path
+        if source == "recording":
+            return                               # הקלטה מלאה (מובנית או OBS): חומר גלם, לא נכנסת לשרשור של השורטס
         if self.on_clip:
             self.on_clip(path, source)
 
@@ -148,7 +153,8 @@ class RecorderManager:
             else:
                 self._engine = FfmpegEngine(self.ffmpeg_exe, os.path.join(self.workspace_dir, ".cache"), self.import_dir,
                                             on_clip=self._clip_saved, creationflags=self.creationflags,
-                                            loopback_factory=loopback.LoopbackSender)
+                                            loopback_factory=loopback.LoopbackSender,
+                                            record_dir=lambda: os.path.join(self.workspace_dir, "recordings"))
             return self._engine
 
     def _drop_engine(self) -> None:
@@ -165,19 +171,19 @@ class RecorderManager:
         status = self._engine.status()
         return bool(status.get("recording") or status.get("replay"))
 
-    def _spec(self) -> CaptureSpec:
+    def _spec(self, replay: bool = False) -> CaptureSpec:
         settings = self.settings()
-        args = video_args_for(settings["codec"], settings["quality"], self.backend_args)
+        codec = settings["codec"]
+        if replay and codec == "av1":
+            codec = "hevc"                       # 17.11.2026: AV1 לא עובר במקטעי MPEG-TS של ה-replay (הקליפ יצא פגום)
+        args = video_args_for(codec, settings["quality"], self.backend_args)
         return build_spec(settings, self.ffmpeg_exe, args, self.creationflags)
 
     # --- פעולות ---
     def start_record(self) -> Dict[str, Any]:
         engine = self.engine()
         if isinstance(engine, FfmpegEngine):
-            folder = os.path.join(self.workspace_dir, "recordings")
-            engine.output_dir = lambda: folder   # הקלטה מלאה - חומר גלם, לא Import
-            engine.on_clip = lambda path, source: setattr(self, "last_saved", path)
-            engine.start_record(self._spec(), time.strftime("recording_%Y%m%d_%H%M%S"))
+            engine.start_record(self._spec(), time.strftime("recording_%Y%m%d_%H%M%S"))   # ל-record_dir (workspace/recordings)
         else:
             engine.start_record()
         if not self._hotkey_handles:
@@ -186,13 +192,13 @@ class RecorderManager:
 
     def stop_record(self) -> Dict[str, Any]:
         engine = self.engine()
-        path = engine.stop_record()
-        if isinstance(engine, FfmpegEngine):
-            engine.output_dir, engine.on_clip = self.import_dir, self._clip_saved
+        try:
+            path = engine.stop_record()
+        finally:
+            if not engine.status().get("replay"):
+                self._unregister_hotkeys()
         if path:
             self.last_saved = path
-        if not engine.status().get("replay"):
-            self._unregister_hotkeys()
         return self.status()
 
     def toggle_record(self) -> Dict[str, Any]:
@@ -202,7 +208,9 @@ class RecorderManager:
         settings = self.settings()
         engine = self.engine()
         if isinstance(engine, FfmpegEngine):
-            engine.start_replay(self._spec(), settings["replay_seconds"], settings["replay_max_gb"] * 1024 ** 3)
+            engine.start_replay(self._spec(replay=True), settings["replay_seconds"], settings["replay_max_gb"] * 1024 ** 3)
+            if settings["codec"] == "av1":
+                engine.notice = "ה-replay מוקלט ב-HEVC, כי AV1 לא נתמך במקטעים של ה-replay"
         else:
             engine.start_replay()
         self._register_hotkeys(settings)
@@ -215,8 +223,10 @@ class RecorderManager:
         return self.status()
 
     def stop_replay(self) -> Dict[str, Any]:
-        self._unregister_hotkeys()
-        self.engine().stop_replay()
+        engine = self.engine()
+        engine.stop_replay()
+        if not engine.status().get("recording"):      # בזמן הקלטה מלאה מקש העצירה שלה נשאר פעיל
+            self._unregister_hotkeys()
         return self.status()
 
     def scenes(self) -> Dict[str, Any]:
@@ -243,9 +253,18 @@ class RecorderManager:
         return os.path.join(self.workspace_dir, ".cache", "import_manifest.json")
 
     def start_import(self, preset_id: str, presets_fn: Optional[Callable[[], List[Any]]] = None) -> Dict[str, Any]:
+        with self._lock:                              # 17.11.2026: לחיצה כפולה לא מתחילה שני ייבואים
+            if self._import.get("running"):
+                raise CaptureError("ייבוא כבר רץ")
+            self._import = {"running": True, "label": "", "done": 0, "total": 0, "last": None, "error": None}
+        try:
+            return self._start_import(preset_id, presets_fn)
+        except Exception:
+            self._import["running"] = False
+            raise
+
+    def _start_import(self, preset_id: str, presets_fn: Optional[Callable[[], List[Any]]] = None) -> Dict[str, Any]:
         from utils.capture import import_presets, importer
-        if self._import.get("running"):
-            raise CaptureError("ייבוא כבר רץ")
         preset = next((p for p in (presets_fn or import_presets.presets)() if p.id == preset_id), None)
         if preset is None or not os.path.isdir(preset.path):
             raise CaptureError("המקור לא נמצא (הכונן לא מחובר?)")
@@ -269,7 +288,8 @@ class RecorderManager:
     def status(self) -> Dict[str, Any]:
         settings = self.settings()
         base = self._engine.status() if self._engine is not None else {
-            "engine": settings["engine"], "recording": False, "replay": False, "replay_buffered_seconds": 0, "error": None}
+            "engine": settings["engine"], "recording": False, "replay": False, "replay_buffered_seconds": 0, "error": None,
+            "notice": None}
         return {**base, "last_saved": self.last_saved, "hotkeys": bool(self._hotkey_handles), "import": dict(self._import)}
 
     # --- מקשי קיצור ---
@@ -283,12 +303,21 @@ class RecorderManager:
                 return
 
         def safe(action):
+            state = {"last": 0.0, "busy": False}
+
             def run():
+                # 17.11.2026: מקש שמוחזק חוזר עשרות פעמים בשנייה - פעולה אחת בשנייה, ולא בזמן שהקודמת עוד רצה
+                now = time.monotonic()
+                if state["busy"] or now - state["last"] < HOTKEY_DEBOUNCE_SECONDS:
+                    return
+                state["busy"], state["last"] = True, now
                 try:
                     action()
                 except Exception as e:
                     if self._engine is not None:
                         self._engine.last_error = str(e)
+                finally:
+                    state["busy"] = False
             return run
 
         for key, action in ((settings["hotkey_save_replay"], lambda: self.save_replay()),

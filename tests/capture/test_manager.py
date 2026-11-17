@@ -79,7 +79,8 @@ def test_full_recordings_go_to_workspace_recordings_and_replays_to_import(tmp_pa
     seen = {}
 
     def fake_start_record(spec, name):
-        seen["record_dir"] = engine.output_dir()
+        seen["record_dir"] = engine.record_dir()
+        seen["replay_dir"] = engine.output_dir()        # 2.0.1: גם בזמן הקלטה מלאה, קליפ replay הולך ל-Import
         engine._record = type("P", (), {"running": True, "tail": [], "stop": lambda self: 0})()
         return ""
 
@@ -92,6 +93,10 @@ def test_full_recordings_go_to_workspace_recordings_and_replays_to_import(tmp_pa
     monkeypatch.setattr(engine, "stop_record", fake_stop_record)
     manager.start_record()
     assert seen["record_dir"].replace("\\", "/").endswith("ws/recordings")
+    assert seen["replay_dir"].replace("\\", "/").endswith("/imports")
+    engine.on_clip("during.mp4", "replay")                 # replay שנשמר באמצע הקלטה מלאה נכנס לשרשור
+    assert clips == [("during.mp4", "replay")]
+    clips.clear()
     assert set(keyboard.keys) == {"ctrl+alt+s", "ctrl+alt+r"}
     manager.stop_record()
     assert clips == []                                     # הקלטה מלאה לא נכנסת לשרשור
@@ -133,3 +138,83 @@ def test_importing_from_a_console_drive_runs_in_the_background_and_reports_progr
     with pytest.raises(CaptureError):
         manager.start_import("ps5:Y", lambda: [preset])
 
+
+
+
+class _FakeEngine:
+    name = "ffmpeg"
+
+    def __init__(self):
+        self.recording = self.replay = False
+        self.last_error = self.notice = None
+        self.saved = []
+        self.replay_spec = None
+
+    def status(self):
+        return {"engine": "ffmpeg", "recording": self.recording, "replay": self.replay, "replay_buffered_seconds": 0, "error": None}
+
+    def start_replay(self, spec, keep, max_bytes):
+        self.replay, self.replay_spec = True, spec
+
+    def stop_replay(self):
+        self.replay = False
+
+    def save_replay(self, seconds, name):
+        self.saved.append(name)
+
+    def shutdown(self):
+        pass
+
+
+def test_a_held_hotkey_saves_once_and_stopping_replay_keeps_the_record_hotkey(tmp_path, monkeypatch):
+    keyboard = FakeKeyboard()
+    manager = _manager(tmp_path, keyboard)
+    manager.save_settings({"game_audio": False})
+    fake = _FakeEngine()
+    monkeypatch.setattr(manager, "engine", lambda: fake)
+    monkeypatch.setattr(mg, "FfmpegEngine", _FakeEngine)
+    manager._engine = fake
+    manager.start_replay()
+    for _ in range(30):                                    # מקש מוחזק: Windows שולח אותו עשרות פעמים בשנייה
+        keyboard.keys["ctrl+alt+s"]()
+    assert len(fake.saved) == 1
+    fake.recording = True
+    manager.stop_replay()
+    assert set(keyboard.keys) == {"ctrl+alt+s", "ctrl+alt+r"}     # הקלטה מלאה עדיין רצה - המקש שעוצר אותה נשאר
+    fake.recording = False
+    manager.start_replay()
+    manager.stop_replay()
+    assert keyboard.keys == {}
+
+
+def test_replay_never_records_av1(tmp_path, monkeypatch):
+    # AV1 לא עובר במקטעי MPEG-TS של ה-replay: הקליפ שנשמר יצא פגום. ה-replay מוקלט ב-HEVC, וההקלטה המלאה נשארת AV1.
+    manager = _manager(tmp_path)
+    manager.backend_args = lambda codec, quality: ["-c:v", f"{codec}_nvenc"]
+    manager.save_settings({"game_audio": False, "codec": "av1"})
+    assert manager._spec().video_args == ["-c:v", "av1_nvenc"]
+    assert manager._spec(replay=True).video_args == ["-c:v", "hevc_nvenc"]
+    fake = _FakeEngine()
+    monkeypatch.setattr(manager, "engine", lambda: fake)
+    monkeypatch.setattr(mg, "FfmpegEngine", _FakeEngine)
+    manager.start_replay()
+    assert fake.replay_spec.video_args == ["-c:v", "hevc_nvenc"] and "HEVC" in fake.notice
+
+
+def test_a_capture_card_at_59_94_asks_for_59_94_not_59():
+    settings = mg.clean_settings({"source": "device", "console": "ps5", "device_video": "Card"})
+    spec = mg.build_spec(settings, "ffmpeg", [], list_modes=lambda *a: [dv.Mode("nv12", 1920, 1080, 5, 59.94)])
+    assert spec.fps == 60 and spec.device_fps == "59.94"
+    whole = mg.build_spec(settings, "ffmpeg", [], list_modes=lambda *a: [dv.Mode("nv12", 1920, 1080, 5, 60.0)])
+    assert whole.fps == 60 and whole.device_fps is None
+
+
+def test_a_double_click_starts_one_import(tmp_path):
+    manager = _manager(tmp_path)
+    manager._import = {"running": True}
+    with pytest.raises(CaptureError):
+        manager.start_import("ps5")
+    manager._import = {}
+    with pytest.raises(CaptureError):                      # מקור שלא קיים: הדגל משתחרר, אפשר לנסות שוב
+        manager.start_import("missing", presets_fn=lambda: [])
+    assert manager._import.get("running") is False

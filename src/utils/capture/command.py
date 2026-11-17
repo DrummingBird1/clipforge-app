@@ -16,6 +16,7 @@ from utils.capture import ring_buffer
 
 PCM_RATE = 48000
 PCM_CHANNELS = 2
+LISTEN_TIMEOUT_MS = 20000   # 17.11.2026: בלי זה ffmpeg מחכה לנצח לשולח שלא הגיע
 
 
 @dataclass
@@ -30,6 +31,7 @@ class CaptureSpec:
     device_audio: str = ""                     # השמע של הכרטיס (HDMI) - בדרך כלל התקן אודיו נפרד באותו שם
     device_size: Optional[str] = None          # "1920x1080" ממצב שנבחר
     device_codec: Optional[str] = None         # pixel_format / vcodec של המצב
+    device_fps: Optional[str] = None           # הקצב המדויק של המצב ("59.94") ל-dshow; fps נשאר שלם בשביל ה-GOP
     game_audio_port: int = 0                   # loopback של המחשב (source=screen): ffmpeg מאזין ב-tcp://127.0.0.1:<port>
     game_audio_rate: int = PCM_RATE
     game_audio_channels: int = PCM_CHANNELS
@@ -64,7 +66,8 @@ def build_command(ffmpeg_exe: str, spec: CaptureSpec) -> List[str]:
         inputs += 1
         if spec.game_audio_port:
             cmd += ["-thread_queue_size", "1024", "-f", "s16le", "-ar", str(spec.game_audio_rate),
-                    "-ac", str(spec.game_audio_channels), "-i", f"tcp://127.0.0.1:{spec.game_audio_port}?listen=1"]
+                    "-ac", str(spec.game_audio_channels), "-i",
+                    f"tcp://127.0.0.1:{spec.game_audio_port}?listen=1&listen_timeout={LISTEN_TIMEOUT_MS}"]
             audio_maps.append(f"{inputs}:a")
             inputs += 1
     else:
@@ -78,7 +81,7 @@ def build_command(ffmpeg_exe: str, spec: CaptureSpec) -> List[str]:
             cmd += ["-video_size", spec.device_size]
         if spec.device_codec:
             cmd += ["-vcodec" if spec.device_codec in ("mjpeg", "h264", "hevc") else "-pixel_format", spec.device_codec]
-        cmd += ["-framerate", str(spec.fps), "-i", device]
+        cmd += ["-framerate", spec.device_fps or str(spec.fps), "-i", device]
         filters.append(f"[{inputs}:v]format=yuv420p[game]")
         video_maps.append("[game]")
         if spec.device_audio:

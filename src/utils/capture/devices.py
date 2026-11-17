@@ -92,7 +92,8 @@ def pick_mode(modes: List[Mode], width: int, height: int, fps: int) -> Optional[
 
     def score(mode: Mode):
         uncompressed = mode.codec not in ("mjpeg", "h264", "hevc")
-        return (mode.width * mode.height, min(mode.max_fps, fps), uncompressed)
+        # 17.11.2026: קודם מצב שמגיע לקצב היעד - משחק ב-1080p60 עדיף על 4K30 (כרטיסים רבים נותנים 4K רק ב-30)
+        return (min(mode.max_fps, fps) >= fps - 0.5, mode.width * mode.height, min(mode.max_fps, fps), uncompressed)
 
     return max(fitting, key=score)
 

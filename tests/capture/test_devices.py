@@ -58,3 +58,12 @@ def test_no_modes_means_let_ffmpeg_choose():
 
 def test_every_console_has_a_profile():
     assert {p.id for p in dv.CONSOLE_PROFILES} == {"ps5", "ps4", "xbox_series", "xbox_one", "switch2", "switch"}
+
+
+
+def test_60_frames_beat_more_pixels():
+    # 2.0.1: כרטיסים רבים נותנים 4K רק ב-30. למשחק, 1080p60 עדיף - קודם הקצב, אחר כך הרזולוציה.
+    modes = [dv.Mode("mjpeg", 3840, 2160, 5, 30.0), dv.Mode("nv12", 1920, 1080, 5, 60.0)]
+    assert dv.pick_mode(modes, 3840, 2160, 60) == modes[1]
+    assert dv.pick_mode([modes[0]], 3840, 2160, 60) == modes[0]              # אין מצב ב-60: הכי טוב שיש
+    assert dv.pick_mode([dv.Mode("nv12", 3840, 2160, 5, 60.0), modes[1]], 3840, 2160, 60).width == 3840

@@ -147,6 +147,7 @@ function _renderRecStatus(s) {
   if (!s.recording && !s.replay) line("לא מקליט");
   if (s.hotkeys) line("⌨️ מקשי הקיצור פעילים");
   if (s.last_saved) line("💾 נשמר אחרון: " + s.last_saved);
+  if (s.notice) line("ℹ️ " + s.notice);
   if (s.error) line("⚠️ " + s.error, "rec-error");
   _renderRecImport(s.import || {});
   document.getElementById("recReplayStart").disabled = !!s.replay;

@@ -55,3 +55,23 @@ def test_output_never_splits_a_frame():
     pacer.pull()
     clock.now += 0.0013                                      # 5.2 בייט - נחתך ל-4 (פריים שלם)
     assert len(pacer.pull()) % 4 == 0
+
+
+
+def test_surround_is_folded_to_stereo_with_the_centre_in_both_sides():
+    import struct
+
+    from utils.capture import loopback
+    frame = struct.pack("<6h", 1000, 2000, 500, 9999, 100, 200)        # FL FR FC LFE BL BR
+    left, right = struct.unpack("<2h", loopback.to_stereo(frame, 6))
+    assert (left, right) == (1420, 2490)                               # FL + 0.7*FC + 0.7*BL ; ה-LFE נזרק
+    assert loopback.to_stereo(b"\x01\x02\x03\x04", 2) == b"\x01\x02\x03\x04"
+    loud = struct.pack("<6h", 32000, 32000, 32000, 0, 32000, 32000)
+    assert struct.unpack("<2h", loopback.to_stereo(loud, 6)) == (32767, 32767)      # בלי גלישה
+    assert len(loopback.to_stereo(frame * 3 + b"\x00\x01", 6)) == 12   # שארית של פריים חלקי נזרקת
+
+
+def test_the_sender_says_when_it_is_connected():
+    from utils.capture import loopback
+    sender = loopback.LoopbackSender(1, 48000, 2)
+    assert not sender.connected.is_set() and sender.error is None

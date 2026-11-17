@@ -8,6 +8,7 @@ import os
 import threading
 
 from fastapi import APIRouter, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
 from entrypoints import web_app as W
@@ -30,6 +31,9 @@ def _backend_args(codec, quality):
     from utils.media import encoders
     backend, _note = encoders.resolve_backend(encoders.load_setting(), codec,
                                               encoders.detect_backends(W.get_ffmpeg_exe(), creationflags=W.NO_WINDOW_FLAGS))
+    if backend == "cpu":
+        # 17.11.2026: בלי מקודד בכרטיס, libx265 / AV1 ב-CPU לא עומדים בזמן אמת - מקליטים ב-H.264 מהיר
+        return ["-c:v", "libx264", "-preset", "veryfast", "-crf", str(quality)]
     args = encoders.codec_args(codec, backend, preset="p4", cq=quality)
     return args
 
@@ -86,7 +90,8 @@ def api_recording_devices():
 @router.post("/api/recording/settings")
 async def api_recording_settings_save(request: Request):
     payload = await request.json()
-    return _act(request, lambda: {"settings": get_manager().save_settings(payload if isinstance(payload, dict) else {})})
+    # 17.11.2026: העבודה עצמה (ffmpeg, OBS) חוסמת - ב-thread, לא על לולאת האירועים של השרת
+    return await run_in_threadpool(_act, request, lambda: {"settings": get_manager().save_settings(payload if isinstance(payload, dict) else {})})
 
 
 @router.post("/api/recording/record/start")
@@ -108,7 +113,11 @@ def api_recording_replay_start(request: Request):
 async def api_recording_replay_save(request: Request):
     payload = await request.json() if (request.headers.get("content-length") or "0") != "0" else {}
     seconds = payload.get("seconds") if isinstance(payload, dict) else None
-    return _act(request, lambda: get_manager().save_replay(int(seconds) if seconds else None))
+    try:
+        seconds = int(seconds) if seconds else None
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "מספר השניות לא תקין."}, status_code=400)
+    return await run_in_threadpool(_act, request, lambda: get_manager().save_replay(seconds))
 
 
 @router.post("/api/recording/replay/stop")
@@ -126,7 +135,7 @@ def api_recording_import_sources():
 async def api_recording_import(request: Request):
     payload = await request.json()
     preset = str((payload or {}).get("source") or "")
-    return _act(request, lambda: get_manager().start_import(preset))
+    return await run_in_threadpool(_act, request, lambda: get_manager().start_import(preset))
 
 
 @router.get("/api/recording/obs/scenes")
@@ -142,4 +151,4 @@ def api_recording_obs_scenes():
 async def api_recording_obs_scene(request: Request):
     payload = await request.json()
     scene = str((payload or {}).get("scene") or "")
-    return _act(request, lambda: (get_manager().switch_scene(scene), get_manager().scenes())[1])
+    return await run_in_threadpool(_act, request, lambda: (get_manager().switch_scene(scene), get_manager().scenes())[1])

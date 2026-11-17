@@ -24,7 +24,7 @@ def test_screen_with_game_audio_and_mic_records_two_audio_tracks_to_mkv():
     assert _value(cmd, "-i") == "ddagrab=output_idx=0:framerate=60"
     assert "hwdownload,format=bgra,format=yuv420p[game]" in _value(cmd, "-filter_complex")
     assert [cmd[i + 1] for i, part in enumerate(cmd) if part == "-map"] == ["[game]", "1:a", "2:a"]
-    assert "audio=Mic (USB)" in cmd and "tcp://127.0.0.1:50123?listen=1" in cmd
+    assert "audio=Mic (USB)" in cmd and "tcp://127.0.0.1:50123?listen=1&listen_timeout=20000" in cmd
     assert _value(cmd, "-ar") == "44100"
     assert cmd[cmd.index("-metadata:s:a:0") + 1] == "title=game" and cmd[cmd.index("-metadata:s:a:1") + 1] == "title=mic"
     assert cmd[-3:] == ["-f", "matroska", "C:/rec/a.mkv"]
