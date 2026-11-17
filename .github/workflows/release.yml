@@ -84,7 +84,11 @@ jobs:
           version = os.environ["GITHUB_REF_NAME"].lstrip("v")
           text = open("CHANGELOG.md", encoding="utf-8").read()
           match = re.search(rf"^## {re.escape(version)}\b.*?$(.*?)(?=^## |\Z)", text, re.M | re.S)
-          print(match.group(1).strip() if match else f"ClipForge {version}")
+          notes = match.group(1).strip() if match else f"ClipForge {version}"
+          # The changelog links its screenshots by a path inside the repository. A Release page is not inside it,
+          # so the images are pointed at the files of this tag.
+          base = f"https://raw.githubusercontent.com/{os.environ['GITHUB_REPOSITORY']}/{os.environ['GITHUB_REF_NAME']}/"
+          print(re.sub(r"\]\((docs/[^)\s]+)\)", lambda m: f"]({base}{m.group(1)})", notes))
           digest, name = open("dist/SHA256SUMS.txt", encoding="utf-8").read().split()
           print(f"\n### Download check\nSHA-256 of `{name}`:\n\n```\n{digest}\n```\n")
           print("PowerShell: `Get-FileHash .\\" + name + "` - the hash must match.")

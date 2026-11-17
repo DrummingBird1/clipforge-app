@@ -2,46 +2,100 @@
 
 What changed in each ClipForge release, by topic. Dates are release dates (YYYY-MM-DD).
 
-## 2.0.0 - 2026-11-16
+## 2.0.1 - 2026-11-17
+
+The first full release of 2.0. Version 2.0.0 was up for a few hours as a pre-release; 2.0.1 adds the two features it
+was missing and fixes what a deep check of the new code found. If you are coming from 1.2.0, everything below is new.
 
 ### Recording
+
+![The Recording screen: the replay buffer, full recording, the source, microphone and camera, and import](docs/images/recording.png)
+
 - A Recording screen. Record the screen or a PC game with the built-in recorder, or a console (PlayStation 5 and 4, Xbox
   Series and One, Nintendo Switch and Switch 2) through a capture card. Each console has a profile that picks the best
   mode the card offers, with a note about HDCP or the dock where it matters.
 - A replay buffer: keep the last 10 seconds to 10 minutes in the background and save them as a clip with a button or a
-  global hotkey. The saved clip goes to the Import folder and on to the Shorts auto chain.
+  global hotkey. The saved clip goes to the Import folder and on to the Shorts auto chain, also while a full recording
+  is running.
 - The computer's audio (the game) and the microphone are recorded as separate tracks, and a webcam as a second video
   track. A full recording is saved as MKV while recording, so a crash doesn't lose it, and becomes an MP4 when you stop.
 - Control OBS from the same screen instead of the built-in recorder: start and stop recording, the replay buffer, and
   switching scenes.
+- The recorder stops when ClipForge stops, however it was closed, and cleans up after a run that was cut short.
+- When the computer's audio cannot be opened, the recording starts without it and says so. When the fast screen capture
+  does not start (some full-screen games, older PCs), the plain one is used instead.
+
+![A console through a capture card: the PlayStation 5 profile, with its note about HDCP](docs/images/recording_console.png)
+
 - Import clips from other recorders and consoles with one click: NVIDIA App / ShadowPlay, AMD ReLive, Xbox Game Bar,
-  Steam recordings, OBS, Elgato, a PS5 or PS4 USB drive, a Switch SD card, and Xbox captures in OneDrive. Only new clips
-  are copied, and the source is never changed.
+  Steam clips, OBS, Elgato, a PS5 or PS4 USB drive, a Switch SD card, and Xbox captures in OneDrive. Only new clips are
+  copied, and the source is never changed.
 
 ### Graphics cards
+
+![General settings: the video encoder, what was found on this computer and what is in use](docs/images/encoders.png)
+
 - HEVC and AV1 now encode on AMD (AMF) and Intel (Quick Sync) cards as well as NVIDIA, and on the CPU when there is no
-  suitable card. ClipForge detects the card; Global settings has an encoder choice. On NVIDIA nothing changes.
-  AMD and Intel encoding was checked against the ffmpeg commands only, not on real hardware.
+  suitable card. ClipForge detects the card; General settings has an encoder choice, and "Check the card" looks again
+  after a driver update or a new card. On NVIDIA nothing changes.
+- Tested on real hardware: NVIDIA (HEVC, AV1) and Intel Quick Sync (HEVC). AMD encoding was checked against the ffmpeg
+  commands only.
 
 ### Platforms
+
+![Outputs: a selected video with Publish on TikTok and YouTube, Send to Discord and Upload package](docs/images/packages.png)
+
 - Upload packages for TikTok, Instagram Reels, Twitch and Kick, from the Outputs screen: a folder with the video, a
   caption that fits the platform's limit, and the thumbnail. The caption is copied and the upload page opens.
 - YouTube uploads get chapters (from the chapters in the file), `#Shorts` for vertical clips up to 3 minutes, scheduled
-  publishing, and captions from an `.srt` file next to the video.
-- Send to Discord: the bot posts the video to the channel you set with `/clip_channel`.
+  publishing, and captions from an `.srt` file next to the video. The first upload with captions asks for one more
+  permission from YouTube.
+- Send to Discord: the bot posts the video to the channel you set with `/clip_channel`, and the screen tells you
+  whether it was sent.
 - New studio targets: Twitch, Kick and Discord up to 50MB.
 
 ### New in the studio
+
+![Long recording to several Shorts: how many, how long, the microphone track, and zoom, slow motion and face tracking](docs/images/shorts.png)
+
+- A new script, "Long recording to several Shorts": finds the strongest moments in a long recording or VOD and cuts a
+  vertical Short from each. On the peak it zooms in and plays one second in slow motion. When the file has a camera
+  track, the facecam sits on top and its frame follows your face. The microphone of a ClipForge recording is mixed in
+  by itself.
 - Mix a separate microphone track over the game track, with its own volume, noise reduction on the microphone only,
   and the game lowered while you talk.
-- A new script, "Long recording to several Shorts": finds the strongest moments in a long recording or VOD and cuts a
-  vertical Short from each, with the facecam on top when the file has one, and a quick zoom on the peak.
 - `.ts`, `.flv` and `.m4v` files are picked up everywhere.
 
 ### Install and update
 - Ready for winget, next to Scoop and the zip: the zip now has a `ClipForge.exe`, and a winget install keeps your data
   in `%LOCALAPPDATA%\ClipForge`, so an upgrade doesn't touch it. The package is not in the winget catalog yet.
 - The update banner shows the command that fits how ClipForge was installed (Scoop, winget, zip or git).
+- Your connections survive an update: `.env`, the YouTube sign-in and the TikTok cookies are kept when Scoop or winget
+  replaces the install folder.
+- Starting ClipForge while an older version is still running now says so, instead of opening the old one.
+
+### Fixed since 2.0.0
+- Recording: a recorder left running after ClipForge was closed by force kept writing to the disk without limit.
+- Recording: a replay clip in AV1 was unreadable (the replay now records in HEVC), a replay saved during a full
+  recording went to the wrong folder, and two saves in the same second overwrote each other.
+- Recording with OBS: each saved replay was handled twice, a wrong password was reported as "OBS is not open", and a
+  full OBS recording went into the Shorts chain.
+- Capture cards: 1080p60 is now preferred over 4K30, and 59.94 fps is no longer cut to 59.
+- Long recording to Shorts: the zoom on the peak was stuck to the top-left corner, loud recordings never produced a
+  moment, the script could not be configured from the browser, and an existing Short was overwritten.
+- Studio: a microphone track that the file does not have failed the render; microphone volume 0 was treated as 1.
+- Encoders: AV1 on AMD came out almost uncompressed, AV1 on the CPU failed with the ffmpeg in the download, and a
+  failed card check was remembered for ever.
+- Publishing: YouTube captions never uploaded, and "Publish after editing" or an upload package could overwrite a
+  video when two files had the same name.
+- Send to Discord: a clip sent before the channel was set failed for good after 45 seconds, and the screen said "sent"
+  whatever happened.
+- Bot: the daily test render failed every day with a timeout, the stuck-render warning could never fire, and a
+  `/run_script` crash with a long output showed no alert.
+- Import: "Import from OBS" copied every video in the Videos folder, an Import folder inside a source was imported
+  into itself, the same USB drive under another letter was imported again, and a failed copy left a cut-off video.
+- Security: `.env`, the YouTube token and the TikTok cookies in the install folder could be downloaded through the
+  app's download link. They are now refused, like everything under `data/`.
 
 ### Fixes
 - Security: a file under `data/` (the access token, the settings) could be downloaded through a `\\?\` or
@@ -57,6 +111,10 @@ What changed in each ClipForge release, by topic. Dates are release dates (YYYY-
 
 ### Security
 - opentelemetry-api 1.45.2 (CVE-2026-126360).
+
+## 2.0.0 - 2026-11-16
+
+A pre-release of 2.0, replaced by 2.0.1 the next day. Everything it had is listed under 2.0.1.
 
 ## 1.2.0 - 2026-11-08
 

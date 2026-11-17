@@ -24,7 +24,7 @@ Edit, brand and export Shorts, TikToks and YouTube videos from your browser, wit
 
 - 🔒 **Local first.** Your clips never leave your PC. The studio, the data videos and the outputs screen need no account and no key.
 - 🎯 **One run, every target.** Shorts, TikTok, Instagram and YouTube versions come out of a single run, each in its own format.
-- ⚡ **Fast with an NVIDIA card, fine without.** Exports use the GPU encoder (NVENC) when there is one, and the CPU when there isn't.
+- ⚡ **Fast with a graphics card, fine without.** Exports use the card's encoder (NVIDIA, AMD or Intel) when there is one, and the CPU when there isn't.
 - 🧰 **Nothing to install.** Unzip it, double-click `ClipForge.vbs`, and it opens in your browser. Delete the folder to remove it.
 - 🆓 **Free and open source.** MIT license.
 
@@ -58,6 +58,17 @@ In the studio you can:
 | ![The phone screen](docs/images/phone.png) | ![The notification center](docs/images/notifications.png) |
 | Phone screen | Notification center |
 
+### Recording and publishing
+
+![The Recording screen: the replay buffer, full recording, the source, microphone and camera, and import](docs/images/recording.png)
+
+| | |
+|---|---|
+| ![A console through a capture card, with the PlayStation 5 profile](docs/images/recording_console.png) | ![A selected output with Publish on YouTube and TikTok, Send to Discord and Upload package](docs/images/packages.png) |
+| A console through a capture card: PlayStation, Xbox or Switch, each with its own profile | Publishing from Outputs: YouTube, TikTok, Send to Discord, and an upload package for Reels, Twitch and Kick |
+| ![Long recording to several Shorts: count, length, microphone, zoom, slow motion and face tracking](docs/images/shorts.png) | ![The video encoder in Global settings: what was found on this computer and what is in use](docs/images/encoders.png) |
+| A long recording becomes several Shorts, with a zoom and slow motion on the peak and a facecam that follows your face | The encoder follows your graphics card: NVIDIA, AMD or Intel |
+
 ## Install
 
 1. Download the ClipForge zip from the [latest release](../../releases/latest).
@@ -80,7 +91,7 @@ Then start ClipForge from the Start menu. `scoop update clipforge` installs a ne
 ### Requirements
 
 - Windows 10 or 11, 64-bit.
-- An NVIDIA GPU is optional. With one, exports use the GPU encoder (NVENC) and finish much faster. Without one, ClipForge encodes on the CPU.
+- A graphics card is optional. With an NVIDIA, AMD or Intel card, exports use its encoder and finish much faster. Without one, ClipForge encodes on the CPU.
 - Disk space for the app (about 1 GB) and for your videos.
 
 ## Your first video
@@ -131,7 +142,7 @@ ClipForge isn't signed with a code-signing certificate, so Windows SmartScreen w
 <details markdown="1">
 <summary><b>I don't have an NVIDIA graphics card.</b></summary>
 
-Everything works on the CPU, just slower. The studio's H.264 output and the Shorts publisher's default preset (CPU Fallback, H.264) use the CPU encoder. HEVC and AV1 in the studio, and the NVENC presets of the Shorts publisher, need an NVIDIA card; choose H.264 or the CPU preset instead.
+You don't need one. HEVC and AV1 also encode on AMD (AMF) and Intel (Quick Sync) cards, and on the CPU when there is no suitable card; **General settings** shows which encoder was found and which is in use. The NVENC presets of the Shorts publisher switch to the card you have. The studio's H.264 output and the Shorts publisher's default preset (CPU Fallback, H.264) always use the CPU.
 
 </details>
 
