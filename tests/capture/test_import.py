@@ -99,3 +99,105 @@ def test_a_steam_dash_recording_is_remuxed_to_mp4(tmp_path):
     assert len(items) == 1 and items[0].kind == "steam"
     done = importer.import_items(items, str(tmp_path / "imports"), str(tmp_path / "m.json"), get_ffmpeg_exe())
     assert [os.path.basename(p) for p in done] == ["clip_730_20261116_140322.mp4"] and os.path.getsize(done[0]) > 0
+
+
+# ---- 2.0.1: מהבדיקה המעמיקה ----
+
+def test_obs_takes_only_files_obs_named(tmp_path):
+    # תיקיית ההקלטות של OBS היא בדרך כלל Videos כולה. ב-2.0.0 "ייבוא מ-OBS" העתיק כל סרטון שיש שם.
+    env = {"USERPROFILE": str(tmp_path / "me"), "APPDATA": str(tmp_path / "appdata")}
+    videos = tmp_path / "me" / "Videos"
+    profiles = tmp_path / "appdata" / "obs-studio" / "basic" / "profiles"
+    (profiles / "Old").mkdir(parents=True)
+    (profiles / "Stream").mkdir()
+    (profiles / "Old" / "basic.ini").write_text("[SimpleOutput]\nFilePath=C:\\Wrong\n", encoding="utf-8")
+    (profiles / "Stream" / "basic.ini").write_text(f"[SimpleOutput]\nFilePath={videos}\n", encoding="utf-8")
+    (tmp_path / "appdata" / "obs-studio" / "user.ini").write_text("[Basic]\nProfileDir=Stream\n", encoding="utf-8")   # OBS חדש
+    obs = next(p for p in ip.presets(env, registry=lambda *a, **k: None, drives=[]) if p.id == "obs")
+    assert obs.path == os.path.normpath(str(videos))          # הפרופיל הפעיל מ-user.ini, לא הראשון לפי הא"ב
+    for name in ("2026-11-17 14-03-22.mkv", "Replay 2026-11-17 14-05-00.mp4", "wedding.mp4", "holiday 2024.mp4"):
+        _file(videos / name)
+    assert sorted(os.path.basename(i.source) for i in importer.find_new(obs, {})) == [
+        "2026-11-17 14-03-22.mkv", "Replay 2026-11-17 14-05-00.mp4"]
+    custom = ip.obs_name_pattern("Rec_%YY%MM%DD_%hh%mm", "Clip")
+    import re
+    assert re.search(custom, "Rec_261117_1403.mkv") and re.search(custom, "Clip Rec_261117_1403.mp4") and not re.search(custom, "wedding.mp4")
+
+
+def test_a_moved_videos_folder_and_a_usb_disk_that_is_not_removable(tmp_path):
+    moved = tmp_path / "D" / "Movies"
+    moved.mkdir(parents=True)
+    env = {"USERPROFILE": str(tmp_path / "me")}
+    found = ip.presets(env, registry=lambda key, value, hive="HKCU": str(moved) if value == "My Video" else None, drives=[])
+    assert next(p for p in found if p.id == "nvidia").path == str(moved)
+    assert next(p for p in found if p.id == "elgato").path == os.path.join(str(moved), "4K Capture Utility")
+
+
+def test_an_import_folder_inside_the_source_is_not_imported_into_itself(tmp_path):
+    # ב-2.0.0, עם תיקיית NVIDIA כתיקיית ה-Import, כל ייבוא יצר עותק _2 של כל קליפ
+    videos = tmp_path / "Videos"
+    preset = ip.Preset("amd", "AMD", str(videos), "folder", True, False)
+    _file(videos / "Game" / "clip.mp4")
+    dest = videos / "Import"
+    manifest_path = str(tmp_path / "cache" / "manifest.json")
+    first = importer.find_new(preset, {}, exclude=str(dest))
+    assert len(first) == 1
+    importer.import_items(first, str(dest), manifest_path, "ffmpeg")
+    assert importer.find_new(preset, importer.load_manifest(manifest_path), exclude=str(dest)) == []
+    assert sorted(os.listdir(dest)) == ["clip.mp4"]
+
+
+def test_the_same_usb_drive_under_another_letter_is_not_imported_again(tmp_path):
+    clip = _file(tmp_path / "F" / "PS5" / "CREATE" / "Video Clips" / "Game" / "win.webm", b"x" * 50)
+    manifest_path = str(tmp_path / "cache" / "manifest.json")
+    preset = ip.Preset("ps5:F", "PS5", str(tmp_path / "F" / "PS5" / "CREATE" / "Video Clips"), "folder", True, True)
+    importer.import_items(importer.find_new(preset, {}), str(tmp_path / "import"), manifest_path, "ffmpeg")
+    other = tmp_path / "G" / "PS5" / "CREATE" / "Video Clips" / "Game" / "win.webm"
+    _file(other, b"x" * 50, mtime=os.path.getmtime(clip))
+    again = ip.Preset("ps5:G", "PS5", str(tmp_path / "G" / "PS5" / "CREATE" / "Video Clips"), "folder", True, True)
+    assert importer.find_new(again, importer.load_manifest(manifest_path)) == []
+
+
+def test_a_copy_that_fails_leaves_no_broken_file_and_the_rest_continue(tmp_path, monkeypatch):
+    source = tmp_path / "src"
+    good, bad, last = _file(source / "a.mp4", mtime=OLD), _file(source / "b.mp4", mtime=OLD + 1), _file(source / "c.mp4", mtime=OLD + 2)
+    preset = ip.Preset("x", "X", str(source), "folder", False, False)
+    real_copy = importer.shutil.copy2
+
+    def flaky(src, dst):
+        if os.path.basename(src) == "b.mp4":
+            open(dst, "wb").write(b"half")
+            raise OSError("the drive was pulled out")
+        return real_copy(src, dst)
+
+    monkeypatch.setattr(importer.shutil, "copy2", flaky)
+    failures = []
+    dest = tmp_path / "import"
+    done = importer.import_items(importer.find_new(preset, {}), str(dest), str(tmp_path / "m.json"), "ffmpeg", failures=failures)
+    assert [os.path.basename(p) for p in done] == ["a.mp4", "c.mp4"] and sorted(os.listdir(dest)) == ["a.mp4", "c.mp4"]
+    assert len(failures) == 1 and failures[0].startswith("b.mp4") and bad.read_bytes() == b"video"
+    assert time.time() - os.path.getmtime(dest / "a.mp4") < 60          # זמן שינוי של עכשיו, לא של ההקלטה המקורית
+    assert os.path.getmtime(good) == OLD and last.exists()               # המקור לא השתנה
+    monkeypatch.undo()
+    retry = importer.find_new(preset, importer.load_manifest(str(tmp_path / "m.json")))
+    assert [os.path.basename(i.source) for i in retry] == ["b.mp4"]      # מה שנכשל מיובא בפעם הבאה
+
+
+def test_a_full_disk_stops_the_import_with_a_reason(tmp_path, monkeypatch):
+    source = tmp_path / "src"
+    _file(source / "a.mp4")
+    preset = ip.Preset("x", "X", str(source), "folder", False, False)
+    monkeypatch.setattr(importer.shutil, "disk_usage", lambda path: type("U", (), {"free": 10})())
+    failures = []
+    assert importer.import_items(importer.find_new(preset, {}), str(tmp_path / "import"), str(tmp_path / "m.json"), "ffmpeg",
+                                 failures=failures) == []
+    assert "מקום פנוי" in failures[0] and os.listdir(tmp_path / "import") == []
+
+
+def test_steam_background_recordings_are_left_alone(tmp_path):
+    root = tmp_path / "userdata" / "1" / "gamerecordings"
+    _file(root / "clips" / "clip_730_20261117" / "video" / "fg_730" / "session.mpd")
+    _file(root / "video" / "bg_730_20261117" / "session.mpd")
+    preset = ip.Preset("steam", "Steam", str(tmp_path / "userdata"), "steam", True, False)
+    found = importer.find_new(preset, {})
+    assert len(found) == 1 and "clip_730_20261117" in found[0].source

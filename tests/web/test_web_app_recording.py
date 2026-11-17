@@ -86,3 +86,8 @@ def test_a_saved_replay_goes_to_the_auto_chain(monkeypatch):
     monkeypatch.setattr(web_app, "_on_clip_ready", events.append)
     rec_routes._on_clip("C:/imports/replay_1.mp4", "replay")
     assert events == [{"script": "recording", "path": "C:/imports/replay_1.mp4", "source": "replay"}]
+
+
+def test_the_manifest_reports_the_version_for_the_launcher():
+    data = client.get("/manifest.json").json()
+    assert data["short_name"] == "ClipForge" and data["version"] == web_app.APP_VERSION

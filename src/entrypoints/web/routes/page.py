@@ -70,6 +70,7 @@ def manifest():
     return {
         "name": "ClipForge - Web",
         "short_name": "ClipForge",
+        "version": W.APP_VERSION,   # 17.11.2026: ה-launcher בודק שמה שרץ בפורט הוא ClipForge באותה גרסה
         "start_url": "/",
         "display": "standalone",
         "background_color": "#0b0c0f",

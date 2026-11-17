@@ -89,6 +89,8 @@ def _get_credentials(need_captions=False):
             creds = flow.run_local_server(port=0)
         with open(TOKEN_FILE, "w", encoding="utf-8") as f:
             f.write(creds.to_json())
+        from utils.shared import install_files
+        install_files.sync_default()   # 17.11.2026: עותק ב-data/ - הטוקן שורד את העדכון הבא של חבילה מותקנת
 
     return creds
 

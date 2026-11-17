@@ -112,7 +112,7 @@ def test_diagnostics_check_known_files_in_a_subfolder(tmp_path, monkeypatch):
 
 def test_the_daily_backup_skips_by_name_from_here():
     from cogs import scheduler_cog
-    assert scheduler_cog._DATA_BACKUP_EXCLUDE_DIRNAMES == data_paths.BACKUP_SKIP_DIRS == {"backups", "logs"}
+    assert scheduler_cog._DATA_BACKUP_EXCLUDE_DIRNAMES == data_paths.BACKUP_SKIP_DIRS == {"backups", "logs", "install_files"}   # 2.0.1: העותקים של קובצי החיבור (סודות) לא נכנסים לגיבוי
     assert scheduler_cog._DATA_BACKUP_EXCLUDE_FILENAMES == data_paths.BACKUP_SKIP_FILES == {"clipforge_data.db", "render.lock"}
 
 

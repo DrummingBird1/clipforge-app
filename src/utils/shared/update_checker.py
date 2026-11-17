@@ -33,10 +33,11 @@ UPDATE_COMMANDS = {"scoop": "scoop update clipforge", "winget": "winget upgrade 
 
 def install_kind(base_dir):
     """16.11.2026 (2.0): scoop / winget / portable (ה-zip) / git / unknown - כדי להציג את דרך העדכון הנכונה."""
-    path = os.path.normcase(os.path.abspath(base_dir)) + os.sep
-    if os.sep + "scoop" + os.sep + "apps" + os.sep in path:
+    # 17.11.2026: גם התקנות בתיקייה לא רגילה (winget --location, Scoop בשורש אחר) - utils/shared/install_where.py
+    from utils.shared import install_where
+    if install_where.is_scoop(base_dir):
         return "scoop"
-    if os.sep + "winget" + os.sep + "packages" + os.sep in path:
+    if install_where.is_winget(base_dir):
         return "winget"
     if is_portable(base_dir):
         return "portable"

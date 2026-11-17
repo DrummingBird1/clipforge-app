@@ -247,7 +247,7 @@ class RecorderManager:
         manifest = importer.load_manifest(self._manifest_path())
         found = import_presets.available((presets_fn or import_presets.presets)())
         return [{"id": p.id, "label": p.label, "path": p.path, "console": p.console,
-                 "new": len(importer.find_new(p, manifest))} for p in found]
+                 "new": len(importer.find_new(p, manifest, exclude=self.import_dir()))} for p in found]
 
     def _manifest_path(self) -> str:
         return os.path.join(self.workspace_dir, ".cache", "import_manifest.json")
@@ -268,15 +268,19 @@ class RecorderManager:
         preset = next((p for p in (presets_fn or import_presets.presets)() if p.id == preset_id), None)
         if preset is None or not os.path.isdir(preset.path):
             raise CaptureError("המקור לא נמצא (הכונן לא מחובר?)")
-        items = importer.find_new(preset, importer.load_manifest(self._manifest_path()))
+        items = importer.find_new(preset, importer.load_manifest(self._manifest_path()), exclude=self.import_dir())
         self._import = {"running": True, "label": preset.label, "done": 0, "total": len(items), "last": None, "error": None}
 
         def progress(done, total, path):
             self._import.update(done=done, total=total, last=path)
 
         def run():
+            failed: List[str] = []
             try:
-                importer.import_items(items, self.import_dir(), self._manifest_path(), self.ffmpeg_exe, self.creationflags, progress)
+                importer.import_items(items, self.import_dir(), self._manifest_path(), self.ffmpeg_exe, self.creationflags, progress,
+                                      failures=failed)
+                if failed:
+                    self._import["error"] = f"{len(failed)} קבצים לא יובאו. הראשון: {failed[0]}"
             except Exception as e:
                 self._import["error"] = str(e)
             finally:

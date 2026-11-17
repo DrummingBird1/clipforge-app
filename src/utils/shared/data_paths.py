@@ -97,7 +97,7 @@ _COMPANION_SUFFIXES = (".bak", "-wal", "-shm", "-journal")
 
 # מה שהגיבויים מדלגים עליו - לפי שם, בכל עומק, כך שזה נשאר נכון גם אחרי שהקבצים יעברו לתיקיות לפי נושא: הגיבויים
 # עצמם, הלוגים, מנעול הרינדור - וה-DB, שמצולם בנפרד (snapshot עקבי מ-path(BOT_DB), ונשמר בגיבוי בשם BOT_DB)
-BACKUP_SKIP_DIRS = frozenset(name.rsplit("/", 1)[-1] for name in (BACKUPS, LOGS))
+BACKUP_SKIP_DIRS = frozenset(name.rsplit("/", 1)[-1] for name in (BACKUPS, LOGS)) | {"install_files"}   # install_files: סודות
 BACKUP_SKIP_FILES = frozenset(name.rsplit("/", 1)[-1] for name in (BOT_DB, RENDER_LOCK))
 # קובצי ה-JSON שהאבחון בודק, איפה שהם נמצאים (בנוסף לכל *.json בשורש data/)
 CHECKED_JSON = (CONFIG, ROCKET_SETTINGS, EXPORT_SETTINGS, ENCODER_SETTINGS, RECORDING_SETTINGS, REMOTE_ACCESS, SCHEDULED_TASKS, PAIRED_DEVICES, SCHEDULER_STATE,
