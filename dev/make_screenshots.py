@@ -54,8 +54,10 @@ RECORDING_FAKE = """([he, console]) => {
   const json = (body) => Promise.resolve(new Response(JSON.stringify(body), {status: 200, headers: {'Content-Type': 'application/json'}}));
   const devices = {video: [{name: 'Game Capture HD60 X', alternative: ''}, {name: 'Facecam Pro', alternative: ''}],
                    audio: [{name: 'Game Capture HD60 X Audio', alternative: ''}, {name: 'Microphone (USB)', alternative: ''}]};
-  const status = {engine: 'ffmpeg', recording: false, recording_path: '', replay: !console, replay_buffered_seconds: 58, error: null,
-                  notice: null, last_saved: console ? null : 'D:/ClipForge/imports/replay_20261117_203114.mp4'.replaceAll('/', String.fromCharCode(92)), hotkeys: !console, import: {}};
+  const status = {engine: 'ffmpeg', recording_path: '', replay: !console, replay_buffered_seconds: 58, error: null,
+                  notice: console ? (he ? 'הכרטיס מכריז על 60 פריימים ב-1920x1080 אבל נותן 30. מקליט ב-1920x1080 ב-30 פריימים'
+                                           : 'הכרטיס מכריז על 60 פריימים ב-1920x1080 אבל נותן 30. מקליט ב-1920x1080 ב-30 פריימים') : null,
+                  recording: false, last_saved: console ? null : 'D:/ClipForge/imports/replay_20261117_203114.mp4'.replaceAll('/', String.fromCharCode(92)), hotkeys: !console, import: {}};
   const sources = [{id: 'nvidia', label: 'NVIDIA App / ShadowPlay', new: 3}, {id: 'ps5:F:', label: 'PlayStation 5 (F:)', new: 5},
                    {id: 'switch:G:', label: 'Nintendo Switch (G:)', new: 2}, {id: 'steam', label: 'Steam', new: 1},
                    {id: 'obs', label: 'OBS', new: 0}];

@@ -65,7 +65,7 @@ In the studio you can:
 | | |
 |---|---|
 | ![A console through a capture card, with the PlayStation 5 profile](docs/images/recording_console.png) | ![A selected output with Publish on YouTube and TikTok, Send to Discord and Upload package](docs/images/packages.png) |
-| A console through a capture card: PlayStation, Xbox or Switch, each with its own profile | Publishing from Outputs: YouTube, TikTok, Send to Discord, and an upload package for Reels, Twitch and Kick |
+| A console through a capture card: PlayStation, Xbox or Switch, each with its own profile. The card is measured first, so the recording uses what it really delivers | Publishing from Outputs: YouTube, TikTok, Send to Discord, and an upload package for Reels, Twitch and Kick |
 | ![Long recording to several Shorts: count, length, microphone, zoom, slow motion and face tracking](docs/images/shorts.png) | ![The video encoder in Global settings: what was found on this computer and what is in use](docs/images/encoders.png) |
 | A long recording becomes several Shorts, with a zoom and slow motion on the peak and a facecam that follows your face | The encoder follows your graphics card: NVIDIA, AMD or Intel |
 

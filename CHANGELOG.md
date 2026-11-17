@@ -24,6 +24,11 @@ was missing and fixes what a deep check of the new code found. If you are coming
 - The recorder stops when ClipForge stops, however it was closed, and cleans up after a run that was cut short.
 - When the computer's audio cannot be opened, the recording starts without it and says so. When the fast screen capture
   does not start (some full-screen games, older PCs), the plain one is used instead.
+- A capture card is measured before its first recording. Many USB cards report 1080p at 60 frames and deliver 30; the
+  recording then uses what the card really delivers, and the screen says so. A new setting chooses what to prefer in
+  that case: sharpness (the full resolution, the default) or smooth motion (a lower resolution that really does 60).
+- Picture, game audio, microphone and camera share one clock, so they stay in sync however long each takes to start.
+- Tested on real hardware: an Xbox through a USB capture card (1080p), and the screen with the computer's audio in 4K.
 
 ![A console through a capture card: the PlayStation 5 profile, with its note about HDCP](docs/images/recording_console.png)
 
@@ -75,6 +80,12 @@ was missing and fixes what a deep check of the new code found. If you are coming
 - Starting ClipForge while an older version is still running now says so, instead of opening the old one.
 
 ### Fixed since 2.0.0
+- Recording: the computer's audio ran 0.3 seconds ahead of the picture, and a microphone or camera drifted by however
+  long it took to open.
+- Capture cards: a card that reports 60 frames and delivers 30 produced a 30-frame recording labelled 60, and its
+  replay clips reported 240 frames a second, which the studio would have rendered at 240.
+- Recording: track names were lost when a recording became an MP4, so the microphone track was not found by itself.
+- Studio: a render that failed on the graphics card's encoder was marked as failed; it is now finished on the CPU.
 - Recording: a recorder left running after ClipForge was closed by force kept writing to the disk without limit.
 - Recording: a replay clip in AV1 was unreadable (the replay now records in HEVC), a replay saved during a full
   recording went to the wrong folder, and two saves in the same second overwrote each other.
