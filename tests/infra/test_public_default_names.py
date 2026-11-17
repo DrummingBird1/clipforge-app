@@ -10,11 +10,11 @@ from pathlib import Path
 from tests import PROJECT_ROOT
 from utils.video.video_editor_field_help import FIELD_HELP
 
-# 30.10.2026: שמות הבעלים לא כתובים כאן (הקובץ יוצא לציבור) - הם בדפוסים המקומיים של dev/export_public.py, כשהקובץ קיים
-_spec = importlib.util.spec_from_file_location("export_public", Path(PROJECT_ROOT) / "dev" / "export_public.py")
-_export_public = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_export_public)
-_LOCAL = _export_public.personal_patterns(_export_public.local_patterns_file(PROJECT_ROOT))
+# 30.10.2026: שמות הבעלים לא כתובים כאן (הקובץ יוצא לציבור) - הם בדפוסים המקומיים של dev/leak_check.py, כשהקובץ קיים
+_spec = importlib.util.spec_from_file_location("leak_check", Path(PROJECT_ROOT) / "dev" / "leak_check.py")
+_leak_check = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_leak_check)
+_LOCAL = _leak_check.personal_patterns(_leak_check.local_patterns_file(PROJECT_ROOT))
 PERSONAL = re.compile("|".join([r"RLShorts|PShorts|Rocket League"] + [p for k, p in _LOCAL.items() if k == "owner-name"]),
                       re.IGNORECASE)
 ROOT = Path(PROJECT_ROOT)

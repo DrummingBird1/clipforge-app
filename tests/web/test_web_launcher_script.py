@@ -41,6 +41,18 @@ def test_every_exit_after_taking_the_lock_releases_it():
     assert any(line.startswith('rmdir "%LOCK_DIR%"') for line in lines[lines.index(":port_ready"):])
 
 
+def test_the_launcher_follows_a_data_folder_outside_the_repository():
+    """18.11.2026: עם CLIPFORGE_DATA_DIR השרת כותב את הטוקן לתיקייה ההיא, והקובץ הזה חיכה לו ב-data\\ שליד הריפו עד שנכשל.
+    הלוג, המנעול והטוקן נגזרים כולם מ-%DATA%, ואין יותר נתיב קבוע ל-data\\."""
+    _raw, lines = _code_lines()
+    assert 'set "DATA=data"' in lines and 'if defined CLIPFORGE_DATA_DIR set "DATA=%CLIPFORGE_DATA_DIR%"' in lines
+    assert lines.index('set "DATA=data"') < next(i for i, line in enumerate(lines) if line.startswith('set "LOG='))
+    for name in ("LOG", "TOKEN_FILE", "LOCK_DIR"):
+        values = [line for line in lines if line.startswith(f'set "{name}=')]
+        assert values and all(line.startswith(f'set "{name}=%DATA%\\') for line in values), values
+    assert not [line for line in lines if re.search(r'"data\\', line)]
+
+
 def test_the_lock_folder_is_gitignored():
     # 30.10.2026: data/ כולה ב-.gitignore - בודקים את התוצאה (git check-ignore), לא שורה מסוימת בקובץ
     result = subprocess.run(["git", "check-ignore", "-q", "data/.web_launcher.lock/"], cwd=PROJECT_ROOT, capture_output=True)

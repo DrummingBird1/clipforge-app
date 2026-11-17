@@ -1,20 +1,21 @@
 # dev/leak_check.py
 #
-# 17.11.2026: מ-2.0.1 הריפו הזה מפותח ישירות, בלי ריפו פיתוח נפרד ובלי שלב ייצוא. הסריקה שעצרה סודות ופרטים אישיים בזמן
-# הייצוא (dev/export_public.py) רצה מעכשיו כאן, לפני push: כל מה שהענף מוסיף מאז <base> (ברירת מחדל origin/main) נבדק מול
-# דפוסי הסודות, הדפוסים האישיים הכלליים (תיקיית משתמש, אימייל) והדפוסים המקומיים של הבעלים (dev/export_public.local.json -
-# לא במעקב; נקרא מהעותק הזה או מהעותק הראשי כשרצים מ-worktree). בלי הקובץ המקומי הסריקה רצה עם הדפוסים הכלליים, ואומרת זאת.
+# הריפו הזה מפותח ישירות, וכל מה שנדחף אליו ציבורי. לפני push: כל מה שהענף מוסיף מאז <base> (ברירת מחדל origin/main) נבדק
+# מול דפוסי הסודות, הדפוסים האישיים הכלליים (תיקיית משתמש, אימייל) והדפוסים המקומיים של הבעלים.
+# מה שמזהה את הבעלים לא כתוב כאן (הקובץ הזה ציבורי) - הוא ב-dev/leak_check.local.json, שלא במעקב:
+#   {"personal_patterns": {"<שם>": "<regex>"}}
+# נקרא מהעותק הזה או מהעותק הראשי כשרצים מ-worktree. בלעדיו הסריקה רצה עם הדפוסים הכלליים בלבד, ואומרת זאת.
 #
 # מה נסרק: שורות שנוספו (commits ושינויים שלא נשמרו), קבצים חדשים שלא במעקב, קבצים בינאריים שהשתנו (סודות בלבד), וגם
 # הודעות ה-commit, המחברים וה-committers של הענף - כי בריפו ציבורי גם הם ציבוריים.
-# הדפוסים ורשימת החריגים מוגדרים ב-dev/export_public.py, כדי שיהיה להם מקור אחד.
+# 18.11.2026: עד 2.0.0 הריפו הזה יוצא מריפו פיתוח נפרד עם dev/export_public.py, והסריקה רצה שם. הכלי ההוא פרש, והדפוסים כאן.
 #
 #   uv run python dev/leak_check.py                 # מה שנוסף מאז origin/main
-#   uv run python dev/leak_check.py --base v2.0.0   # מול tag או ענף אחר
+#   uv run python dev/leak_check.py --base v2.0.1   # מול tag או ענף אחר
 #   uv run python dev/leak_check.py --all           # כל הקבצים שבמעקב
 # קוד יציאה: 0 נקי, 2 נמצא סוד, 3 נמצא פרט אישי, 1 אין base כזה. הטקסט של סוד לא מודפס.
 import argparse
-import importlib.util
+import json
 import os
 import re
 import subprocess
@@ -24,15 +25,55 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COMMITS = "(commits)"   # ה"קובץ" של ממצא בהודעת commit או בשם ובכתובת של מחבר
 
 
-def _patterns_module():
-    spec = importlib.util.spec_from_file_location("export_public", os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                                                                "export_public.py"))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+LOCAL_PATTERNS_NAME = os.path.join("dev", "leak_check.local.json")
+
+SECRET_PATTERNS = {
+    "discord-token": r"\b[MN][A-Za-z\d]{23,27}\.[\w-]{6}\.[\w-]{27,}",
+    "discord-webhook": r"discord(?:app)?\.com/api/webhooks/\d+/[\w-]{20,}",
+    "google-api-key": r"AIza[0-9A-Za-z_-]{35}",
+    "google-oauth-secret": r"GOCSPX-[\w-]{20,}",
+    "google-refresh-token": r"\b1//0[\w-]{40,}",
+    "github-token": r"\bgh[pousr]_[A-Za-z0-9]{36}\b|\bgithub_pat_[A-Za-z0-9_]{50,}",
+    "aws-key-id": r"\bAKIA[0-9A-Z]{16}\b",
+    "slack-token": r"\bxox[baprs]-[A-Za-z0-9-]{10,}",
+    "openai-or-anthropic-key": r"\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,}",
+    "private-key": r"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----",
+}
+PERSONAL_PATTERNS = {
+    "windows-user-folder": r"[A-Za-z]:[\\/]+Users[\\/]+(?!<|\{|%|\$|Public\b|Default\b|you\b|me\b|USER(?:NAME)?\b)[\w.-]{2,}",
+    "this-machine-ai-shelf": r"\b[A-Za-z]:[\\/]+AI[\\/]",
+    "email": r"[\w.+-]+@(?!example\.(?:com|org)|users\.noreply\.github\.com|anthropic\.com\b)[\w-]+\.[A-Za-z]{2,}",
+}
+# ממצאים ידועים שאינם סוד אמיתי: (נתיב יחסי, שם הדפוס). נתיב שמסתיים ב-"/" = כל התיקייה.
+ALLOW = {
+    ("tests/", "email"),   # כתובות מזויפות בטסטים (user@host)
+    ("tests/dataviz/test_dataviz_notify.py", "discord-webhook"),   # webhook מזויף (abcdef...) - בודק את ההסתרה שלו
+    ("tests/dataviz/test_web_app_dataviz_notify_browser.py", "discord-webhook"),
+}
+TEXT_LIMIT = 5 * 1024 * 1024
 
 
-exp = _patterns_module()
+def local_patterns_file(repo=ROOT):
+    """dev/leak_check.local.json בעותק הזה, או בעותק הראשי (מ-worktree: התיקייה של git-common-dir). None = אין."""
+    candidates = [os.path.join(repo, LOCAL_PATTERNS_NAME)]
+    common = subprocess.run(["git", "-C", repo, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                            capture_output=True, text=True).stdout.strip()
+    if common:
+        candidates.append(os.path.join(os.path.dirname(common), LOCAL_PATTERNS_NAME))
+    return next((path for path in candidates if os.path.isfile(path)), None)
+
+
+def personal_patterns(local_file=None):
+    """PERSONAL_PATTERNS + הדפוסים מהקובץ המקומי (שמות הבעלים)."""
+    patterns = dict(PERSONAL_PATTERNS)
+    if local_file:
+        with open(local_file, encoding="utf-8") as f:
+            patterns.update(json.load(f).get("personal_patterns", {}))
+    return patterns
+
+
+def _allowed(rel, kind):
+    return any(kind == k and (rel == p or (p.endswith("/") and rel.startswith(p))) for p, k in ALLOW)
 
 
 def _git(repo, *args, check=True):
@@ -60,7 +101,18 @@ def added_lines(repo, since):
             number += 1
     for rel in _untracked(repo):
         path = os.path.join(repo, *rel.split("/"))
-        if _is_binary(path) or os.path.getsize(path) > exp.TEXT_LIMIT:
+        if _is_binary(path) or os.path.getsize(path) > TEXT_LIMIT:
+            continue
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            for number, line in enumerate(f, 1):
+                yield rel, number, line.rstrip("\r\n")
+
+
+def file_lines(repo, files):
+    """(נתיב, מספר שורה, טקסט) לכל שורה בקובצי הטקסט שברשימה."""
+    for rel in files:
+        path = os.path.join(repo, *rel.split("/"))
+        if os.path.getsize(path) > TEXT_LIMIT:
             continue
         with open(path, encoding="utf-8", errors="ignore") as f:
             for number, line in enumerate(f, 1):
@@ -92,39 +144,40 @@ def commit_lines(repo, since):
 
 def scan_lines(lines, patterns):
     """(סוג, נתיב, שורה, דפוס, טקסט) לכל ממצא בשורות; סוג: secret / personal."""
-    secret = {name: re.compile(pattern) for name, pattern in exp.SECRET_PATTERNS.items()}
+    secret = {name: re.compile(pattern) for name, pattern in SECRET_PATTERNS.items()}
     personal = {name: re.compile(pattern, re.IGNORECASE) for name, pattern in patterns.items()}
     findings = []
     for rel, number, line in lines:
         for kind, group in (("secret", secret), ("personal", personal)):
             for name, pattern in group.items():
                 for match in pattern.finditer(line):
-                    if not exp._allowed(rel, name):
+                    if not _allowed(rel, name):
                         findings.append((kind, rel, number, name, match.group(0)[:80]))
     return findings
 
 
 def scan_binaries(repo, names):
-    secret = {name: re.compile(pattern.encode("ascii")) for name, pattern in exp.SECRET_PATTERNS.items()}
+    secret = {name: re.compile(pattern.encode("ascii")) for name, pattern in SECRET_PATTERNS.items()}
     findings = []
     for rel in names:
         path = os.path.join(repo, *rel.split("/"))
-        if os.path.getsize(path) > exp.TEXT_LIMIT:
+        if os.path.getsize(path) > TEXT_LIMIT:
             continue
         with open(path, "rb") as f:
             data = f.read()
         findings += [("secret", rel, 0, name, "") for name, pattern in secret.items()
-                     if pattern.search(data) and not exp._allowed(rel, name)]
+                     if pattern.search(data) and not _allowed(rel, name)]
     return findings
 
 
 def check(repo=ROOT, base="origin/main", everything=False):
     """הממצאים, או None כשאין base כזה. everything: כל הקבצים שבמעקב במקום מה שנוסף."""
-    patterns = exp.personal_patterns(exp.local_patterns_file(repo))
+    patterns = personal_patterns(local_patterns_file(repo))
     if everything:
         files = [rel for rel in _git(repo, "ls-files", "-z").stdout.split("\0")
                  if rel and os.path.isfile(os.path.join(repo, *rel.split("/")))]
-        return [finding for finding in exp.scan(repo, files, patterns) if finding[0] != "dangling"]
+        binaries = [rel for rel in files if _is_binary(os.path.join(repo, *rel.split("/")))]
+        return scan_lines(file_lines(repo, sorted(set(files) - set(binaries))), patterns) + scan_binaries(repo, binaries)
     since = merge_base(repo, base)
     if since is None:
         return None
@@ -140,8 +193,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    if not exp.local_patterns_file(args.repo):
-        print(f"No {exp.LOCAL_PATTERNS_NAME}: scanning with the general patterns only (the owner's own patterns are in that file).")
+    if not local_patterns_file(args.repo):
+        print(f"No {LOCAL_PATTERNS_NAME}: scanning with the general patterns only (the owner's own patterns are in that file).")
     findings = check(args.repo, args.base, args.all)
     if findings is None:
         print(f"Cannot compare with {args.base}: no such ref here. Run 'git fetch', or pass --base.")

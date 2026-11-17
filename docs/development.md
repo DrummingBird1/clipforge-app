@@ -391,7 +391,7 @@ development repository and no export step.
    ```
    It checks the lines added since `origin/main` (commits, unsaved changes and untracked files), changed binary files,
    and the branch's commit messages and authors, since those are public as well. A secret exits with 2 and a personal
-   detail (a user folder, an e-mail address, a name listed in the untracked `dev/export_public.local.json`) with 3.
+   detail (a user folder, an e-mail address, a name listed in the untracked `dev/leak_check.local.json`) with 3.
    `--all` scans every tracked file. It also runs as a `pre-push` hook (`.pre-commit-config.yaml`).
 3. Open a pull request to `main`, wait for the checks, and merge it (squash).
 4. Tag the version on `main` and push the tag: `git tag v2.0.1` and `git push origin v2.0.1`. The tag starts

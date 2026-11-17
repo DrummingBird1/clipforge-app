@@ -3,23 +3,27 @@ setlocal enabledelayedexpansion
 REM קובץ זה יושב תחת dev\ - חוזרים תחילה לשורש הפרויקט (%~dp0..), כי כל
 REM הנתיבים למטה (.venv, data\logs, src\entrypoints\web_app.py) יחסיים לשורש.
 cd /d "%~dp0.."
-if not exist "data\logs" mkdir "data\logs" >nul 2>nul
+REM 18.11.2026: תיקיית הנתונים יכולה לשבת מחוץ לריפו (CLIPFORGE_DATA_DIR, כמו ש-web_app קורא אותה). עד עכשיו הלוג, המנעול
+REM והטוקן נקראו תמיד מ-data\ שליד הריפו - השרת כתב את הטוקן לתיקייה האחרת, והקובץ הזה חיכה לו 30 שניות ונכשל.
+set "DATA=data"
+if defined CLIPFORGE_DATA_DIR set "DATA=%CLIPFORGE_DATA_DIR%"
+if not exist "%DATA%\logs" mkdir "%DATA%\logs" >nul 2>nul
 
 REM כל הבדיקות למטה כותבות ללוג הזה בלבד, לא לקונסולה - WebLauncher.vbs מריץ
 REM את הקובץ הזה מוסתר לגמרי (בלי חלון CMD בכלל), אז שום echo כאן לא נראה
 REM לאף אחד. בלי pause על כשל - אותה סיבה בדיוק כמו _launcher_impl.bat.
-set "LOG=data\logs\web_launcher.log"
-set "TOKEN_FILE=data\web_app_token.txt"
+set "LOG=%DATA%\logs\web_launcher.log"
+set "TOKEN_FILE=%DATA%\web_app_token.txt"
 REM 24.10.2026: אחרי ההעברה לתיקיות לפי נושא (data\.data_layout קיים) הטוקן ב-data\security\ - כמו data_paths.path():
 REM החדש, אלא אם הוא קיים רק במקום הישן.
-if exist "data\.data_layout" (
-    if exist "data\security\web_app_token.txt" (
-        set "TOKEN_FILE=data\security\web_app_token.txt"
-    ) else if not exist "data\web_app_token.txt" (
-        set "TOKEN_FILE=data\security\web_app_token.txt"
+if exist "%DATA%\.data_layout" (
+    if exist "%DATA%\security\web_app_token.txt" (
+        set "TOKEN_FILE=%DATA%\security\web_app_token.txt"
+    ) else if not exist "%DATA%\web_app_token.txt" (
+        set "TOKEN_FILE=%DATA%\security\web_app_token.txt"
     )
 )
-set "LOCK_DIR=data\.web_launcher.lock"
+set "LOCK_DIR=%DATA%\.web_launcher.lock"
 echo [WebLauncher] starting > "%LOG%"
 
 REM נועלים לפני כל בדיקה/החלטה, כדי למנוע מרוץ בין שתי הפעלות כמעט-בו-זמניות
