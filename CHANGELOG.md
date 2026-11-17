@@ -122,6 +122,10 @@ was missing and fixes what a deep check of the new code found. If you are coming
 
 ### Security
 - opentelemetry-api 1.45.2 (CVE-2026-126360).
+- Code scanning: the release workflow is read-only except for the job that publishes, and a CodeQL configuration leaves
+  out the two queries that flag what a local, single-user app does by design, so a new finding of another kind is seen.
+- `dev/leak_check.py` scans what a branch adds for secrets and personal details before a push, including its commit
+  messages and authors. It also runs as a `pre-push` hook.
 
 ## 2.0.0 - 2026-11-16
 
