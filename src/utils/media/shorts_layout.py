@@ -6,6 +6,9 @@
 #   - punch-in: זום של 25% על המשחק סביב השיא (שנייה לפני ועד שנייה וחצי אחריו), בלי לשנות את גודל הפלט.
 #   - שמע: ערוץ המשחק, ואם יש - המיקרופון מעורבב מעליו (כמו --mic-track בסטודיו).
 # 17.11.2026 (2.0.1):
+#   - הזום על השיא ממורכז. crop מחשב את iw/ih פעם אחת, כך ש-(iw-ow)/2 נשאר 0 גם כשהתמונה גדלה, והזום נצמד לפינה
+#     השמאלית-עליונה; עכשיו ההיסט מחושב מהזום עצמו.
+#   - מקור צר מהמסגרת (הקלטה אנכית, 4:3 ברצועת המשחק) גדל עד שהוא מכסה אותה; קודם החיתוך נכשל.
 #   - cam_track: מסגרת המצלמה עוקבת אחרי הפנים (utils/media/face_track.py) במקום חיתוך למרכז.
 #   - slowmo_at: הילוך איטי (חצי מהירות) על השיא - מ-0.3 שניות לפניו ועד 0.7 אחריו, בווידאו ובשמע (atempo שומר על גובה
 #     הצליל). ה-Short מתארך בשנייה. הזום על השיא מחושב על הזמן המקורי, ולכן שניהם יושבים על אותו רגע.
@@ -28,7 +31,7 @@ def _punch(width: int, height: int, peak: Optional[float]) -> str:
         return ""
     on = f"between(t\\,{max(0.0, peak - 1.0):.2f}\\,{peak + 1.5:.2f})"
     return (f",scale=w='trunc({width}*(1+{PUNCH_ZOOM}*{on})/2)*2':h='trunc({height}*(1+{PUNCH_ZOOM}*{on})/2)*2':eval=frame"
-            f",crop={width}:{height}:(iw-ow)/2:(ih-oh)/2")
+            f",crop={width}:{height}:x='{width}*{PUNCH_ZOOM}*{on}/2':y='{height}*{PUNCH_ZOOM}*{on}/2'")
 
 
 def slowmo_window(duration: float, peak: Optional[float]) -> Optional[Tuple[float, float]]:
@@ -72,10 +75,10 @@ def build_command(ffmpeg_exe: str, source: str, start: float, duration: float, o
         cam = (face_track.crop_filter(cam_track, W, CAM_H) if cam_track
                else f"scale={W}:{CAM_H}:force_original_aspect_ratio=increase,crop={W}:{CAM_H}")
         graph = [f"[0:v:1]{cam}[cam]",
-                 f"[0:v:0]scale=-2:{GAME_H},crop={W}:{GAME_H}{_punch(W, GAME_H, punch_at)}[game]",
+                 f"[0:v:0]scale={W}:{GAME_H}:force_original_aspect_ratio=increase,crop={W}:{GAME_H}{_punch(W, GAME_H, punch_at)}[game]",
                  f"[cam][game]vstack,format=yuv420p{video_out}"]
     else:
-        graph = [f"[0:v:0]scale=-2:{H},crop={W}:{H}{_punch(W, H, punch_at)},format=yuv420p{video_out}"]
+        graph = [f"[0:v:0]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}{_punch(W, H, punch_at)},format=yuv420p{video_out}"]
     if window:
         graph += _slowmo("[vl]", "[vs]" if fps else "[v]", window, duration, audio=False)
         if fps:

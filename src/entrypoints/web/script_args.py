@@ -135,9 +135,9 @@ def _build_wave7_args(payload):
             mic = int(mic_raw)
             if 0 <= mic <= 32:
                 args += ["--mic-track", str(mic)]
-                gain = float(payload.get("mic_gain") or 1.0)
-                if gain != 1.0:
-                    args += ["--mic-gain", f"{max(0.0, min(3.0, gain)):g}"]
+                gain = _clamped_float(payload.get("mic_gain"), 0.0, 3.0)   # 17.11.2026: 0 הוא 0 (לא 1), וערך לא תקין לא מפיל את שאר הדגלים
+                if gain is not None and gain != 1.0:
+                    args += ["--mic-gain", f"{gain:g}"]
                 if payload.get("mic_denoise"):
                     args += ["--mic-denoise"]
                 if payload.get("duck_game"):
@@ -725,7 +725,32 @@ def _args_super_streamer(payload, batch_overrides_path=None, layers_path=None):
     return args
 
 
+def _args_long_to_shorts(payload, batch_overrides_path=None, layers_path=None):
+    """17.11.2026 (2.0.1): עד עכשיו הסקריפט קיבל מהדפדפן רק את התיקייה, וכל האפשרויות שלו היו נגישות רק משורת הפקודה."""
+    args = []
+    try:
+        count = max(1, min(20, int(payload.get("ls_count") or 5)))
+        if count != 5:
+            args += ["--count", str(count)]
+    except (TypeError, ValueError):
+        pass
+    length = _clamped_float(payload.get("ls_length"), 5.0, 180.0)
+    if length is not None and length != 30.0:
+        args += ["--length", _fmt_num(length)]
+    mic = str(payload.get("ls_mic") or "auto").strip().lower()
+    if mic == "none" or (mic.isdigit() and int(mic) <= 32):
+        args += ["--mic-track", mic]
+    threshold = _clamped_float(payload.get("ls_threshold"), 3.0, 40.0)
+    if threshold is not None and threshold != 18.0:
+        args += ["--threshold", _fmt_num(threshold)]
+    for key, flag in (("ls_punch", "--no-punch-in"), ("ls_slowmo", "--no-slowmo"), ("ls_face", "--no-face-track")):
+        if payload.get(key) is False:
+            args.append(flag)
+    return args
+
+
 _SCRIPT_ARG_BUILDERS = {
+    "long_to_shorts.py": _args_long_to_shorts,
     "dataviz_maker.py": _args_dataviz,
     "story_cutter.py": _args_story_cutter,
     "video_editor.py": _args_video_editor,

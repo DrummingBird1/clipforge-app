@@ -508,6 +508,19 @@ def _file_control(filename):
     if RUN_CONTROL is None:
         return None
     return lambda: RUN_CONTROL.action_for(filename)
+
+
+def _mic_track_for_file(video_path, cfg):
+    """17.11.2026 (2.0.1): ערוץ המיקרופון לקובץ הזה, או None כשאין בו ערוץ כזה. ב-2.0.0 פרופיל עם ערוץ מיקרופון הפיל את
+    הרינדור של כל קליפ עם ערוץ שמע אחד (auto chain מעתיק את הפרופיל לכל קליפ) - עכשיו הקליפ מרונדר בלי הערבוב, עם שורה בלוג."""
+    if cfg.MIC_TRACK is None:
+        return None
+    from utils.media import audio_tracks
+    track = audio_tracks.usable_mic_track(audio_tracks.audio_titles(video_path, FFPROBE_EXE), cfg.MIC_TRACK, cfg.AUDIO_TRACK or 0)
+    if track is None:
+        print(f"[WARN] {os.path.basename(video_path)}: אין בקובץ ערוץ שמע {cfg.MIC_TRACK + 1} נפרד מערוץ המשחק - ממשיך בלי ערבוב המיקרופון.")
+        sys.stdout.flush()
+    return track
 CAPTION_FONT = args.caption_font
 CAPTION_FONT_SIZE = args.caption_font_size
 CAPTION_COLOR = args.caption_color
@@ -1894,7 +1907,7 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
         gpu_prefix=gpu_prefix,
         denoise_filter=cfg.DENOISE_FILTER_OVERRIDE, sharpen_filter=cfg.SHARPEN_FILTER_OVERRIDE, tonemap_filter=cfg.TONEMAP_FILTER_OVERRIDE,
         eq_filter=cfg.EQ_FILTER, lut_intensity=cfg.LUT_INTENSITY, audio_stream_index=cfg.AUDIO_TRACK, audio_fx_filters=cfg.AUDIO_FX_FILTERS,
-        mic_stream_index=cfg.MIC_TRACK, mic_gain=cfg.MIC_GAIN, mic_denoise=cfg.MIC_DENOISE, duck_game=cfg.DUCK_GAME,
+        mic_stream_index=_mic_track_for_file(video_path, cfg), mic_gain=cfg.MIC_GAIN, mic_denoise=cfg.MIC_DENOISE, duck_game=cfg.DUCK_GAME,
         layers=file_layers, layer_text_files=layer_text_files, layer_image_inputs=layer_image_inputs,
         broll_audio_sources=build_broll_audio_sources(file_layers, layer_image_inputs) if cfg.KEEP_AUDIO else None,
         progress_bar=cfg.PROGRESS_BAR, frame_border=cfg.FRAME_BORDER, frame_radius=cfg.FRAME_RADIUS,

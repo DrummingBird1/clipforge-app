@@ -152,3 +152,25 @@ def test_select_script_shows_super_manager_panel_only_for_its_own_script():
 def test_select_script_shows_super_streamer_panel_only_for_its_own_script():
     html = _index_html()
     assert 'document.getElementById("superStreamerOptions").hidden = basename !== "super_streamer.py";' in html
+
+
+def test_build_extra_args_long_to_shorts_defaults_send_nothing():
+    # 2.0.1: עד עכשיו הסקריפט קיבל מהדפדפן רק את התיקייה. ברירות המחדל לא מוסיפות דגלים - הפקודה כמו קודם.
+    payload = {"ls_count": "5", "ls_length": "30", "ls_mic": "auto", "ls_threshold": "18", "ls_punch": True, "ls_slowmo": True, "ls_face": True}
+    assert web_app._build_extra_args("long_to_shorts.py", payload) == []
+    assert web_app._build_extra_args("long_to_shorts.py", {}) == []
+
+
+def test_build_extra_args_long_to_shorts_choices_and_limits():
+    payload = {"ls_count": "50", "ls_length": "12.5", "ls_mic": "1", "ls_threshold": "12", "ls_punch": False, "ls_slowmo": False, "ls_face": False}
+    assert web_app._build_extra_args("long_to_shorts.py", payload) == [
+        "--count", "20", "--length", "12.5", "--mic-track", "1", "--threshold", "12", "--no-punch-in", "--no-slowmo", "--no-face-track"]
+    assert web_app._build_extra_args("long_to_shorts.py", {"ls_mic": "none"}) == ["--mic-track", "none"]
+    assert web_app._build_extra_args("long_to_shorts.py", {"ls_mic": "; rm", "ls_count": "x", "ls_length": "abc"}) == []
+
+
+def test_build_extra_args_mic_gain_zero_and_bad_gain_keep_the_other_flags():
+    args = web_app._build_extra_args("video_editor.py", {"mic_track": 1, "mic_gain": 0, "mic_denoise": True, "duck_game": True})
+    assert args[args.index("--mic-gain") + 1] == "0" and "--mic-denoise" in args and "--duck-game" in args
+    args = web_app._build_extra_args("video_editor.py", {"mic_track": 1, "mic_gain": "loud", "mic_denoise": True})
+    assert "--mic-track" in args and "--mic-gain" not in args and "--mic-denoise" in args

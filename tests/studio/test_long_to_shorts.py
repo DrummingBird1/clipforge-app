@@ -37,7 +37,41 @@ def test_windows_stay_inside_the_file_and_quiet_files_have_none():
     assert mf.find_moments([-40.0] * 100, -40.0, 10) == []
 
 
+def test_loud_recordings_and_ties():
+    # 2.0.1: ממוצע של -12dBFS - שום נתח לא יכול לעבור "ממוצע + 18dB". בוחרים את ה-5% החזקים, אם הם בולטים מעל השאר.
+    loud = [-14.0] * 600
+    for second in (10, 30, 50):
+        loud[second * 10] = -1.0
+    moments = mf.find_moments(loud, -12.0, 60, count=3, length=10)
+    assert [m.peak for m in moments] == [10.0, 30.0, 50.0]
+    assert mf.find_moments([-14.0] * 600, -12.0, 60) == []                   # שמע אחיד: אין רגעים
+    tied = _levels([(10, 0), (30, 0), (50, 0)], 60)
+    assert [m.peak for m in mf.find_moments(tied, -40.0, 60, count=2, length=10)] == [10.0, 30.0]   # בשוויון - המוקדם, לא סוף הקובץ
+
+
+def test_the_mic_track_is_found_checked_and_never_guessed():
+    from my_scripts.video import long_to_shorts as script
+    from utils.media import audio_tracks as at
+    assert at.find_mic_track(["game", "mic"]) == 1 and at.find_mic_track(["mic"]) is None and at.find_mic_track(["", ""]) is None
+    assert at.usable_mic_track(["game", "mic"], 1) == 1 and at.usable_mic_track(["game"], 1) is None
+    assert at.usable_mic_track(["game", "mic"], 0) is None                     # ערוץ המשחק עצמו
+    assert at.usable_mic_track(None, 1) == 1                                   # ffprobe לא רץ - כמו קודם
+    assert script.pick_mic_track("auto", ["game", "mic"]) == 1 and script.pick_mic_track("auto", ["a", "b"]) is None
+    assert script.pick_mic_track("none", ["game", "mic"]) is None and script.pick_mic_track("2", ["game", "mic"]) is None
+    assert script.pick_mic_track("1", ["game", "mic"]) == 1
+
+
+def test_an_existing_short_is_never_overwritten(tmp_path):
+    from my_scripts.video import long_to_shorts as script
+    assert script.free_name(str(tmp_path), "a_short_1.mp4") == str(tmp_path / "a_short_1.mp4")
+    (tmp_path / "a_short_1.mp4").write_bytes(b"kept")
+    (tmp_path / "a_short_1_2.mp4").write_bytes(b"kept too")
+    assert script.free_name(str(tmp_path), "a_short_1.mp4") == str(tmp_path / "a_short_1_3.mp4")
+
+
 def test_layout_commands():
+    narrow = sl.build_command("ffmpeg", "in.mkv", 0, 30, "out.mp4")              # מקור צר מ-9:16 גדל עד שהוא מכסה
+    assert "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" in narrow[narrow.index("-filter_complex") + 1]
     center = sl.build_command("ffmpeg", "in.mkv", 10, 30, "out.mp4")
     graph = center[center.index("-filter_complex") + 1]
     assert "crop=1080:1920" in graph and "between" not in graph and center[center.index("-ss") + 1] == "10.00"
@@ -132,6 +166,29 @@ def test_a_tracked_facecam_and_slowmo_render_with_real_ffmpeg(tmp_path):
                            "-of", "csv=p=0", str(out)], capture_output=True, text=True, encoding="utf-8").stdout.strip().split(",")
     assert info[:2] == ["1080", "1920"] and 6.7 <= float(info[2]) <= 7.3
     assert ft.sample_faces(str(source), 1, 6, get_ffmpeg_exe(), 160, 120) == [None] * 12    # 6 שניות, פעמיים בשנייה, בלי פנים
+
+
+@needs_ffmpeg
+def test_the_zoom_on_the_peak_stays_centred(tmp_path):
+    # 2.0.0: הזום נצמד לפינה השמאלית-עליונה. ריבוע לבן במרכז המקור חייב להישאר במרכז גם בזמן הזום, רק גדול יותר.
+    import cv2
+    import numpy as np
+    source, out = tmp_path / "square.mp4", tmp_path / "short.mp4"
+    subprocess.run([get_ffmpeg_exe(), "-hide_banner", "-y", "-f", "lavfi", "-i", "color=c=black:s=640x360:r=10:d=6",
+                    "-vf", "drawbox=x=(iw-80)/2:y=(ih-80)/2:w=80:h=80:color=white:t=fill", "-c:v", "libx264", "-preset", "ultrafast", str(source)],
+                   check=True, capture_output=True, timeout=120)
+    cmd = sl.build_command(get_ffmpeg_exe(), str(source), 0, 6, str(out), punch_at=3, has_audio=False,
+                           video_args=["-c:v", "libx264", "-preset", "ultrafast"])
+    assert subprocess.run(cmd, capture_output=True, timeout=300).returncode == 0
+    widths = {}
+    for at in (0.5, 3.0):
+        frame = tmp_path / f"frame_{at}.png"
+        subprocess.run([get_ffmpeg_exe(), "-hide_banner", "-v", "error", "-y", "-ss", str(at), "-i", str(out), "-frames:v", "1", str(frame)],
+                       check=True, capture_output=True, timeout=120)
+        ys, xs = np.nonzero(cv2.imread(str(frame), cv2.IMREAD_GRAYSCALE) > 128)
+        assert abs(xs.mean() - 540) < 6 and abs(ys.mean() - 960) < 6, (at, xs.mean(), ys.mean())
+        widths[at] = xs.max() - xs.min()
+    assert 1.2 < widths[3.0] / widths[0.5] < 1.3
 
 
 def test_sampling_reads_ffmpeg_frames_and_keeps_the_biggest_sure_face(monkeypatch):
