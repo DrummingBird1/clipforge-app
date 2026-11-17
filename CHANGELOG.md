@@ -89,6 +89,10 @@ was missing and fixes what a deep check of the new code found. If you are coming
 - Recording: track names were lost when a recording became an MP4, so the microphone track was not found by itself.
 - Recording with OBS: the WebSocket password is saved from the Recording screen. The screen said it was "kept in the
   vault" but had no field for it, so the only way was editing `.env` by hand.
+- Recording with OBS: the screen showed "not recording" right after Start and "recording" right after Stop, until
+  its next refresh, because OBS answers before the recording has really started or stopped.
+- Recording with OBS: with the Replay Buffer turned off in OBS, the whole screen showed an error on every refresh.
+  Recording works as usual, and the screen says where to turn the Replay Buffer on.
 - Capture cards: when another app holds the card (OBS, the Camera app), the screen says so instead of showing a raw
   FFmpeg error. A recording that did not start is now explained in English too.
 - Studio: a render that failed on the graphics card's encoder was marked as failed; it is now finished on the CPU.

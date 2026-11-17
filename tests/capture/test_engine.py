@@ -113,6 +113,14 @@ class FakeObs:
 
     async def call(self, request):
         self.calls.append((request.requestType, request.requestData))
+        active = self.__dict__.setdefault("active", {"Record": False, "ReplayBuffer": False})
+        for output in active:
+            if request.requestType == f"Start{output}":
+                active[output] = True
+            elif request.requestType == f"Stop{output}":
+                active[output] = False
+            elif request.requestType == f"Get{output}Status":
+                return FakeResponse({"outputActive": active[output]})
         if request.requestType == "GetSceneList":
             return FakeResponse({"currentProgramSceneName": "Game", "scenes": [{"sceneName": "BRB"}, {"sceneName": "Game"}]})
         if request.requestType == "StopRecord":
@@ -135,12 +143,104 @@ def test_obs_engine_drives_obs_and_forwards_saved_replays():
         engine.start_record()
         assert engine.stop_record() == "C:/obs/rec.mkv"
         obs = FakeObs.instances[0]
-        assert [c[0] for c in obs.calls] == ["StartReplayBuffer", "SaveReplayBuffer", "GetSceneList",
-                                             "SetCurrentProgramScene", "StartRecord", "StopRecord"]
-        assert obs.calls[3][1] == {"sceneName": "BRB"}
+        actions = [c for c in obs.calls if not c[0].endswith("Status")]          # בלי שאלות המצב שבין הפעולות
+        assert [c[0] for c in actions] == ["StartReplayBuffer", "SaveReplayBuffer", "GetSceneList",
+                                           "SetCurrentProgramScene", "StartRecord", "StopRecord"]
+        assert actions[3][1] == {"sceneName": "BRB"}
         asyncio.run_coroutine_threadsafe(obs.callback("ReplayBufferSaved", {"savedReplayPath": "C:/obs/r.mp4"}),
                                          engine._loop).result(5)
         assert clips == [("C:/obs/r.mp4", "obs")]
+    finally:
+        engine.shutdown()
+
+
+def test_obs_state_is_right_as_soon_as_start_and_stop_return():
+    """18.11.2026, מול OBS אמיתי: OBS עונה ל-StartRecord לפני שההקלטה התחילה ול-StopRecord לפני שנעצרה. המצב שנשאל מיד אחר כך
+    היה הקודם: "לא מקליט" אחרי התחלה, "מקליט" אחרי עצירה."""
+    class Slow(FakeObs):
+        """כמו OBS: שתי שאלות המצב הראשונות אחרי כל פעולה עוד מחזירות את המצב הקודם."""
+        async def call(self, request):
+            lag = self.__dict__.setdefault("lag", {})
+            kind = request.requestType
+            if kind in ("StartRecord", "StopRecord"):
+                lag["left"], lag["old"] = 2, kind == "StopRecord"
+            response = await super().call(request)
+            if kind == "GetRecordStatus" and lag.get("left"):
+                lag["left"] -= 1
+                return FakeResponse({"outputActive": lag["old"]})
+            return response
+
+    engine = ObsEngine("ws://localhost:4455", "pw", client_factory=Slow)
+    try:
+        engine.start_record()
+        assert engine.status()["recording"] is True
+        engine.stop_record()
+        assert engine.status()["recording"] is False
+    finally:
+        engine.shutdown()
+
+
+def test_obs_that_never_settles_does_not_hang(monkeypatch):
+    from utils.capture import engine as engine_module
+    monkeypatch.setattr(engine_module, "OBS_SETTLE_SECONDS", 0.3)
+
+    class Stuck(FakeObs):
+        async def call(self, request):
+            self.calls.append((request.requestType, request.requestData))
+            return FakeResponse({"outputActive": False})
+
+    engine = ObsEngine("ws://localhost:4455", "pw", client_factory=Stuck)
+    try:
+        started = time.monotonic()
+        engine.start_record()
+        assert time.monotonic() - started < 3
+    finally:
+        engine.shutdown()
+
+
+def test_obs_without_a_replay_buffer_still_records_and_says_where_to_turn_it_on():
+    """18.11.2026, מול OBS אמיתי: כשה-Replay Buffer כבוי בהגדרות של OBS, כל רענון של המצב הציג "GetReplayBufferStatus נכשל
+    (code=604)" כשגיאה של כל המסך. ההקלטה עובדת בלי קשר; רק ה-replay לא זמין, ועל זה יש הודעה שאומרת איפה מפעילים אותו."""
+    class Status:
+        code = 604
+
+        def __str__(self):
+            return "RequestStatus(result=False, code=604, comment='Replay buffer is not available.')"
+
+    class NoReplay(FakeObs):
+        async def call(self, request):
+            self.calls.append((request.requestType, request.requestData))
+            if "ReplayBuffer" in request.requestType:
+                response = FakeResponse(ok=False)
+                response.requestStatus = Status()
+                return response
+            return FakeResponse({"outputActive": request.requestType == "GetRecordStatus"})
+
+    engine = ObsEngine("ws://localhost:4455", "pw", client_factory=NoReplay)
+    try:
+        status = engine.status()
+        assert status["error"] is None and status["recording"] is True and status["replay"] is False
+        assert "Enable Replay Buffer" in status["notice"]
+        for action in (engine.start_replay, engine.save_replay, engine.stop_replay):
+            with pytest.raises(CaptureError, match="Enable Replay Buffer"):
+                action()
+        assert engine.status()["replay"] is False                    # start_replay שנכשל לא משאיר "replay פועל"
+    finally:
+        engine.shutdown()
+
+
+def test_another_obs_failure_is_still_an_error():
+    class Broken(FakeObs):
+        async def call(self, request):
+            response = FakeResponse(ok=False)
+            response.requestStatus = type("Status", (), {"code": 207})()
+            return response
+
+    engine = ObsEngine("ws://localhost:4455", "pw", client_factory=Broken)
+    try:
+        assert "GetRecordStatus" in engine.status()["error"]
+        with pytest.raises(CaptureError, match="StartReplayBuffer"):
+            engine.start_replay()
     finally:
         engine.shutdown()
 

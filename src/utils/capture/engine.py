@@ -108,7 +108,14 @@ def free_path(folder: str, name: str, ext: str) -> str:
 
 
 class CaptureError(RuntimeError):
-    pass
+    obs_code: Optional[int] = None   # קוד הכישלון של obs-websocket, כשהשגיאה הגיעה מבקשה ל-OBS
+
+
+# 18.11.2026 (בדיקה מול OBS אמיתי): כשה-Replay Buffer לא מופעל בהגדרות של OBS, כל בקשה שנוגעת בו חוזרת עם 604
+# ("Replay buffer is not available"). status() שאל עליו בכל רענון, ולכן המסך כולו הציג שגיאה - גם כשהמשתמש רק רצה להקליט.
+OBS_REPLAY_OFF_CODE = 604
+OBS_SETTLE_SECONDS = 5.0     # כמה מחכים שהקלטה / replay ב-OBS באמת יתחילו או ייעצרו אחרי הבקשה
+OBS_REPLAY_OFF_TEXT = "ה-Replay Buffer כבוי ב-OBS. כדי לשמור קליפים דרך OBS מפעילים אותו שם: Settings > Output > Enable Replay Buffer"
 
 
 # 17.11.2026 (בדיקה על חומרה אמיתית): כש-OBS פתוח עם אותו כרטיס, ffmpeg נופל עם "Error opening input: I/O error" - שורה שלא
@@ -433,7 +440,10 @@ class ObsEngine:
         ws = await self._ensure()
         response = await ws.call(simpleobsws.Request(request_type, data or {}))
         if not response.ok():
-            raise CaptureError(f"OBS: {request_type} נכשל ({getattr(response, 'requestStatus', None)})")
+            status = getattr(response, "requestStatus", None)
+            error = CaptureError(f"OBS: {request_type} נכשל ({status})")
+            error.obs_code = getattr(status, "code", None)
+            raise error
         return response.responseData or {}
 
     def call(self, request_type: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -445,27 +455,53 @@ class ObsEngine:
             self._ws = None
             raise CaptureError(f"אין חיבור ל-OBS ({e}). ודא ש-OBS פתוח ו-obs-websocket מופעל (Tools > WebSocket Server Settings).")
 
+    def _settle(self, status_request: str, active: bool) -> None:
+        """18.11.2026 (בדיקה מול OBS אמיתי): OBS עונה ל-StartRecord / StopRecord לפני שהפלט באמת התחיל או נעצר. המצב שנשאל מיד
+        אחר כך עוד היה הקודם, ולכן המסך הראה "לא מקליט" אחרי "התחל הקלטה" ו"מקליט" אחרי "עצור", עד הרענון הבא. מחכים כאן
+        (עד OBS_SETTLE_SECONDS) שהמצב ב-OBS יתאים למה שביקשנו."""
+        deadline = time.monotonic() + OBS_SETTLE_SECONDS
+        while time.monotonic() < deadline:
+            try:
+                if bool(self.call(status_request).get("outputActive")) == active:
+                    return
+            except CaptureError:
+                return
+            time.sleep(0.1)
+
     def start_record(self, spec=None, name: str = "") -> str:
         self.call("StartRecord")
         self._state["recording"] = True
+        self._settle("GetRecordStatus", True)
         return ""
 
     def stop_record(self) -> Optional[str]:
         path = self.call("StopRecord").get("outputPath") or None
         self._state["recording"] = False
+        self._settle("GetRecordStatus", False)
         return path
 
+    def _replay_call(self, request_type: str) -> Dict[str, Any]:
+        """בקשה שנוגעת ב-Replay Buffer: כשהוא כבוי בהגדרות של OBS - הודעה שאומרת איפה מפעילים אותו, לא קוד שגיאה."""
+        try:
+            return self.call(request_type)
+        except CaptureError as e:
+            if e.obs_code == OBS_REPLAY_OFF_CODE:
+                raise CaptureError(OBS_REPLAY_OFF_TEXT) from None
+            raise
+
     def start_replay(self, spec=None, keep_seconds: int = 0, max_bytes: int = 0) -> None:
-        self.call("StartReplayBuffer")
+        self._replay_call("StartReplayBuffer")
         self._state["replay"] = True
+        self._settle("GetReplayBufferStatus", True)
 
     def save_replay(self, seconds: int = 0, name: str = "") -> str:
-        self.call("SaveReplayBuffer")   # הנתיב מגיע באירוע ReplayBufferSaved -> on_clip
+        self._replay_call("SaveReplayBuffer")   # הנתיב מגיע באירוע ReplayBufferSaved -> on_clip
         return ""
 
     def stop_replay(self) -> None:
-        self.call("StopReplayBuffer")
+        self._replay_call("StopReplayBuffer")
         self._state["replay"] = False
+        self._settle("GetReplayBufferStatus", False)
 
     def scenes(self) -> Dict[str, Any]:
         data = self.call("GetSceneList")
@@ -475,9 +511,15 @@ class ObsEngine:
         self.call("SetCurrentProgramScene", {"sceneName": scene})
 
     def status(self) -> Dict[str, Any]:
+        notice = None
         try:
             record = self.call("GetRecordStatus")
-            replay = self.call("GetReplayBufferStatus")
+            try:
+                replay = self.call("GetReplayBufferStatus")
+            except CaptureError as e:
+                if e.obs_code != OBS_REPLAY_OFF_CODE:
+                    raise
+                replay, notice = {}, OBS_REPLAY_OFF_TEXT     # ההקלטה עובדת; רק ה-replay לא זמין, וזו לא שגיאה
             self._state = {"recording": bool(record.get("outputActive")), "replay": bool(replay.get("outputActive"))}
             error = None
         except CaptureError as e:
@@ -485,7 +527,7 @@ class ObsEngine:
             if self._ws is None:                 # אין חיבור: לא יודעים, ולכן לא "מקליט" - אחרת ההגדרות ננעלות על מצב ישן
                 self._state = {"recording": False, "replay": False}
         return {"engine": self.name, "recording": self._state["recording"], "recording_path": "",
-                "replay": self._state["replay"], "replay_buffered_seconds": None, "error": error, "notice": None}
+                "replay": self._state["replay"], "replay_buffered_seconds": None, "error": error, "notice": notice}
 
     def shutdown(self) -> None:
         if self._ws is not None:

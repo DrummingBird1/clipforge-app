@@ -1024,6 +1024,7 @@
   "בתחנת העגינה בלבד - במצב נייד אין יציאת HDMI.": "In the dock only - handheld mode has no HDMI output.",
   "מקליט בלי שמע המשחק: שמע המחשב לא נפתח": "Recording without the game audio: the computer's audio could not be opened",
   "לכידת המסך המהירה לא עלתה, ולכן ההקלטה בלכידה הרגילה (איטית יותר)": "The fast screen capture did not start, so the recording uses the plain capture (slower)",
+  "ה-Replay Buffer כבוי ב-OBS. כדי לשמור קליפים דרך OBS מפעילים אותו שם: Settings > Output > Enable Replay Buffer": "The Replay Buffer is off in OBS. To save clips through OBS, turn it on there: Settings > Output > Enable Replay Buffer",
   "שמור סיסמה": "Save password",
   "OBS צריך להיות פתוח, עם השרת שלו מופעל: Tools > WebSocket Server Settings > Enable WebSocket server. את הסיסמה מעתיקים משם (Show Connect Info) ושומרים כאן פעם אחת. היא נשמרת בכספת של Windows ולא מוצגת שוב.": "OBS has to be open, with its server turned on: Tools > WebSocket Server Settings > Enable WebSocket server. Copy the password from there (Show Connect Info) and save it here once. It is kept in the Windows vault and is not shown again.",
   "סיסמת ה-WebSocket של OBS": "The OBS WebSocket password",
