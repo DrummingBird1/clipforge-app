@@ -285,6 +285,8 @@ def main(argv=None):
     parser.add_argument("--ref", default="HEAD", help="מאיזה commit לקחת את הקבצים (ברירת מחדל: HEAD)")
     parser.add_argument("--offline", action="store_true", help="uv sync בלי רשת - רק מה-cache")
     parser.add_argument("--keep-stage", action="store_true", help="להשאיר את תיקיית הבנייה ב-build/portable/")
+    parser.add_argument("--launcher-exe", help="16.11.2026: ClipForge.exe שנבנה מ-dev/portable/clipforge_exe.py (PyInstaller) - "
+                                                 "winget דורש exe בתוך ה-zip. בלעדיו החבילה כמו קודם (ClipForge.vbs)")
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -319,6 +321,10 @@ def main(argv=None):
     print(f"[4/6] ffmpeg: {copy_ffmpeg(ffmpeg, os.path.join(stage, 'ffmpeg'), work)}")
     for launcher in ("ClipForge.vbs", "launcher.pyw"):
         shutil.copy2(os.path.join(PORTABLE_SRC, launcher), os.path.join(stage, launcher))
+    if args.launcher_exe:
+        if not os.path.isfile(args.launcher_exe):
+            raise SystemExit(f"ה-launcher לא נמצא: {args.launcher_exe}")
+        shutil.copy2(args.launcher_exe, os.path.join(stage, "ClipForge.exe"))
     sys.path.insert(0, os.path.join(ROOT, "src"))
     from utils.shared import release_info   # לא update_checker: הוא מייבא requests, ופה רץ הפייתון של ה-runner בלי ספריות הפרויקט
     with open(os.path.join(stage, release_info.PORTABLE_MARKER), "w", encoding="utf-8") as f:

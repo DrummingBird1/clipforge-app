@@ -355,7 +355,7 @@ def burn_captions(
         cmd += ["-c:a", "copy"]
         cmd += list(hdr_output_args) if hdr_output_args else []
         cmd += [temp_output]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS)
 
         if result.returncode != 0 or not os.path.exists(temp_output) or os.path.getsize(temp_output) == 0:
             if os.path.exists(temp_output):

@@ -19,7 +19,7 @@ import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 
-from utils.bot.approval_store import CLIPS_REVIEW_DIR, FRIEND_TAGS_CACHE_DIR, REJECTED_DIR, get_rocket_input_dir
+from utils.bot.approval_store import CLIPS_REVIEW_DIR, FRIEND_TAGS_CACHE_DIR, REJECTED_DIR, get_rocket_input_dir, move_decided_clip
 from utils.media.clip_tagger import tags_cache_path as _friend_tags_cache_path
 from utils.shared.ffmpeg_locator import get_ffmpeg_exe
 from utils.shared.subprocess_flags import NO_WINDOW_FLAGS
@@ -100,15 +100,7 @@ class ApprovalCog(commands.Cog):
 
     async def resolve_pending(self, pending_id, video_path, approved):
         try:
-            if approved:
-                os.makedirs(get_rocket_input_dir(), exist_ok=True)
-                dest = os.path.join(get_rocket_input_dir(), os.path.basename(video_path))
-            else:
-                os.makedirs(REJECTED_DIR, exist_ok=True)
-                dest = os.path.join(REJECTED_DIR, os.path.basename(video_path))
-
-            if os.path.exists(video_path):
-                os.replace(video_path, dest)
+            move_decided_clip(video_path, get_rocket_input_dir() if approved else REJECTED_DIR)   # 16.11.2026: גם בין כוננים, ובלי לדרוס קליפ באותו שם
 
             await self.bot.db.execute(
                 "UPDATE pending_approvals SET status = ?, resolved_at = ? WHERE id = ?",

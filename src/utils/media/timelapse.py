@@ -4,7 +4,8 @@
 # מקדם המהירות, שרשור atempo (ל-audio מהיר במיוחד), ובניית ה-filter_complex.
 # הקוד שבאמת מריץ ffmpeg נשאר בסקריפט עצמו (כמו בכל my_scripts/video/*.py אחר).
 
-VIDEO_EXTENSIONS = (".mp4", ".mkv", ".mov", ".avi", ".webm")
+# 16.11.2026: גם .ts (OBS, Steam, לכידה), .flv (הקלטות סטרים ישנות) ו-.m4v (קונסולות ו-Apple) - קבצים שהמאזינים דילגו עליהם
+VIDEO_EXTENSIONS = (".mp4", ".mkv", ".mov", ".avi", ".webm", ".ts", ".flv", ".m4v")
 
 HORIZONTAL_SCALE_CHAIN = "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2"
 VERTICAL_SCALE_CHAIN = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"

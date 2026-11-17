@@ -35,12 +35,14 @@ Edit, brand and export Shorts, TikToks and YouTube videos from your browser, wit
 | 🎞️ **Studio**<br>A video editor in the browser. **Simple** mode takes you from a folder to finished videos in four steps, and **Normal** and **Expert** open every setting. | 📊 **Data videos**<br>Turn a table into an animated chart video (bar races, lines, maps) with titles, narration and captions. |
 | 📂 **Outputs**<br>Every video you made, in one place, with a player and quick actions. | 📱 **Phone screen**<br>See what's running, approve clips and run things again from your phone. |
 | 🔔 **Notification center**<br>Finished runs, failures and anything that needs you. | 🤖 **Optional automation**<br>Clip detection, AI titles and descriptions, YouTube upload, a Discord bot, Twitch clip import and an OBS replay watcher. Each one is off until you set it up (see [Optional features](#optional-features)). |
+| 🔴 **Recording**<br>Record the screen, a PC game, or a console through a capture card. Keep a replay buffer and save the last moments as a clip, or control OBS from the same screen. | 📥 **Import**<br>Bring in clips from NVIDIA, AMD, Xbox Game Bar, Steam, OBS and Elgato, and from a PlayStation, Xbox or Switch. |
 
 In the studio you can:
 
 - Trim, crop to vertical, and add layers: text, images, a logo or watermark, a frame, the file name.
 - Add captions and normalize the loudness.
-- Export to several targets (Shorts, TikTok, Instagram, YouTube) in one run, with a live player that shows the result as you edit.
+- Export to several targets (Shorts, TikTok, Instagram, YouTube, Twitch, Kick, Discord) in one run, with a live player that shows the result as you edit.
+- Mix the microphone over the game from a recording with separate tracks, and cut a long recording into several Shorts.
 - Keep a project per folder, and save your look as a style or a template.
 
 ## A look inside
@@ -99,7 +101,8 @@ The studio, the data videos editor and the outputs screen work with no account a
 | AI titles, descriptions and clip detection (Gemini) | A Gemini API key | `GEMINI_API_KEY` |
 | YouTube upload and channel stats | An OAuth client of type "Desktop app" for the YouTube Data API v3, from Google Cloud | Save it as `client_secret.json` in the ClipForge folder. The first upload asks you to sign in. |
 | Twitch clip import | A Twitch app (client ID and secret) and your channel name | `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_CHANNEL_NAME` |
-| OBS replay watcher | OBS with its WebSocket server turned on (Tools, WebSocket Server Settings) | `OBS_WEBSOCKET_PORT` (default 4455) and `OBS_WEBSOCKET_PASSWORD`, if you set one |
+| OBS: control from the Recording screen, and the replay watcher | OBS with its WebSocket server turned on (Tools, WebSocket Server Settings) | `OBS_WEBSOCKET_PORT` (default 4455) and `OBS_WEBSOCKET_PASSWORD`, if you set one |
+| Send to Discord from the Outputs screen | The Discord bot running, and `/clip_channel` in the channel you want | `DISCORD_TOKEN` |
 
 Keys go in a text file named `.env` in the ClipForge folder, one per line, for example `GEMINI_API_KEY=your-key`. Add only the ones you use. The 🩺 diagnostics screen shows which keys are set and can check that they still work.
 

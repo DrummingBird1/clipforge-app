@@ -13,7 +13,8 @@ from utils.media.timelapse import VIDEO_EXTENSIONS
 MODES = ("off", "edit", "edit_publish", "publish")
 
 # רק המאזינים האלה מפעילים שרשור - שורת EVENT מסקריפט אחר לא מריצה כלום בטעות
-SOURCE_SCRIPTS = ("super_streamer.py", "obs_replay_watcher.py", "capture_folder_watcher.py")
+SOURCE_SCRIPTS = ("super_streamer.py", "obs_replay_watcher.py", "capture_folder_watcher.py",
+                  "recording")   # 16.11.2026: מסך ההקלטה (routes/recording.py) - replay שנשמר
 
 # שדות של ריצה/קובץ מסוימים (ושל קובץ הסגנונות), לא של הסגנון - לא נלקחים לקליפ חדש
 _RUN_ONLY_KEYS = (

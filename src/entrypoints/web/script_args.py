@@ -128,6 +128,22 @@ def _build_wave7_args(payload):
                 args += ["--audio-track", str(track)]
         except (TypeError, ValueError):
             pass
+    # 16.11.2026 (2.0): ערוץ מיקרופון נפרד - רק כשנבחר (payload בלי השדה = הפקודה כמו קודם)
+    mic_raw = payload.get("mic_track")
+    if mic_raw not in (None, ""):
+        try:
+            mic = int(mic_raw)
+            if 0 <= mic <= 32:
+                args += ["--mic-track", str(mic)]
+                gain = float(payload.get("mic_gain") or 1.0)
+                if gain != 1.0:
+                    args += ["--mic-gain", f"{max(0.0, min(3.0, gain)):g}"]
+                if payload.get("mic_denoise"):
+                    args += ["--mic-denoise"]
+                if payload.get("duck_game"):
+                    args += ["--duck-game"]
+        except (TypeError, ValueError):
+            pass
     if payload.get("keep_audio") and payload.get("captions"):
         style = str(payload.get("caption_style") or "classic")
         if style in _CHOICES["caption_style"] and style != "classic":

@@ -121,7 +121,7 @@ def _run_ffprobe(path):
     }
     try:
         # גל 24: probe לתור של מאות קבצים - בתוך תקרת נתיב ה-thumbs (utils/video/media_pool.py)
-        proc = media_pool.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=15, creationflags=NO_WINDOW_FLAGS)
+        proc = media_pool.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace", timeout=15, creationflags=NO_WINDOW_FLAGS)
         data = json.loads(proc.stdout)
     except Exception:
         return result

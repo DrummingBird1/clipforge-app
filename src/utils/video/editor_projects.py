@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional
 from utils.video import video_editor_profiles as vep
 from utils.shared.atomic_write import atomic_write_json
 from utils.shared import data_paths
+from utils.media.timelapse import VIDEO_EXTENSIONS
 from utils.video.editor_model import SCHEMA_VERSION, sanitize_targets
 
 MAX_PROJECTS = 200
@@ -99,7 +100,7 @@ def delete_project(folder: str) -> bool:
     return True
 
 
-_VIDEO_EXTENSIONS = (".mp4", ".mkv", ".mov", ".avi", ".webm")
+_VIDEO_EXTENSIONS = VIDEO_EXTENSIONS  # utils.media.timelapse - אותה רשימה בכל מקום
 
 
 def _first_video(folder: str, queue: Any) -> Optional[str]:

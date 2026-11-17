@@ -195,7 +195,7 @@ def _cached(kind, path, compute):
 def _run_ffmpeg(args, timeout):
     from utils.shared.ffmpeg_locator import get_ffmpeg_exe
     from utils.shared.subprocess_flags import NO_WINDOW_FLAGS
-    return media_pool.run([get_ffmpeg_exe(), "-hide_banner", "-nostats", *args], lane="analysis", capture_output=True, text=True,
+    return media_pool.run([get_ffmpeg_exe(), "-hide_banner", "-nostats", *args], lane="analysis", capture_output=True, text=True, encoding="utf-8",
                           errors="replace", timeout=timeout, creationflags=NO_WINDOW_FLAGS)
 
 

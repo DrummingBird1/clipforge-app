@@ -84,3 +84,8 @@ desktop.ini
 
 # 30.10.2026: dev/export_public.py - שמות הבעלים לסריקה, לא בריפו (ראו שם)
 /dev/export_public.local.json
+
+# 16.11.2026: סימני המים של המשתמש (AGENTS.md, כלל 4) - נשארים מחוץ לגיט ומחוץ לייצוא הציבורי
+/assets/PShorts Watermark.png
+/assets/RLShorts Watermark.png
+/assets/watermark-820x180.png

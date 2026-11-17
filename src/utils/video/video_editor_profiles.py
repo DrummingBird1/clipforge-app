@@ -75,7 +75,7 @@ PROFILE_FIELDS = (
     "aspect", "custom_width", "custom_height", "fit", "dual_output", "watermark_position_vertical",
     "speed", "crf", "resolution", "scale_algo", "lut_intensity",
     "eq_brightness", "eq_contrast", "eq_saturation", "eq_gamma", "denoise_level", "sharpen_level", "tonemap",
-    "rotate", "flip", "deinterlace", "pad_color", "audio_track",
+    "rotate", "flip", "deinterlace", "pad_color", "audio_track", "mic_track", "mic_gain", "mic_denoise", "duck_game",
     "caption_style", "captions_language", "captions_model", "captions_export", "captions_no_burn",
     # גל 7ב: שכבות, קישוטים ועיבוד-אחרי
     "layers", "timestamp_overlay", "progress_bar", "progress_bar_color", "progress_bar_position", "progress_bar_height",

@@ -47,6 +47,7 @@ from utils.video.run_control import RunControl, next_task_index, run_tasks
 from utils.shared.workspace_dir import STUDIO
 from utils.shared.export_dir import output_dir as export_output_dir  # תיקיית הייצוא (של הסטודיו, או הכללית), או workspace
 from utils.media.ffprobe_cache import probe_video
+from utils.media import encoders  # 16.11.2026: מקודד hevc/av1 לפי הכרטיס
 from utils.media.nvenc_probe import DEFAULT_MAX_TO_TRY as NVENC_PROBE_MAX_TO_TRY
 from utils.media.nvenc_probe import probe_max_concurrent_nvenc_sessions
 from utils.shared.render_lock import render_lock_if_needed
@@ -258,6 +259,21 @@ if REPLACE_AUDIO_PATH and not args.keep_audio:
     sys.stdout.flush()
 LOUDNORM = args.loudnorm
 CODEC = args.codec
+# 16.11.2026: מקודד hevc/av1 לפי הכרטיס (utils/media/encoders.py) - nvenc / amf / qsv / cpu. h264 נשאר libx264.
+ENCODER_BACKEND = "nvenc"
+if CODEC in encoders.GPU_CODECS:
+    _requested_backend = args.encoder_backend or encoders.load_setting()
+    if _requested_backend == "nvenc":
+        ENCODER_BACKEND = "nvenc"   # בלי בדיקה - בדיוק כמו קודם
+    else:
+        ENCODER_BACKEND, _backend_note = encoders.resolve_backend(
+            _requested_backend, CODEC, encoders.detect_backends(FFMPEG_EXE, creationflags=NO_WINDOW_FLAGS))
+        if _backend_note:
+            print(f"[WARN] {_backend_note}")
+        elif ENCODER_BACKEND != "nvenc":
+            print(f"[INFO] מקודד: {encoders.LABELS[ENCODER_BACKEND]} ({encoders.encoder_name(CODEC, ENCODER_BACKEND)})")
+        sys.stdout.flush()
+
 GENERATE_THUMBNAIL = args.thumbnail
 FORCE = args.force
 PREVIEW_ONLY = args.preview_only
@@ -317,7 +333,7 @@ if args.parallel != PARALLEL:
 # עם --codec h264, או אם הבדיקה לא זיהתה אף סשן NVENC פעיל (למשל אין GPU של NVIDIA) -
 # במקרה כזה הקידוד האמיתי ייכשל בעצמו על כל קובץ באותה סיבה, לא קשור להגבלה הזו.
 NVENC_SEMAPHORE = None
-if PARALLEL > 1 and CODEC in ("hevc", "av1"):
+if PARALLEL > 1 and CODEC in ("hevc", "av1") and ENCODER_BACKEND == "nvenc":
     if args.max_concurrent_nvenc is not None:
         nvenc_limit = max(1, args.max_concurrent_nvenc)
         print(f"[INFO] מגבלת NVENC מקבילים: {nvenc_limit} (הוגדר ידנית עם --max-concurrent-nvenc).")
@@ -345,9 +361,9 @@ EFFORT = args.effort
 # --hwaccel דורש NVENC (hevc/av1) - הפריימים המפוענחים/מסוננים נשארים בפורמט
 # CUDA עד לקידוד עצמו, ו-libx264 (h264) לא יודע לקבל את זה. מתעלמים בשקט
 # (לא נכשלים) עם --codec h264, כמו כל דגל לא-רלוונטי אחר בפרויקט הזה.
-USE_HWACCEL = args.hwaccel and CODEC in ("hevc", "av1")
+USE_HWACCEL = args.hwaccel and CODEC in ("hevc", "av1") and ENCODER_BACKEND == "nvenc"
 if args.hwaccel and not USE_HWACCEL:
-    print(f"[INFO] --hwaccel מתעלם - דורש --codec hevc/av1 (NVENC), לא {CODEC!r}.")
+    print(f"[INFO] --hwaccel מתעלם - דורש --codec hevc/av1 ב-NVENC (NVIDIA), לא {CODEC!r} / {ENCODER_BACKEND}.")
     sys.stdout.flush()
 
 # item: פענוח מואץ-GPU בלי NVENC - נדחה הדדית מול --hwaccel (שכבר כולל פענוח
@@ -365,7 +381,7 @@ def available_cuda_filters():
     global _CUDA_FILTERS_CACHE
     if _CUDA_FILTERS_CACHE is None:
         try:
-            listing = subprocess.run([FFMPEG_EXE, "-hide_banner", "-filters"], capture_output=True, text=True, timeout=20, creationflags=NO_WINDOW_FLAGS).stdout
+            listing = subprocess.run([FFMPEG_EXE, "-hide_banner", "-filters"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20, creationflags=NO_WINDOW_FLAGS).stdout
             _CUDA_FILTERS_CACHE = parse_cuda_filters(listing)
         except (OSError, subprocess.SubprocessError):
             _CUDA_FILTERS_CACHE = []
@@ -668,6 +684,10 @@ FLIP = args.flip
 ORIENTATION_FILTERS = build_orientation_filters(ROTATE, FLIP)
 DEINTERLACE = args.deinterlace
 AUDIO_TRACK = args.audio_track if args.audio_track is not None and args.audio_track >= 0 else None
+MIC_TRACK = args.mic_track if args.mic_track is not None and args.mic_track >= 0 else None   # 16.11.2026 (2.0)
+MIC_GAIN = max(0.0, min(3.0, args.mic_gain))
+MIC_DENOISE = args.mic_denoise
+DUCK_GAME = args.duck_game
 EQ_FILTER = build_eq_filter(
     max(-1.0, min(1.0, args.eq_brightness)), max(0.0, min(3.0, args.eq_contrast)),
     max(0.0, min(3.0, args.eq_saturation)), max(0.1, min(10.0, args.eq_gamma)),
@@ -853,7 +873,7 @@ def maybe_burn_captions(video_output_path, hdr_output_args=None, nvenc_preset=No
         burn_captions(
             video_output_path, ffmpeg_exe=FFMPEG_EXE, translate_to_english=CAPTIONS_TRANSLATE,
             font_name=CAPTION_FONT, font_size=CAPTION_FONT_SIZE, font_color=CAPTION_COLOR, position=CAPTION_POSITION,
-            video_codec_args=get_codec_args(CODEC, preset=nvenc_preset, cq=CODEC_QUALITY), hdr_output_args=hdr_output_args,
+            video_codec_args=get_codec_args(CODEC, preset=nvenc_preset, cq=CODEC_QUALITY, backend=ENCODER_BACKEND), hdr_output_args=hdr_output_args,
             style=CAPTION_STYLE, language=CAPTIONS_LANGUAGE, model_size=CAPTIONS_MODEL,
             export_formats=CAPTIONS_EXPORT, burn=not CAPTIONS_NO_BURN,
             srt_override_path=edited if (edited and os.path.exists(edited)) else None,
@@ -895,7 +915,7 @@ def maybe_post_process(output_path, output_width, output_height, output_fps, nve
     has_steps = INTRO_PATH or OUTRO_PATH or BOOMERANG or LOOP_COUNT > 1 or META_TITLE or META_COMMENT or CHAPTERS or EXPORT_GIF or EXPORT_AUDIO
     if not has_steps:
         return
-    codec_args = get_codec_args(CODEC, preset=nvenc_preset, cq=CODEC_QUALITY) + list(hdr_output_args or [])
+    codec_args = get_codec_args(CODEC, preset=nvenc_preset, cq=CODEC_QUALITY, backend=ENCODER_BACKEND) + list(hdr_output_args or [])
     name = os.path.basename(output_path)
     intro_offset = 0.0
     if INTRO_PATH or OUTRO_PATH:
@@ -976,7 +996,7 @@ def detect_silence_trim_bounds(video_path, duration):
         return 0.0, None
     try:
         cmd = [FFMPEG_EXE, "-i", video_path, "-vn", "-af", SILENCE_DETECT_FILTER, "-f", "null", os.devnull]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, creationflags=NO_WINDOW_FLAGS)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120, creationflags=NO_WINDOW_FLAGS)
         intervals = parse_silence_intervals(result.stderr, duration=duration)
         return compute_silence_trim_bounds(duration, intervals, min_silence_seconds=SILENCE_MIN_DURATION)
     except Exception as e:
@@ -992,7 +1012,7 @@ def detect_all_silence_intervals(video_path, duration):
         return []
     try:
         cmd = [FFMPEG_EXE, "-i", video_path, "-vn", "-af", SILENCE_DETECT_FILTER, "-f", "null", os.devnull]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, creationflags=NO_WINDOW_FLAGS)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120, creationflags=NO_WINDOW_FLAGS)
         return parse_silence_intervals(result.stderr, duration=duration)
     except Exception as e:
         print(f"  ⚠️ זיהוי שקט למחיקה-באמצע נכשל (ממשיך בלי הסרה): {e}")
@@ -1010,7 +1030,7 @@ def detect_stabilization_transform(video_path):
     os.close(fd)
     try:
         cmd = [FFMPEG_EXE, "-y", "-i", video_path, "-vf", get_vidstabdetect_filter(transforms_path), "-f", "null", os.devnull]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, creationflags=NO_WINDOW_FLAGS)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600, creationflags=NO_WINDOW_FLAGS)
         if result.returncode != 0 or not os.path.exists(transforms_path) or os.path.getsize(transforms_path) == 0:
             raise RuntimeError((result.stderr or "").strip()[-300:] or "vidstabdetect לא הפיק קובץ transforms תקין")
         return transforms_path
@@ -1386,9 +1406,9 @@ def persist_final_counter_value():
 # בגלובלים המשותפים. המעבר נבדק מול "פקודות זהב" (tests/studio/test_video_editor_golden.py): פקודות ffmpeg זהות
 # בייט-בבייט ל-48 צירופי דגלים, מה שמבטיח סרטונים זהים - בלי לרנדר.
 RENDER_CONFIG_NAMES = (
-    "AUDIO_FX_FILTERS", "AUDIO_TRACK", "AUTO_LEVELS", "BLUR_BACKGROUND", "CAPTIONS", "CAPTION_COLOR",
+    "AUDIO_FX_FILTERS", "AUDIO_TRACK", "MIC_TRACK", "MIC_GAIN", "MIC_DENOISE", "DUCK_GAME", "AUTO_LEVELS", "BLUR_BACKGROUND", "CAPTIONS", "CAPTION_COLOR",
     "CAPTION_FONT", "CAPTION_FONT_SIZE", "CAPTION_MAX_CHARS", "CAPTION_POSITION", "CHROMAKEY", "CHROMAKEY_BG_COLOR", "CHROMAKEY_BLEND",
-    "CHROMAKEY_COLOR", "CHROMAKEY_SIMILARITY", "CODEC", "CODEC_QUALITY", "CONTAINER", "DEINTERLACE", "DENOISE",
+    "CHROMAKEY_COLOR", "CHROMAKEY_SIMILARITY", "CODEC", "CODEC_QUALITY", "ENCODER_BACKEND", "CONTAINER", "DEINTERLACE", "DENOISE",
     "DENOISE_FILTER_OVERRIDE", "EFFECTIVE_OUTPUT_TEMPLATE", "EFFORT", "EQ_FILTER", "FADE_IN_SECONDS",
     "FADE_OUT_SECONDS", "FFMPEG_EXE", "FIT", "FORCE", "FRAME_BORDER", "FRAME_RADIUS", "GPU_HYBRID", "HWACCEL_DECODE", "KEEP_AUDIO",
     "KEN_BURNS", "LAYERS", "LOUDNORM", "LOUDNORM_FILTER_OVERRIDE", "LUT_INTENSITY", "LUT_PATH", "NOISE_GATE",
@@ -1874,6 +1894,7 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
         gpu_prefix=gpu_prefix,
         denoise_filter=cfg.DENOISE_FILTER_OVERRIDE, sharpen_filter=cfg.SHARPEN_FILTER_OVERRIDE, tonemap_filter=cfg.TONEMAP_FILTER_OVERRIDE,
         eq_filter=cfg.EQ_FILTER, lut_intensity=cfg.LUT_INTENSITY, audio_stream_index=cfg.AUDIO_TRACK, audio_fx_filters=cfg.AUDIO_FX_FILTERS,
+        mic_stream_index=cfg.MIC_TRACK, mic_gain=cfg.MIC_GAIN, mic_denoise=cfg.MIC_DENOISE, duck_game=cfg.DUCK_GAME,
         layers=file_layers, layer_text_files=layer_text_files, layer_image_inputs=layer_image_inputs,
         broll_audio_sources=build_broll_audio_sources(file_layers, layer_image_inputs) if cfg.KEEP_AUDIO else None,
         progress_bar=cfg.PROGRESS_BAR, frame_border=cfg.FRAME_BORDER, frame_radius=cfg.FRAME_RADIUS,
@@ -1948,14 +1969,14 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
     # (מצב two-pass) - זה בודק תקינות פילטרים, לא ביטרייט, אז ממשיך עם קידוד
     # רגיל (get_codec_args) בכל מקרה.
     if cfg.VALIDATE_ONLY:
-        validate_cmd = cmd_prefix + audio_args + get_codec_args(cfg.CODEC, preset=file_nvenc_preset, cq=cfg.CODEC_QUALITY) + hdr_output_args + ["-t", "0.3", "-f", "null", os.devnull]
+        validate_cmd = cmd_prefix + audio_args + get_codec_args(cfg.CODEC, preset=file_nvenc_preset, cq=cfg.CODEC_QUALITY, backend=cfg.ENCODER_BACKEND) + hdr_output_args + ["-t", "0.3", "-f", "null", os.devnull]
         if stabilize_transform_path is not None:
             try:
                 os.remove(stabilize_transform_path)  # safe: temp vidstab transforms this run wrote itself, not user input
             except OSError:
                 pass
         try:
-            result = subprocess.run(validate_cmd, capture_output=True, text=True, timeout=60, creationflags=NO_WINDOW_FLAGS)
+            result = subprocess.run(validate_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60, creationflags=NO_WINDOW_FLAGS)
             valid = result.returncode == 0
             error_tail = (result.stderr or "").strip()[-500:]
         except Exception as e:
@@ -1983,7 +2004,7 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
         bitrate_kbps = compute_target_bitrate_kbps(cfg.TARGET_SIZE_MB, output_seconds, audio_kbps=audio_kbps)
         if cfg.CODEC == "h264":
             passlog_path = os.path.join(output_dir, f"{base_name}_2pass")
-            pass1_cmd = cmd_prefix + audio_args + effort_codec_args + get_two_pass_codec_args(cfg.CODEC, bitrate_kbps, 1, passlog_path, preset=file_nvenc_preset) + ["-f", "null", os.devnull]
+            pass1_cmd = cmd_prefix + audio_args + effort_codec_args + get_two_pass_codec_args(cfg.CODEC, bitrate_kbps, 1, passlog_path, preset=file_nvenc_preset, backend=cfg.ENCODER_BACKEND) + ["-f", "null", os.devnull]
             print(f"[INFO] {filename}: יעד {cfg.TARGET_SIZE_MB:.1f}MB (~{bitrate_kbps}kbps) - מריץ pass 1/2...")
             sys.stdout.flush()
             try:
@@ -1999,13 +2020,13 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
                 _bump(results, "errors")
                 _file_failed(filename, "pass 1/2 נכשל")
                 return
-            cmd = cmd_prefix + audio_args + effort_codec_args + get_two_pass_codec_args(cfg.CODEC, bitrate_kbps, 2, passlog_path, preset=file_nvenc_preset) + [partial_output_path]
+            cmd = cmd_prefix + audio_args + effort_codec_args + get_two_pass_codec_args(cfg.CODEC, bitrate_kbps, 2, passlog_path, preset=file_nvenc_preset, backend=cfg.ENCODER_BACKEND) + [partial_output_path]
             progress_label = f"{filename} (pass 2/2)"
         else:
-            cmd = cmd_prefix + audio_args + effort_codec_args + get_two_pass_codec_args(cfg.CODEC, bitrate_kbps, 2, "", preset=file_nvenc_preset) + hdr_output_args + [partial_output_path]
+            cmd = cmd_prefix + audio_args + effort_codec_args + get_two_pass_codec_args(cfg.CODEC, bitrate_kbps, 2, "", preset=file_nvenc_preset, backend=cfg.ENCODER_BACKEND) + hdr_output_args + [partial_output_path]
             progress_label = filename
     else:
-        cmd = cmd_prefix + audio_args + effort_codec_args + get_codec_args(cfg.CODEC, preset=file_nvenc_preset, cq=cfg.CODEC_QUALITY) + hdr_output_args + [partial_output_path]
+        cmd = cmd_prefix + audio_args + effort_codec_args + get_codec_args(cfg.CODEC, preset=file_nvenc_preset, cq=cfg.CODEC_QUALITY, backend=cfg.ENCODER_BACKEND) + hdr_output_args + [partial_output_path]
         progress_label = filename
 
     # item: המתנה/ניסיון-חוזר כש-NVENC session-limited, במקום להיכשל מיד -
@@ -2236,7 +2257,7 @@ def run_concat_mode():
         cmd += ["-i", p]
     cmd += ["-filter_complex", filter_complex, *maps]
     cmd += ["-c:a", "aac", "-b:a", "128k"] if include_audio else ["-an"]
-    cmd += get_codec_args(CODEC, preset=NVENC_PRESET_EXPLICIT, cq=CODEC_QUALITY)
+    cmd += get_codec_args(CODEC, preset=NVENC_PRESET_EXPLICIT, cq=CODEC_QUALITY, backend=ENCODER_BACKEND)
     cmd += [output_path]
 
     total_output_seconds = max(0.0, sum(durations) - CONCAT_TRANSITION_DURATION * (len(durations) - 1) if CONCAT_TRANSITION == "fade" else sum(durations))

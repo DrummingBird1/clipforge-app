@@ -950,7 +950,8 @@ async function checkForUpdate() {
     document.getElementById("updateBannerText").textContent =
       `🔔 גרסה חדשה זמינה: ${data.latest_version} (המותקנת: ${data.current_version})`;
     document.getElementById("updateBannerOpenBtn").onclick = () => window.open(data.releases_url, "_blank");
-    document.getElementById("updateApplyBtn").hidden = !!data.portable;   // חבילה ניידת: מורידים מה-Release, אין git pull
+    document.getElementById("updateApplyBtn").hidden = !!data.portable || !!data.update_command;   // חבילה ניידת / Scoop / winget: לא git pull
+    if (data.update_command) document.getElementById("updateApplyStatus").textContent = data.update_command;   // "scoop update clipforge"
     document.getElementById("updateBanner").hidden = false;
   } catch (e) {
     // בדיקה לא-קריטית ברקע - כשל רשת פשוט לא מציג באנר, בלי alert מפחיד.
@@ -1511,6 +1512,8 @@ function switchTab(name) {
     if (!_botWsConnected) { _botWsConnected = true; connectBotWs(); }
   } else if (name === "globalsettings") {
     uiLoadLazy("settings").then(() => { loadGlobalSettings(); loadStyleSettings(); });   // 31-global-settings.js - רק כשפותחים את המסך
+  } else if (name === "recording") {
+    uiLoadLazy("recording").then(() => loadRecordingScreen()).catch((e) => uiToast(e.message, "warn"));   // 37-recording-screen.js
   } else if (name === "phone") {
     uiLoadLazy("phone").then(() => loadPhoneScreen()).catch((e) => uiToast(e.message, "warn"));   // 36-phone-screen.js
   } else if (name === "scheduler") {

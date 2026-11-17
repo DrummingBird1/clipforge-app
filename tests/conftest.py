@@ -67,6 +67,9 @@ if _XDIST_WORKER:
 # תיקיית הייצוא (utils/shared/export_dir.py): ההגדרה יושבת ב-data/ הזמנית, ומשתנה שנשאר בסביבה מהרצה ידנית לא נכנס -
 # אף טסט לא כותב לתיקייה שהמשתמש בחר; התוצרים בטסטים ב-workspace הזמני, כמו קודם
 os.environ.pop("CLIPFORGE_EXPORT_DIR", None)
+# 16.11.2026: מקודד hevc/av1 (utils/media/encoders.py) - NVENC לכל הריצה, כמו לפני 2.0: פקודות הזהב לא תלויות בכרטיס
+# של המחשב שמריץ. טסט של בחירת המקודד מוחק/קובע את המשתנה לעצמו (monkeypatch).
+os.environ["CLIPFORGE_ENCODER_BACKEND"] = "nvenc"
 # utils/bot/wake_timer: אף פעם לא משימה אמיתית ב-Task Scheduler מטסט (גם בתתי-תהליכים, שיורשים את הסביבה)
 os.environ["CLIPFORGE_NO_SCHTASKS"] = "1"
 

@@ -470,6 +470,12 @@
                     <span id="veAudioTrackWrap" hidden data-adv>
                       <label title="איזה ערוץ-שמע לקחת (0 = הראשון) - למשל OBS: משחק + מיקרופון.">ערוץ:</label>
                       <input type="number" id="veAudioTrack" min="0" max="32" step="1" class="u-width-60px" placeholder="ראשון">
+                      <label title="ערוץ המיקרופון בקבצים עם כמה ערוצים (ההקלטה של ClipForge או OBS) - מעורבב מעל המשחק. ריק = בלי.">מיקרופון:</label>
+                      <input type="number" id="veMicTrack" min="0" max="32" step="1" class="u-width-60px" placeholder="בלי">
+                      <label title="עוצמת המיקרופון בערבוב: 1 = כמו שהוא.">עוצמה:</label>
+                      <input type="number" id="veMicGain" min="0" max="3" step="0.1" value="1" class="u-width-60px">
+                      <label title="מסיר רעשי רקע (מאוורר, מזגן) מהמיקרופון בלבד."><input type="checkbox" id="veMicDenoise"> ניקוי רעשים</label>
+                      <label title="המשחק יורד אוטומטית בכל פעם שמדברים במיקרופון."><input type="checkbox" id="veDuckGame"> הנמכת המשחק בדיבור</label>
                     </span>
                   </div>
                   <div class="ve-row ve-composite-sub u-indent" id="veReplaceAudioRow" hidden>

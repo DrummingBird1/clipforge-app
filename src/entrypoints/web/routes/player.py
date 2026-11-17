@@ -63,7 +63,7 @@ def _build_proxy(path, key):
         "-c:a", "aac", "-b:a", "96k", "-ac", "2", "-movflags", "+faststart", partial,
     ]
     try:
-        result = media_pool.run(cmd, lane="analysis", capture_output=True, text=True, errors="replace", timeout=3600, creationflags=NO_WINDOW_FLAGS)
+        result = media_pool.run(cmd, lane="analysis", capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3600, creationflags=NO_WINDOW_FLAGS)
         if result.returncode != 0 or not os.path.isfile(partial):
             raise RuntimeError((result.stderr or "ffmpeg נכשל").strip()[-300:])
         os.replace(partial, target)

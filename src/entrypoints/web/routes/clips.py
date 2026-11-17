@@ -5,6 +5,7 @@
 # שם ונגיש כ-W.<שם>, כך ש-monkeypatch.setattr(web_app, ...) חל גם על ה-endpoints כאן.
 
 import glob
+import hashlib
 import json
 import os
 import tempfile
@@ -35,13 +36,19 @@ def api_download(path: str = ""):
 
 @router.get("/api/clips")
 def api_clips():
-    """זהה ל-ui/stats_tab.py's refresh_gallery - אותה workspace/clips/*.mp4
-    בדיוק, ממוין מהחדש לישן (הפוך מ-glob הגולמי של הדסקטופ, נוח יותר לגלריה)."""
-    clips = sorted(glob.glob(os.path.join(W.CLIPS_DIR, "*.mp4")), key=os.path.getmtime, reverse=True)
+    """workspace/clips/**/*.mp4, ממוין מהחדש לישן. 16.11.2026: גם תתי-תיקיות - story_cutter ממיין לתיקייה לכל משחק,
+    והגלריה ראתה רק את השורש. "folder" = תת-התיקייה היחסית ("" בשורש)."""
+    clips = sorted(glob.glob(os.path.join(W.CLIPS_DIR, "**", "*.mp4"), recursive=True), key=os.path.getmtime, reverse=True)
     return [
-        {"name": os.path.basename(c), "path": c, "size": os.path.getsize(c), "mtime": os.path.getmtime(c)}
+        {"name": os.path.basename(c), "path": c, "size": os.path.getsize(c), "mtime": os.path.getmtime(c),
+         "folder": _clip_folder(c)}
         for c in clips
     ]
+
+
+def _clip_folder(path):
+    sub = os.path.relpath(os.path.dirname(os.path.abspath(path)), os.path.abspath(W.CLIPS_DIR))
+    return "" if sub == "." else sub.replace(os.sep, "/")
 
 
 @router.get("/api/clips/thumbnail")
@@ -56,7 +63,10 @@ def api_clips_thumbnail(path: str = ""):
         return JSONResponse({"error": "קובץ לא נמצא."}, status_code=400)
 
     os.makedirs(W.THUMBNAIL_CACHE_DIR, exist_ok=True)
-    cache_path = os.path.join(W.THUMBNAIL_CACHE_DIR, f"{os.path.basename(validated)}.{int(os.path.getmtime(validated))}.jpg")
+    # קליפ בשורש - אותו שם מטמון כמו קודם; בתת-תיקייה (16.11.2026) - גם hash קצר של התיקייה, כדי ששני goal.mp4 לא יתנגשו
+    sub = os.path.relpath(os.path.dirname(validated), os.path.realpath(W.CLIPS_DIR))
+    tag = "" if sub == "." else "." + hashlib.sha1(sub.encode("utf-8")).hexdigest()[:8]
+    cache_path = os.path.join(W.THUMBNAIL_CACHE_DIR, f"{os.path.basename(validated)}{tag}.{int(os.path.getmtime(validated))}.jpg")
 
     with media_pool.single_flight(cache_path):  # גל 24: ffmpeg אחד לכל תמונה, בתוך תקרת הנתיב
         if not os.path.exists(cache_path):
@@ -169,6 +179,72 @@ async def api_clips_tiktok_export(request: Request):
             "caption": seo["tiktok_caption"] if seo else "", "seo_source": seo["source"] if seo else None}
 
 
+@router.get("/api/publish/platforms")
+def api_publish_platforms():
+    """16.11.2026 (2.0): הפלטפורמות, איך מעלים לכל אחת (api / package / bot) והמגבלות שלהן (utils/bot/platforms.py)."""
+    from utils.bot import platforms
+    return {"platforms": platforms.as_dicts()}
+
+
+@router.post("/api/publish/package")
+async def api_publish_package(request: Request):
+    """16.11.2026 (2.0): חבילת העלאה ל-TikTok / Reels / Twitch / Kick - הסרטון, כיתוב בגבולות הפלטפורמה, תמונה ממוזערת
+    ובדיקות. הלקוח מעתיק את הכיתוב ופותח את upload_url. החבילה ב-workspace/upload_packages/<פלטפורמה>/."""
+    if not W._is_same_origin(request):
+        return JSONResponse({"error": "הבקשה נדחתה (Origin לא תואם)."}, status_code=403)
+    from utils.bot import upload_package
+    from utils.media.ffprobe_cache import probe_video
+    payload = await request.json()
+    validated = W._validate_publishable_path(payload.get("path", ""))
+    if not validated:
+        return JSONResponse({"error": "קובץ לא נמצא."}, status_code=400)
+    tags = payload.get("tags") or []
+    if isinstance(tags, str):
+        tags = [t for t in tags.replace(",", " ").split() if t]
+    thumb = os.path.splitext(validated)[0] + "_thumb.jpg"
+
+    def build():
+        try:
+            probe = probe_video(validated) or {}
+        except Exception:
+            probe = {}
+        return upload_package.build(validated, str(payload.get("platform") or ""), os.path.join(W.WORKSPACE_DIR, "upload_packages"),
+                                    title=str(payload.get("title") or ""), description=str(payload.get("description") or ""),
+                                    tags=[str(t) for t in tags][:30], thumbnail=thumb if os.path.isfile(thumb) else None, probe=probe)
+
+    try:
+        info = await run_in_threadpool(build)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    W.audit_log.record_action("web", "upload_package", details=f"{info['platform']}: {os.path.basename(validated)}",
+                              username=request.client.host if request.client else None)
+    return {"ok": True, **info}
+
+
+@router.post("/api/publish/discord")
+async def api_publish_discord(request: Request):
+    """16.11.2026 (2.0): "שלח לדיסקורד" - נכנס לתור ב-DB של הבוט (utils/bot/discord_outbox.py), והבוט שולח לערוץ שנקבע
+    ב-/clip_channel (cogs/clip_share_cog.py). הבוט צריך לרוץ; קובץ גדול מהמגבלה - הבוט מסמן כשל עם הסבר."""
+    if not W._is_same_origin(request):
+        return JSONResponse({"error": "הבקשה נדחתה (Origin לא תואם)."}, status_code=403)
+    from utils.bot import discord_outbox
+    payload = await request.json()
+    validated = W._validate_publishable_path(payload.get("path", ""))
+    if not validated:
+        return JSONResponse({"error": "קובץ לא נמצא."}, status_code=400)
+    row_id = await run_in_threadpool(discord_outbox.enqueue, validated, str(payload.get("message") or ""))
+    channel = await run_in_threadpool(discord_outbox.get_channel)
+    W.audit_log.record_action("web", "discord_share", details=os.path.basename(validated),
+                              username=request.client.host if request.client else None)
+    return {"ok": True, "id": row_id, "channel_set": channel is not None}
+
+
+@router.get("/api/publish/discord")
+def api_publish_discord_recent():
+    from utils.bot import discord_outbox
+    return {"recent": discord_outbox.recent(), "channel_set": discord_outbox.get_channel() is not None}
+
+
 def _seo_or_none(path):
     """SEO שנכשל (למשל תיקייה בלי הרשאת כתיבה) לא עוצר יצוא - אותו עיקרון כמו generate_seo_metadata."""
     try:
@@ -201,6 +277,11 @@ async def api_clips_youtube_export(request: Request):
     validated = W._validate_publishable_path(payload.get("path", ""))   # כל תוצר, לא רק קליפ (23.10.2026, באישור המפנה)
     if not validated:
         return JSONResponse({"error": "קובץ לא נמצא."}, status_code=400)
+    from utils.bot import youtube_extras   # 16.11.2026 (2.0): פרקים, Shorts, תזמון וכתוביות
+    try:
+        publish_at = youtube_extras.parse_publish_at(str(payload.get("publish_at") or ""))
+    except ValueError as e:
+        return JSONResponse({"error": str(e) if "עבר" in str(e) else "זמן פרסום לא תקין."}, status_code=400)
 
     seo = await run_in_threadpool(_seo_or_none, validated)
 
@@ -224,12 +305,31 @@ async def api_clips_youtube_export(request: Request):
         with W._youtube_upload_lock:
             W._youtube_upload_state["percent"] = pct
 
+    def _extras(description):
+        """פרקים ו-#Shorts. כל כשל (ffprobe חסר, קובץ בלי פרקים) - התיאור כמו שהוא: התוספות לא עוצרות העלאה."""
+        try:
+            from utils.media.ffprobe_cache import probe_video
+            probe = probe_video(validated) or {}
+            chapters = youtube_extras.chapters_text(youtube_extras.read_chapters(validated, W.get_ffprobe_exe(), W.NO_WINDOW_FLAGS),
+                                                    duration=probe.get("duration"))
+            short = youtube_extras.is_short(probe.get("width") or 0, probe.get("height") or 0, probe.get("duration") or 0)
+            return youtube_extras.with_extras(description, chapters, short)
+        except Exception:
+            return description
+
     def _do_upload():
         try:
+            schedule = {"publish_at": publish_at} if publish_at else {}
             video_id = W.youtube_uploader.upload_video(
-                validated, title=title, description=description, tags=tags,
-                privacy_status="private", progress_callback=_progress,
+                validated, title=title, description=_extras(description), tags=tags,
+                privacy_status="private", progress_callback=_progress, **schedule,
             )
+            srt = youtube_extras.sidecar_srt(validated)
+            if srt:
+                try:
+                    youtube_extras.upload_captions(video_id, srt)
+                except Exception as e:   # הסרטון כבר עלה - כתוביות שנכשלו לא הופכות את ההעלאה לכישלון
+                    W.worker.log_queue.put((f"⚠️ העלאת הכתוביות ליוטיוב נכשלה: {e}\n", "red"))
             W.youtube_publish_log.record_upload(video_id, os.path.basename(validated), title)
             W._generate_and_record_thumbnail_candidates(video_id, validated)
             with W._youtube_upload_lock:
@@ -396,7 +496,10 @@ async def api_approvals_decide(pending_id: int, request: Request):
     if not video_path or not W.approval_store.validate_pending_video_path(video_path):
         return JSONResponse({"error": "הקליפ לא נמצא או שכבר טופל."}, status_code=400)
 
-    W.approval_store.resolve_pending(pending_id, video_path, approved)
+    try:
+        W.approval_store.resolve_pending(pending_id, video_path, approved)
+    except OSError as e:   # 16.11.2026: הקובץ לא עבר (נעול, אין מקום) - הקליפ נשאר ממתין, עם הודעה ולא 500 ריק
+        return JSONResponse({"error": f"העברת הקליפ נכשלה: {e.strerror or e}"}, status_code=500)
     W.audit_log.record_action(
         "web", "approval_decide", details=f"{os.path.basename(video_path)}={'approved' if approved else 'rejected'}",
         username=request.client.host if request.client else None,

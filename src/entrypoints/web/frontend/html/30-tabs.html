@@ -104,6 +104,16 @@
     </div>
 
     <div class="tc-section">
+      <h3>🎞️ מקודד וידאו</h3>
+      <div class="hint u-block u-margin-bottom-8px">ל-HEVC ול-AV1. אוטומטי = לפי כרטיס המסך במחשב: NVIDIA, AMD או Intel, ובלי כרטיס מתאים - CPU.</div>
+      <div class="tc-row">
+        <select id="gsEncoder" onchange="saveEncoder()"></select>
+        <button type="button" onclick="loadEncoders(true)">🔍 בדוק את הכרטיס</button>
+      </div>
+      <div id="gsEncoderInfo" class="empty-msg"></div>
+    </div>
+
+    <div class="tc-section">
       <h3>📱 גישה מהטלפון (Tailscale)</h3>
       <label><input type="checkbox" id="gsTailscale" onchange="saveRemoteAccess()"> להאזין גם על כתובת ה-Tailscale של המחשב - רק מכשירים ב-tailnet שלך, והטוקן עדיין נדרש</label>
       <div id="gsTailscaleInfo" class="empty-msg"></div>

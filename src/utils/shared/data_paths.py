@@ -25,6 +25,8 @@ from utils.shared.data_dir import DATA_DIR
 CONFIG = "config.json"
 ROCKET_SETTINGS = "rocket_settings.json"
 EXPORT_SETTINGS = "export_settings.json"
+ENCODER_SETTINGS = "encoder_settings.json"  # 16.11.2026: מקודד הווידאו (utils/media/encoders.py)
+RECORDING_SETTINGS = "recording_settings.json"  # 16.11.2026: מסך ההקלטה (utils/capture/manager.py)
 REMOTE_ACCESS = "remote_access.json"
 SCHEDULED_TASKS = "scheduled_tasks.json"
 # --- אבטחה (ב-.gitignore בכל עומק תחת data/) ---
@@ -79,7 +81,7 @@ LAYOUT_MARKER = ".data_layout"
 
 # שם בשורש data/ -> התיקייה שלו אחרי ההעברה. logs/, ‏backups/ ו-render.lock נשארים בשורש.
 FOLDERS = {
-    **dict.fromkeys((CONFIG, ROCKET_SETTINGS, EXPORT_SETTINGS, REMOTE_ACCESS, SCHEDULED_TASKS), "settings"),
+    **dict.fromkeys((CONFIG, ROCKET_SETTINGS, EXPORT_SETTINGS, ENCODER_SETTINGS, RECORDING_SETTINGS, REMOTE_ACCESS, SCHEDULED_TASKS), "settings"),
     **dict.fromkeys((WEB_TOKEN, TLS_CERT, TLS_KEY, PAIRED_DEVICES, CREDENTIAL_ROTATION), "security"),
     **dict.fromkeys((BOT_DB, SCHEDULER_STATE, WAKE_TIMER, ROCKET_COUNTER), "bot"),
     **dict.fromkeys((EDITOR_PROFILES, EDITOR_PROFILE_META, EDITOR_PROFILE_HISTORY, EDITOR_COUNTER, EDITOR_RUNS, EDITOR_PROJECTS,
@@ -98,7 +100,7 @@ _COMPANION_SUFFIXES = (".bak", "-wal", "-shm", "-journal")
 BACKUP_SKIP_DIRS = frozenset(name.rsplit("/", 1)[-1] for name in (BACKUPS, LOGS))
 BACKUP_SKIP_FILES = frozenset(name.rsplit("/", 1)[-1] for name in (BOT_DB, RENDER_LOCK))
 # קובצי ה-JSON שהאבחון בודק, איפה שהם נמצאים (בנוסף לכל *.json בשורש data/)
-CHECKED_JSON = (CONFIG, ROCKET_SETTINGS, EXPORT_SETTINGS, REMOTE_ACCESS, SCHEDULED_TASKS, PAIRED_DEVICES, SCHEDULER_STATE,
+CHECKED_JSON = (CONFIG, ROCKET_SETTINGS, EXPORT_SETTINGS, ENCODER_SETTINGS, RECORDING_SETTINGS, REMOTE_ACCESS, SCHEDULED_TASKS, PAIRED_DEVICES, SCHEDULER_STATE,
                 EDITOR_PROFILES, EDITOR_PROFILE_META, EDITOR_PROFILE_HISTORY, DATAVIZ_HIDDEN, DATAVIZ_TAGS, DATAVIZ_KITS)
 
 

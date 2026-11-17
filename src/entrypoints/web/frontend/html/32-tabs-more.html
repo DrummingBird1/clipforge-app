@@ -81,6 +81,108 @@
         <button id="outputsTiktokBtn" class="output-action" disabled onclick="publishOutput('tiktok')">🎵 פרסם ב-TikTok</button>
         <button id="outputsYoutubeBtn" class="output-action" disabled onclick="publishOutput('youtube')">📺 פרסם ביוטיוב</button>
       </div>
+      <div class="tc-row">
+        <label for="outputsYoutubeAt" title="ריק = עולה עכשיו כפרטי. זמן עתידי = יוטיוב מפרסם בעצמו בזמן הזה.">תזמון ליוטיוב</label>
+        <input type="datetime-local" id="outputsYoutubeAt">
+      </div>
+      <div class="tc-row">
+        <select id="outputsPackagePlatform" aria-label="פלטפורמה לחבילת ההעלאה">
+          <option value="tiktok">TikTok</option>
+          <option value="reels">Instagram Reels</option>
+          <option value="twitch">Twitch</option>
+          <option value="kick">Kick</option>
+        </select>
+        <button id="outputsDiscordBtn" class="output-action" disabled onclick="sendOutputToDiscord()" title="הבוט שולח את הסרטון לערוץ שנקבע ב-/clip_channel">💬 שלח לדיסקורד</button>
+        <button id="outputsPackageBtn" class="output-action" disabled onclick="buildOutputPackage()" title="תיקייה עם הסרטון, הכיתוב והתמונה הממוזערת, ופתיחת דף ההעלאה">📦 חבילת העלאה</button>
+      </div>
     </div>
     <!-- /lazy-html:outputs -->
+  </div>
+
+  <div class="tab-content" data-tab-panel="recording" hidden>
+    <!-- lazy-html:recording -->
+    <div class="rec-screen">
+      <div class="tc-section">
+        <h3>🔴 הקלטה</h3>
+        <div id="recStatus" class="rec-status"></div>
+        <div class="rec-actions">
+          <button id="recReplayStart" class="rec-btn" onclick="recAction('replay/start')">⏺ הפעל Replay</button>
+          <button id="recReplaySave" class="rec-btn" onclick="recAction('replay/save')" disabled>💾 שמור קליפ</button>
+          <button id="recReplayStop" class="rec-btn" onclick="recAction('replay/stop')" disabled>🛑 עצור Replay</button>
+        </div>
+        <div class="rec-actions">
+          <button id="recRecordStart" class="rec-btn" onclick="recAction('record/start')">🎥 התחל הקלטה</button>
+          <button id="recRecordStop" class="rec-btn rec-danger" onclick="recAction('record/stop')" disabled>🛑 עצור הקלטה</button>
+        </div>
+        <div class="hint u-block">קליפ Replay נשמר לתיקיית ה-Import וממשיך לשרשור האוטומטי של Shorts. הקלטה מלאה נשמרת ב-workspace/recordings.</div>
+      </div>
+
+      <div class="tc-section">
+        <h3>⚙️ מקור ומנוע</h3>
+        <div class="tc-row">
+          <label for="recEngine">מנוע</label>
+          <select id="recEngine" onchange="recFormChanged()">
+            <option value="ffmpeg">מובנה (ffmpeg)</option>
+            <option value="obs">OBS</option>
+          </select>
+        </div>
+        <div id="recFfmpegFields">
+          <div class="tc-row">
+            <label for="recSource">מה מקליטים</label>
+            <select id="recSource" onchange="recFormChanged()">
+              <option value="screen">המסך / משחק במחשב</option>
+              <option value="device">קונסולה / כרטיס לכידה</option>
+            </select>
+          </div>
+          <div id="recScreenFields">
+            <div class="tc-row"><label for="recScreen">מסך מספר</label><input id="recScreen" type="number" min="0" max="8"></div>
+            <label><input type="checkbox" id="recGameAudio"> להקליט את שמע המחשב (המשחק)</label>
+            <div id="recLoopbackHint" class="hint u-block" hidden>שמע המחשב לא זמין במחשב הזה.</div>
+          </div>
+          <div id="recDeviceFields" hidden>
+            <div class="tc-row"><label for="recConsole">קונסולה</label><select id="recConsole" onchange="recShowConsoleNote()"></select></div>
+            <div id="recConsoleNote" class="hint u-block"></div>
+            <div class="tc-row"><label for="recDeviceVideo">כרטיס לכידה</label><select id="recDeviceVideo"></select></div>
+            <div class="tc-row"><label for="recDeviceAudio">שמע הכרטיס</label><select id="recDeviceAudio"></select></div>
+          </div>
+          <div class="tc-row"><label for="recMic">מיקרופון</label><select id="recMic"></select></div>
+          <div class="tc-row"><label for="recFacecam">מצלמה (Facecam)</label><select id="recFacecam"></select></div>
+          <div class="tc-row">
+            <label for="recCodec">קידוד</label>
+            <select id="recCodec">
+              <option value="hevc">HEVC (כרטיס המסך)</option>
+              <option value="av1">AV1 (כרטיס המסך)</option>
+              <option value="h264">H.264 (CPU)</option>
+            </select>
+          </div>
+          <div class="tc-row"><label for="recFps">FPS</label><input id="recFps" type="number" min="10" max="240"></div>
+          <div class="tc-row"><label for="recQuality">איכות (נמוך = טוב יותר)</label><input id="recQuality" type="number" min="10" max="40"></div>
+        </div>
+        <div class="tc-row"><label for="recReplaySeconds">אורך Replay בשניות</label><input id="recReplaySeconds" type="number" min="10" max="600"></div>
+        <div class="tc-row"><label for="recHotkeySave">מקש לשמירת קליפ</label><input id="recHotkeySave" dir="ltr"></div>
+        <div class="tc-row"><label for="recHotkeyRecord">מקש להתחלה/עצירה של הקלטה</label><input id="recHotkeyRecord" dir="ltr"></div>
+        <div class="tc-row">
+          <button type="button" class="u-grow" onclick="saveRecSettings()">💾 שמור הגדרות</button>
+          <button type="button" onclick="loadRecDevices()">🔍 רענן התקנים</button>
+        </div>
+      </div>
+
+      <div class="tc-section">
+        <h3>📥 ייבוא מקונסולה או מתוכנת הקלטה</h3>
+        <div class="hint u-block">PS5/PS4 מכונן USB, Switch מכרטיס SD, Xbox דרך OneDrive, ו-NVIDIA, AMD, Xbox Game Bar, Steam, OBS ו-Elgato מהמחשב. רק קליפים חדשים, למקור לא נוגעים.</div>
+        <div class="tc-row">
+          <select id="recImportSource"></select>
+          <button type="button" onclick="loadRecImportSources()">🔍 חפש</button>
+          <button type="button" id="recImportBtn" onclick="startRecImport()">📥 ייבא</button>
+        </div>
+        <div id="recImportStatus" class="empty-msg"></div>
+      </div>
+
+      <div id="recObsSection" class="tc-section" hidden>
+        <h3>🎬 סצנות OBS</h3>
+        <div class="hint u-block">OBS צריך להיות פתוח, עם obs-websocket מופעל (Tools &gt; WebSocket Server Settings). הסיסמה נשמרת בכספת (OBS_WEBSOCKET_PASSWORD).</div>
+        <div id="recScenes" class="rec-scenes"></div>
+      </div>
+    </div>
+    <!-- /lazy-html:recording -->
   </div>

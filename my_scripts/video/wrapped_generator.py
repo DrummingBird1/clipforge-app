@@ -146,7 +146,7 @@ def render_card_video_segment(card_png_path, size, out_path):
         FFMPEG_EXE, "-y", "-loop", "1", "-i", card_png_path, "-t", str(CARD_DURATION_SECONDS),
         "-vf", f"scale={size[0]}:{size[1]}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30", out_path,
     ]
-    result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS)
+    result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS)
     return result.returncode == 0 and os.path.exists(out_path)
 
 
@@ -252,7 +252,7 @@ def main():
         output_path = os.path.join(source_dir, f"Wrapped_{args.year}.mp4")
 
         cmd_copy = [FFMPEG_EXE, "-y", "-f", "concat", "-safe", "0", "-i", concat_list_path, "-c", "copy", output_path]
-        result = subprocess.run(cmd_copy, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS)
+        result = subprocess.run(cmd_copy, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS)
         success = result.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 0
 
         if not success:
@@ -262,7 +262,7 @@ def main():
                 FFMPEG_EXE, "-y", "-f", "concat", "-safe", "0", "-i", concat_list_path,
                 "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-c:a", "aac", output_path,
             ]
-            result = subprocess.run(cmd_reencode, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS)
+            result = subprocess.run(cmd_reencode, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS)
             success = result.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 0
 
         if success:

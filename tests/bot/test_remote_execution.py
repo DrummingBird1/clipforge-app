@@ -576,3 +576,67 @@ def test_docker_status_does_not_block_the_bot_when_docker_hangs(tmp_path, monkey
     (thread, timeout), = calls
     assert timeout and timeout <= 30
     assert thread != threading.get_ident()   # לא בתוך הלולאה של הבוט
+
+
+# --- 16.11.2026: פלט עם \r בלבד (פס התקדמות) ---
+
+def test_output_lines_split_on_carriage_returns_across_chunks():
+    class FakeStream:
+        def __init__(self, chunks):
+            self.chunks = list(chunks)
+
+        async def read(self, n):
+            return self.chunks.pop(0) if self.chunks else b""
+
+    async def collect():
+        stream = FakeStream([b"10%\r20", b"%\r30%\r", b"\ndone\r", b"\n", b"tail"])
+        return [line async for line in remote_execution_module.iter_output_lines(stream)]
+
+    assert _run(collect()) == [b"10%", b"20%", b"30%", b"done", b"tail"]
+
+
+def test_run_script_survives_a_long_progress_bar_without_newlines(tmp_path, monkeypatch):
+    """tqdm כותב רק \r: readline() זרק ValueError אחרי ~64KB, שחרר את המנעול והשאיר את התהליך רץ."""
+    lock_calls = _patch_render_lock(monkeypatch)
+    _write_script(tmp_path, "progress.py",
+                  "import sys\nfor i in range(20000):\n    sys.stdout.write(f'\\r{i:08d} frames')\n"
+                  "sys.stdout.write('\\nfinished\\n')\n")
+
+    async def scenario():
+        db = await _open_db(tmp_path)
+        try:
+            cog = _make_cog(FakeBot(db), tmp_path)
+            interaction = _make_interaction()
+            await cog.run_script.callback(cog, interaction, "progress.py")
+            status_msg = interaction.channel.messages[0][1]
+            final = status_msg.edit.call_args.kwargs.get("content") or status_msg.edit.call_args.args[0]
+            assert "הסתיים בהצלחה" in final and "finished" in final
+            assert [c[0] for c in lock_calls] == ["acquire", "release"]
+        finally:
+            await db.close()
+
+    _run(scenario())
+
+
+def test_run_script_keeps_the_render_lock_fresh_while_it_runs(tmp_path, monkeypatch):
+    """16.11.2026: בלי touch() ריצה של יותר מ-4 שעות "התיישנה" ותהליך אחר יכול היה לתפוס את המנעול באמצע."""
+    _patch_render_lock(monkeypatch)
+    touches = []
+    monkeypatch.setattr(remote_execution_module, "RENDER_LOCK_HEARTBEAT_SECONDS", 0.02)
+    monkeypatch.setattr(remote_execution_module, "touch_render_lock", lambda: touches.append(1))
+    _write_script(tmp_path, "slow.py", "import time\ntime.sleep(0.6)\nprint('done')\n")
+
+    async def scenario():
+        db = await _open_db(tmp_path)
+        try:
+            cog = _make_cog(FakeBot(db), tmp_path)
+            await cog.run_script.callback(cog, _make_interaction(), "slow.py")
+        finally:
+            await db.close()
+
+    _run(scenario())
+    count = len(touches)
+    assert count >= 2
+    _run(asyncio.sleep(0.1))
+    assert len(touches) == count   # נעצר עם סוף הריצה
+

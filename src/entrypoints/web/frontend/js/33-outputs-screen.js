@@ -90,6 +90,14 @@ function selectOutput(item, card) {
   card.classList.add("selected");
 }
 
+async function _postOutputWith(url, extra) {
+  const resp = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({path: _selectedOutput.path, ...extra})});
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || "הפעולה נכשלה");
+  return data;
+}
+
 async function _postOutput(url) {
   const resp = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({path: _selectedOutput.path})});
   const data = await resp.json().catch(() => ({}));
@@ -122,7 +130,10 @@ async function publishOutput(target) {
   if (!_selectedOutput) return;
   const status = document.getElementById("outputsStatus");
   try {
-    const data = await _postOutput(target === "tiktok" ? "/api/clips/tiktok_export" : "/api/clips/youtube_export");
+    // 16.11.2026 (2.0): תזמון ליוטיוב (שדה datetime-local - זמן מקומי, השרת ממיר ל-UTC); פרקים, Shorts וכתוביות - בשרת
+    const at = target === "youtube" ? document.getElementById("outputsYoutubeAt").value : "";
+    const data = at ? await _postOutputWith("/api/clips/youtube_export", {publish_at: at})
+      : await _postOutput(target === "tiktok" ? "/api/clips/tiktok_export" : "/api/clips/youtube_export");
     if (target === "tiktok") {
       if (data.caption) {
         await navigator.clipboard.writeText(data.caption).then(() => uiToast("📋 הכיתוב הועתק - הדבק אותו ב-TikTok", "ok"),
@@ -132,7 +143,7 @@ async function publishOutput(target) {
     } else if (!data.configured) {
       window.open(data.fallback_url, "_blank");
     } else {
-      status.textContent = "⏳ מעלה ליוטיוב (פרטי)...";
+      status.textContent = at ? "⏳ מעלה ליוטיוב (מתוזמן)..." : "⏳ מעלה ליוטיוב (פרטי)...";
       _watchOutputUpload(status);
     }
   } catch (e) {
@@ -151,4 +162,36 @@ function _watchOutputUpload(status) {
     clearInterval(timer);
     status.textContent = data.success ? `✅ הועלה ל-YouTube! ID: ${data.video_id}` : `❌ העלאה נכשלה: ${data.error}`;   // כמו בגלריה
   }, 1500);
+}
+
+// 16.11.2026 (2.0): חבילת העלאה ל-TikTok / Reels / Twitch / Kick (/api/publish/package, utils/bot/upload_package.py):
+// תיקייה עם הסרטון, הכיתוב והתמונה הממוזערת; הכיתוב מועתק ללוח, ודף ההעלאה נפתח
+async function buildOutputPackage() {
+  if (!_selectedOutput) return;
+  const status = document.getElementById("outputsStatus");
+  try {
+    const res = await fetch("/api/publish/package", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({path: _selectedOutput.path, platform: document.getElementById("outputsPackagePlatform").value})});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "יצירת החבילה נכשלה");
+    status.textContent = `📦 החבילה מוכנה: ${data.folder}`;
+    for (const warning of data.warnings || []) uiToast(warning, "warn");
+    if (data.caption) {
+      await navigator.clipboard.writeText(data.caption).then(() => uiToast("📋 הכיתוב הועתק", "ok"), () => {});
+    }
+    if (data.upload_url) window.open(data.upload_url, "_blank");
+  } catch (e) {
+    uiToast(e.message, "warn");
+  }
+}
+
+// 16.11.2026 (2.0): "שלח לדיסקורד" - נכנס לתור, והבוט שולח (cogs/clip_share_cog.py)
+async function sendOutputToDiscord() {
+  if (!_selectedOutput) return;
+  try {
+    const data = await _postOutput("/api/publish/discord");
+    uiToast(data.channel_set ? "💬 נשלח לבוט - יופיע בערוץ תוך כמה שניות" : "💬 בתור. קבע ערוץ: /clip_channel בדיסקורד", data.channel_set ? "ok" : "warn");
+  } catch (e) {
+    uiToast(e.message, "warn");
+  }
 }

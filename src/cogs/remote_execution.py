@@ -4,16 +4,55 @@ from discord import app_commands
 import asyncio
 import glob
 import os
+import re
 import sqlite3
 import subprocess
 import sys
 
-from utils.shared.render_lock import CALLER_HOLDS_LOCK_ENV_VAR, acquire as acquire_render_lock, release as release_render_lock
+from utils.shared.render_lock import CALLER_HOLDS_LOCK_ENV_VAR, HEARTBEAT_SECONDS as RENDER_LOCK_HEARTBEAT_SECONDS
+from utils.shared.render_lock import acquire as acquire_render_lock, release as release_render_lock, touch as touch_render_lock
 from utils.shared.subprocess_flags import NO_WINDOW_FLAGS
 
 STATUS_EDIT_INTERVAL_SECONDS = 3
 OUTPUT_TAIL_LINES = 40
 DOCKER_TIMEOUT_SECONDS = 10
+
+OUTPUT_CHUNK_BYTES = 4096
+MAX_PENDING_LINE_BYTES = 65536
+_LINE_BREAK = re.compile(rb"\r\n|\r|\n")
+
+
+async def iter_output_lines(stream, chunk_size=OUTPUT_CHUNK_BYTES):
+    r"""16.11.2026: שורות הפלט של תת-התהליך - חותך גם על \r. readline() חיכה ל-\n בלבד, ופס התקדמות (tqdm ב-ffmpeg_progress)
+    כותב רק \r: אחרי ~64KB בלי \n הוא זרק ValueError באמצע רינדור, ה-finally שחרר את מנעול הרינדור והתהליך המשיך לרוץ."""
+    pending = b""
+    while True:
+        chunk = await stream.read(chunk_size)
+        if not chunk:
+            break
+        pending += chunk
+        parts = _LINE_BREAK.split(pending)
+        pending = parts.pop()
+        for part in parts:
+            if part:
+                yield part
+        if len(pending) > MAX_PENDING_LINE_BYTES:   # "שורה" בלי שום שבירה - לא מצטברת בלי סוף
+            yield pending
+            pending = b""
+    if pending:
+        yield pending
+
+
+def kill_process_tree(pid):
+    """תת-התהליך וכל מה שהוא הפעיל (ffmpeg) - לפני ששחררים את מנעול הרינדור, אחרת רינדור יתום ממשיך על ה-GPU."""
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, timeout=15, creationflags=NO_WINDOW_FLAGS)
+        else:
+            os.kill(pid, 9)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -132,15 +171,18 @@ class RemoteExecution(commands.Cog):
             release_render_lock()
             return
 
+        async def _heartbeat():   # 16.11.2026: ריצה של יותר מ-4 שעות לא "מתיישנת" (כמו render_lock() הסינכרוני)
+            while True:
+                await asyncio.sleep(RENDER_LOCK_HEARTBEAT_SECONDS)
+                await loop.run_in_executor(None, touch_render_lock)
+
+        heartbeat = asyncio.ensure_future(_heartbeat())
         try:
             output_lines = []
             last_edit = loop.time()
 
-            while True:
-                line = await process.stdout.readline()
-                if not line:
-                    break
-                output_lines.append(line.decode("utf-8", errors="replace"))
+            async for line in iter_output_lines(process.stdout):
+                output_lines.append(line.decode("utf-8", errors="replace") + "\n")
                 output_lines = output_lines[-OUTPUT_TAIL_LINES:]
 
                 now = loop.time()
@@ -153,7 +195,16 @@ class RemoteExecution(commands.Cog):
                     last_edit = now
 
             await process.wait()
+        except BaseException:
+            if process.returncode is None:   # קריאת הפלט נכשלה / בוטלה - לא משאירים רינדור רץ בלי מנעול
+                kill_process_tree(process.pid)
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=15)
+                except (asyncio.TimeoutError, ProcessLookupError):
+                    pass
+            raise
         finally:
+            heartbeat.cancel()
             release_render_lock()
 
         tail = "".join(output_lines)[-1500:]

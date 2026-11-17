@@ -32,6 +32,9 @@ arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument("--dry-run", action="store_true", help="מדמה את הריצה (מדפיס מה היה קורה) בלי להפעיל ffmpeg/העלאות בפועל")
 arg_parser.add_argument("--no-square", action="store_true", help="מדלג על ייצוא הפורמט המרובע (1:1) גם אם מופעל בהגדרות")
 arg_parser.add_argument("--no-loudnorm", action="store_true", help="מדלג על נרמול עוצמת השמע גם אם מופעל בהגדרות")
+# 16.11.2026: --input_dir נקרא - אבל קובע רק כשזו תיקיית אצווה של השרת (<workspace>/.publish_batches/..., "פרסם אחרי
+# העריכה" ושרשור אוטומטי). תיקייה ממסך הסקריפטים (תמיד מועברת) לא מחליפה את input_dir מ-rocket_settings.json.
+arg_parser.add_argument("--input_dir", default="", help="תיקיית אצווה מהשרת - רק הקבצים שבה מתפרסמים")
 cli_args, _unknown = arg_parser.parse_known_args()
 DRY_RUN = cli_args.dry_run
 
@@ -143,8 +146,22 @@ def load_settings():
 
 settings = load_settings()
 
-VIDEO_DIR = settings.get("input_dir", os.path.abspath(BASE_DIR))
-OUTPUT_BASE_DIR = follow_global(settings.get("output_dir", VIDEO_DIR))
+def resolve_video_dir(settings_dir, cli_dir, workspace_dir):
+    """תיקיית הקלט: אצווה של השרת מ---input_dir אם יש, אחרת input_dir מההגדרות."""
+    if cli_dir and os.path.isdir(cli_dir):
+        batches = os.path.normcase(os.path.abspath(os.path.join(workspace_dir, ".publish_batches")))
+        candidate = os.path.normcase(os.path.abspath(cli_dir))
+        try:
+            inside = candidate != batches and os.path.commonpath([candidate, batches]) == batches
+        except ValueError:  # כוננים שונים
+            inside = False
+        if inside:
+            return cli_dir
+    return settings_dir
+
+
+VIDEO_DIR = resolve_video_dir(settings.get("input_dir", os.path.abspath(BASE_DIR)), cli_args.input_dir, WORKSPACE_DIR)
+OUTPUT_BASE_DIR = follow_global(settings.get("output_dir", settings.get("input_dir", VIDEO_DIR)))
 WATERMARK = settings.get("watermark_image_path", "")
 COUNTER_FILE = settings.get("counter_file_path", data_paths.path(data_paths.ROCKET_COUNTER))
 TITLE_PREFIX = shorts_naming.clean_prefix(settings.get("title_prefix"))
@@ -154,6 +171,37 @@ ENCODER = settings.get("encoder") or DEFAULT_SETTINGS["encoder"]
 FFMPEG_PRESET = settings.get("ffmpeg_preset") or DEFAULT_SETTINGS["ffmpeg_preset"]
 QUALITY_CQ = int(settings.get("quality_cq") or DEFAULT_SETTINGS["quality_cq"])
 IS_NVENC_ENCODER = "nvenc" in ENCODER
+
+# 16.11.2026 (2.0): מקודד NVENC שנבחר בהגדרות, במחשב בלי NVIDIA - המקודד של הכרטיס שיש (utils/media/encoders.py), לפי
+# ההגדרה הכללית. ב-NVIDIA, או כשההגדרה הכללית היא nvenc - בדיוק כמו קודם.
+ENCODER_SWAP = None   # (codec, backend) כשמחליפים
+if "_nvenc" in ENCODER:
+    from utils.media import encoders as _encoders
+    from utils.shared.subprocess_flags import NO_WINDOW_FLAGS as _NO_WINDOW
+    _codec = ENCODER.split("_", 1)[0]
+    _requested = _encoders.load_setting()
+    if _requested != "nvenc":
+        _available = _encoders.detect_backends(FFMPEG_EXE, creationflags=_NO_WINDOW)
+        if _available is not None and not _available.get("nvenc"):   # אין NVIDIA שעובד בכלל
+            if _codec in _encoders.GPU_CODECS:
+                _backend, _note = _encoders.resolve_backend(_requested, _codec, _available)
+                ENCODER_SWAP = (_codec, _backend)
+            else:
+                ENCODER_SWAP = ("h264", "cpu")
+            print(f"⚠️ {ENCODER} לא זמין במחשב הזה - מקודד במקום זה עם "
+                  f"{_encoders.encoder_name(*ENCODER_SWAP) if ENCODER_SWAP[0] != 'h264' else 'libx264'}")
+
+
+def _video_args(cq_value):
+    """-c:v ו-איכות לכל יעד. בלי החלפה - בדיוק הפקודה הקודמת."""
+    if ENCODER_SWAP is None:
+        return ["-c:v", ENCODER, "-pix_fmt", "yuv420p", "-preset", FFMPEG_PRESET] + _quality_args(cq_value)
+    codec, backend = ENCODER_SWAP
+    if codec == "h264":
+        return ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "medium", "-crf", str(cq_value)]
+    preset = FFMPEG_PRESET if FFMPEG_PRESET in ("p1", "p2", "p3", "p4", "p5", "p6", "p7") else None
+    return _encoders.codec_args(codec, backend, preset=preset, cq=cq_value) + ["-pix_fmt", "yuv420p"]
+
 
 def _quality_args(cq_value):
     """NVENC משתמש ב-rc vbr + cq; מקודדי CPU (libx264 וכו') לא מכירים את הדגלים
@@ -219,7 +267,7 @@ def get_video_info(video_path):
 
     info = {"width": 1920, "height": 1080, "fps": 60, "total_frames": 1000}
     try:
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS)
         data = json.loads(result.stdout)
         stream = data.get("streams", [{}])[0]
 
@@ -238,7 +286,7 @@ def get_video_info(video_path):
     except Exception:
         try:
             cmd_dur = [FFPROBE_EXE, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", video_path]
-            duration = float(subprocess.run(cmd_dur, stdout=subprocess.PIPE, text=True, creationflags=NO_WINDOW_FLAGS).stdout.strip())
+            duration = float(subprocess.run(cmd_dur, stdout=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", creationflags=NO_WINDOW_FLAGS).stdout.strip())
             info["total_frames"] = int(duration * info["fps"])
         except Exception:
             pass
@@ -293,9 +341,8 @@ def build_render_jobs(video, title_name, info):
             "cmd": [
                 FFMPEG_EXE, "-y", *inputs,
                 "-filter_complex", yt_filter,
-                "-map", "[outv]", "-map", "0:a?", "-c:v", ENCODER, "-pix_fmt", "yuv420p",
-                "-preset", FFMPEG_PRESET,
-            ] + _quality_args(QUALITY_CQ) + ["-c:a", "aac", "-b:a", "320k"] + loudnorm_args + ["-movflags", "+faststart", yt_output]
+                "-map", "[outv]", "-map", "0:a?",
+            ] + _video_args(QUALITY_CQ) + ["-c:a", "aac", "-b:a", "320k"] + loudnorm_args + ["-movflags", "+faststart", yt_output]
         },
         {
             "label": f"  -> TikTok ({size} {info['fps']}FPS)",
@@ -303,9 +350,8 @@ def build_render_jobs(video, title_name, info):
             "cmd": [
                 FFMPEG_EXE, "-y", *inputs,
                 "-filter_complex", tt_filter,
-                "-map", "[outv]", "-map", "0:a?", "-c:v", ENCODER, "-pix_fmt", "yuv420p",
-                "-preset", FFMPEG_PRESET,
-            ] + _quality_args(QUALITY_CQ + 2) + ["-c:a", "aac", "-b:a", "320k"] + loudnorm_args + ["-movflags", "+faststart", tt_output]
+                "-map", "[outv]", "-map", "0:a?",
+            ] + _video_args(QUALITY_CQ + 2) + ["-c:a", "aac", "-b:a", "320k"] + loudnorm_args + ["-movflags", "+faststart", tt_output]
         },
     ]
 
@@ -317,9 +363,8 @@ def build_render_jobs(video, title_name, info):
             "cmd": [
                 FFMPEG_EXE, "-y", *inputs,
                 "-filter_complex", sq_filter,
-                "-map", "[outv]", "-map", "0:a?", "-c:v", ENCODER, "-pix_fmt", "yuv420p",
-                "-preset", FFMPEG_PRESET,
-            ] + _quality_args(QUALITY_CQ + 2) + ["-c:a", "aac", "-b:a", "320k"] + loudnorm_args + ["-movflags", "+faststart", sq_output]
+                "-map", "[outv]", "-map", "0:a?",
+            ] + _video_args(QUALITY_CQ + 2) + ["-c:a", "aac", "-b:a", "320k"] + loudnorm_args + ["-movflags", "+faststart", sq_output]
         })
 
     return jobs
@@ -432,7 +477,7 @@ print(f"🎬 מתחיל עיבוד קבוצתי{' (DRY-RUN - סימולציה ב
 print(f"נתיב מנוע FFmpeg: {FFMPEG_EXE}")
 print(f"תיקיית קליפים (Import): {VIDEO_DIR}")
 print(f"תיקיית ייצוא (Export): {OUTPUT_BASE_DIR}")
-print(f"מקודד פעיל: {ENCODER} | שקיפות לוגו: {int(OPACITY * 100)}% | רינדורים מקביליים: {MAX_CONCURRENT_RENDERS}")
+print(f"מקודד פעיל: {_video_args(QUALITY_CQ)[1]} | שקיפות לוגו: {int(OPACITY * 100)}% | רינדורים מקביליים: {MAX_CONCURRENT_RENDERS}")
 print(f"פורמט מרובע: {'פעיל' if ENABLE_SQUARE else 'כבוי'} | נרמול שמע: {'פעיל' if ENABLE_LOUDNORM else 'כבוי'} | Instagram Reels: {'פעיל' if ENABLE_INSTAGRAM else 'כבוי'}")
 print("--------------------------------------------------")
 sys.stdout.flush()

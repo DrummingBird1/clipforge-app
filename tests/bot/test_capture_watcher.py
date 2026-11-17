@@ -20,6 +20,16 @@ def test_list_video_files_finds_recognized_extensions_only(tmp_path):
     assert set(result.keys()) == {"clip.mp4", "clip.mkv"}
 
 
+def test_stream_and_console_formats_are_picked_up_too(tmp_path):
+    """16.11.2026: .ts (OBS/Steam/לכידה), .flv ו-.m4v - המאזין דילג עליהם, וגם עורך-העל והשרשור האוטומטי."""
+    from entrypoints import web_app
+    from utils.video import editor_projects
+    for name in ("a.ts", "b.flv", "c.M4V"):
+        (tmp_path / name).write_bytes(b"x")
+    assert set(list_video_files(str(tmp_path))) == {"a.ts", "b.flv", "c.M4V"}
+    assert ".ts" in web_app.EDITOR_VIDEO_EXTENSIONS and ".m4v" in editor_projects._VIDEO_EXTENSIONS
+
+
 def test_list_video_files_ignores_subdirectories(tmp_path):
     (tmp_path / "sub").mkdir()
     (tmp_path / "sub" / "nested.mp4").write_bytes(b"x")

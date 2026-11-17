@@ -103,6 +103,7 @@ These are not in the repository; `dev/build_portable.py` adds them to `ClipForge
 | psutil | 7.2.2 | BSD-3-Clause |
 | pyasn1 | 0.6.4 | BSD-2-Clause |
 | pyasn1_modules | 0.4.2 | BSD License |
+| pyaudiowpatch | 0.2.12.9 | Apache-2.0 (bundles PortAudio, MIT) |
 | pycparser | 3.11 | BSD-3-Clause |
 | pydantic | 2.14.0 | MIT |
 | pydantic_core | 2.50.0 | MIT |

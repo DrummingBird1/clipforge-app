@@ -178,12 +178,13 @@ def test_lazy_html_is_cut_from_the_served_page_and_loaded_before_the_screen_js()
     # סבב ייצוב: ה-HTML של עורך הגרפים (המסך ושני החלונות שלו) לא בדף שהשרת מגיש - רק <template> במקומו
     shell, page, inline = fa._html_shell(), fa.assemble_page(), fa.assemble_inline_page()
     # 23.10.2026: גם מסך "תוצרים", מרכז ההתראות ומסך "📱 בטלפון" (אזור אחד לכל אחד)
-    assert fa.lazy_html_names() == ["dataviz", "notifications", "outputs", "phone"]
-    assert shell.count("<!-- lazy-html:") == shell.count("<!-- /lazy-html:") == 5
+    assert fa.lazy_html_names() == ["dataviz", "notifications", "outputs", "phone", "recording"]
+    assert shell.count("<!-- lazy-html:") == shell.count("<!-- /lazy-html:") == 6   # 16.11.2026: + מסך ההקלטה
     assert "lazy-html:" not in page and page.count('<template data-lazy-html="dataviz"></template>') == 2
     assert page.count('<template data-lazy-html="outputs"></template>') == 1
     assert page.count('<template data-lazy-html="notifications"></template>') == 1
     assert page.count('<template data-lazy-html="phone"></template>') == 1
+    assert page.count('<template data-lazy-html="recording"></template>') == 1
     for fragment in fa.lazy_html_fragments("dataviz"):
         assert fragment not in page and fragment in inline       # הדף המלא של הטסטים - כמו שהיה
     for marker in ('id="dvzEpisodes"', 'id="dvzNewDialog"', 'id="dvzHelpBg"', 'id="dvzWizardBg"'):

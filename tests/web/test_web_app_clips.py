@@ -158,6 +158,23 @@ def test_api_clips_lists_mp4_files_newest_first(tmp_path, monkeypatch):
     assert names == ["new.mp4", "old.mp4"]
 
 
+def test_api_clips_includes_the_story_cutter_game_subfolders(tmp_path, monkeypatch):
+    """16.11.2026: story_cutter ממיין קליפים לתתי-תיקיות לפי משחק - הגלריה ראתה רק את השורש."""
+    monkeypatch.setattr(web_app, "CLIPS_DIR", str(tmp_path))
+    (tmp_path / "root.mp4").write_bytes(b"r")
+    game = tmp_path / "Rocket League"
+    game.mkdir()
+    (game / "goal.mp4").write_bytes(b"g")
+    (game / "goal.MP4.part").write_bytes(b"x")
+
+    clips = client.get("/api/clips").json()
+
+    by_name = {c["name"]: c for c in clips}
+    assert set(by_name) == {"root.mp4", "goal.mp4"}
+    assert by_name["goal.mp4"]["folder"] == "Rocket League" and by_name["root.mp4"]["folder"] == ""
+    assert client.get("/api/clips/stream", params={"path": by_name["goal.mp4"]["path"]}).status_code != 400
+
+
 # --- /api/clips/thumbnail (item: gallery thumbnails) ---
 
 def test_api_clips_thumbnail_rejects_path_outside_clips_dir(tmp_path, monkeypatch):
@@ -797,3 +814,89 @@ def test_api_waveform_reports_error_for_unreadable_file(tmp_path):
 
     assert resp.status_code == 500
     assert "error" in resp.json()
+
+
+# --- 16.11.2026 (2.0): /api/publish/package - חבילת העלאה ל-TikTok / Reels / Twitch / Kick ---
+
+def test_publish_package_builds_a_folder_for_the_platform(tmp_path, monkeypatch):
+    monkeypatch.setattr(web_app, "CLIPS_DIR", str(tmp_path / "clips"))
+    monkeypatch.setattr(web_app, "WORKSPACE_DIR", str(tmp_path / "ws"))
+    (tmp_path / "clips").mkdir()
+    clip = tmp_path / "clips" / "goal.mp4"
+    clip.write_bytes(b"v")
+    import utils.media.ffprobe_cache as fc
+    monkeypatch.setattr(fc, "probe_video", lambda p: {"width": 1080, "height": 1920, "duration": 12})
+
+    resp = client.post("/api/publish/package", json={"path": str(clip), "platform": "reels", "title": "גול",
+                                                     "description": "מהמשחק", "tags": "RL, goal"})
+
+    data = resp.json()
+    assert resp.status_code == 200 and data["platform"] == "reels" and data["warnings"] == []
+    assert data["caption"] == "גול\n\nמהמשחק\n\n#RL #goal"
+    assert os.path.isfile(os.path.join(data["folder"], "goal.mp4"))
+    assert data["folder"].startswith(str(tmp_path / "ws" / "upload_packages"))
+
+
+def test_publish_package_refuses_unknown_platforms_and_files_outside(tmp_path, monkeypatch):
+    monkeypatch.setattr(web_app, "CLIPS_DIR", str(tmp_path / "clips"))
+    (tmp_path / "clips").mkdir()
+    clip = tmp_path / "clips" / "a.mp4"
+    clip.write_bytes(b"v")
+    assert client.post("/api/publish/package", json={"path": str(clip), "platform": "youtube"}).status_code == 400
+    outside = tmp_path / "x.mp4"
+    outside.write_bytes(b"v")
+    assert client.post("/api/publish/package", json={"path": str(outside), "platform": "tiktok"}).status_code == 400
+    assert {p["id"] for p in client.get("/api/publish/platforms").json()["platforms"]} >= {"tiktok", "kick"}
+
+
+# --- 16.11.2026 (2.0): פרקים, Shorts, תזמון וכתוביות בהעלאה ליוטיוב ---
+
+def test_youtube_export_adds_chapters_shorts_schedule_and_captions(tmp_path, monkeypatch):
+    from utils.bot import youtube_extras
+    import utils.media.ffprobe_cache as fc
+    _reset_youtube_upload_state()
+    monkeypatch.setattr(web_app, "CLIPS_DIR", str(tmp_path))
+    clip = tmp_path / "goal.mp4"
+    clip.write_bytes(b"x")
+    (tmp_path / "goal.srt").write_text("1", encoding="utf-8")
+    monkeypatch.setattr(web_app, "generate_seo_with_sheet", MagicMock(return_value=_fake_seo()))
+    monkeypatch.setattr(web_app.youtube_uploader, "is_configured", lambda: True)
+    monkeypatch.setattr(fc, "probe_video", lambda p: {"width": 1080, "height": 1920, "duration": 60})
+    monkeypatch.setattr(youtube_extras, "read_chapters", lambda *a, **k: [(0, "א"), (15, "ב"), (35, "ג")])
+    captions = []
+    monkeypatch.setattr(youtube_extras, "upload_captions", lambda vid, srt, **k: captions.append((vid, srt)))
+    calls = {}
+
+    def fake_upload(path, title, description="", tags=None, privacy_status="private", progress_callback=None, publish_at=None):
+        calls.update(description=description, publish_at=publish_at)
+        return "vid-1"
+
+    monkeypatch.setattr(web_app.youtube_uploader, "upload_video", fake_upload)
+    monkeypatch.setattr(web_app.threading, "Thread", _ImmediateThread)
+
+    resp = client.post("/api/clips/youtube_export", json={"path": str(clip), "publish_at": "2099-01-01T10:00:00+00:00"})
+
+    assert resp.status_code == 200
+    assert calls["publish_at"] == "2099-01-01T10:00:00Z"
+    assert "00:00 א\n00:15 ב\n00:35 ג" in calls["description"] and calls["description"].endswith("#Shorts")
+    assert captions == [("vid-1", str(tmp_path / "goal.srt"))]
+
+
+def test_youtube_export_refuses_a_schedule_in_the_past(tmp_path, monkeypatch):
+    monkeypatch.setattr(web_app, "CLIPS_DIR", str(tmp_path))
+    clip = tmp_path / "a.mp4"
+    clip.write_bytes(b"x")
+    resp = client.post("/api/clips/youtube_export", json={"path": str(clip), "publish_at": "2020-01-01T10:00:00Z"})
+    assert resp.status_code == 400
+
+def test_send_to_discord_queues_the_clip_for_the_bot(tmp_path, monkeypatch):
+    from utils.bot import discord_outbox
+    monkeypatch.setattr(discord_outbox, "DB_PATH", str(tmp_path / "bot.db"))
+    monkeypatch.setattr(web_app, "CLIPS_DIR", str(tmp_path / "clips"))
+    (tmp_path / "clips").mkdir()
+    clip = tmp_path / "clips" / "goal.mp4"
+    clip.write_bytes(b"v")
+    data = client.post("/api/publish/discord", json={"path": str(clip)}).json()
+    assert data["ok"] and data["channel_set"] is False
+    assert discord_outbox.pending()[0]["path"].endswith("goal.mp4")
+    assert client.get("/api/publish/discord").json()["recent"][0]["status"] == "pending"
