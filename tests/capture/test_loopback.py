@@ -75,3 +75,16 @@ def test_the_sender_says_when_it_is_connected():
     from utils.capture import loopback
     sender = loopback.LoopbackSender(1, 48000, 2)
     assert not sender.connected.is_set() and sender.error is None
+
+
+def test_clearing_the_pacer_drops_what_was_queued_and_restarts_its_clock():
+    from utils.capture import loopback
+    clock = Clock()
+    pacer = loopback.PcmPacer(48000, 2, clock=clock)
+    pacer.push(b"\x01" * 4000)
+    pacer.pull()
+    clock.now += 0.5
+    pacer.clear()
+    assert pacer.pull() == b""                                   # השעון התחיל מחדש: עוד לא עבר זמן
+    clock.now += 0.01
+    assert pacer.pull() == bytes(1920)                           # 10ms של שקט - מה שהיה בתור נזרק

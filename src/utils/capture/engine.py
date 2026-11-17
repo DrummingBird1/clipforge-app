@@ -145,6 +145,8 @@ class FfmpegEngine:
         if spec.source != "screen" or not spec.game_audio_port or self._loopback_factory is None:
             return None
         sender = self._loopback_factory(spec.game_audio_port, spec.game_audio_rate, spec.game_audio_channels)
+        if hasattr(sender, "start_mono"):
+            sender.start_mono = spec.clock_mono
         sender.start()
         self._loopbacks[slot] = sender
         return sender
@@ -162,6 +164,7 @@ class FfmpegEngine:
 
     def _launch(self, spec: CaptureSpec, slot: str) -> FfmpegProcess:
         """מפעיל ffmpeg ומחכה שהוא באמת מקליט: לא נפל מיד, ושמע המשחק (אם יש) התחבר."""
+        spec.clock_wall, spec.clock_mono = time.time(), time.monotonic()   # רגע ההתחלה המשותף לכל הקלטים (command.py)
         process = self._factory(build_command(self.ffmpeg_exe, spec), creationflags=self.creationflags)
         orphans.remember(self._pid_file, getattr(process, "pid", None))
         sender = self._with_loopback(spec, slot)

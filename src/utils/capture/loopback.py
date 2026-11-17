@@ -22,6 +22,7 @@ SAMPLE_BYTES = 2           # s16le
 TICK_SECONDS = 0.01
 CONNECT_TIMEOUT_SECONDS = 10.0
 SEND_TIMEOUT_SECONDS = 30.0
+MAX_LEAD_SECONDS = 60.0
 
 
 class PcmPacer:
@@ -45,6 +46,13 @@ class PcmPacer:
             self._queued += len(data)
             while self._queued > self.max_lag_bytes and len(self._queue) > 1:
                 self._queued -= len(self._queue.popleft())
+
+    def clear(self) -> None:
+        """זורק את מה שבתור ומתחיל את השעון מחדש."""
+        with self._lock:
+            self._queue.clear()
+            self._queued = 0
+        self._start, self._sent = None, 0
 
     def pull(self) -> bytes:
         now = self._clock()
@@ -120,6 +128,7 @@ class LoopbackSender:
 
     def __init__(self, port: int, rate: int, channels: int):
         self.port, self.rate, self.channels = port, rate, channels
+        self.start_mono = 0.0     # רגע ההתחלה המשותף של ההקלטה (time.monotonic()); 0 = בלי יישור
         self.error: Optional[str] = None
         self.connected = threading.Event()
         self._stop = threading.Event()
@@ -168,6 +177,12 @@ class LoopbackSender:
                 self.error = "ffmpeg לא קיבל את חיבור השמע"
                 return
             conn.settimeout(SEND_TIMEOUT_SECONDS)
+            if self.start_mono:
+                # 17.11.2026: הזרם מתחיל ברגע ההתחלה המשותף. שקט באורך הזמן שעבר מאז (ffmpeg נפתח, התחברנו), ומה שנאסף
+                # לפני החיבור נזרק - כך הדגימה הראשונה של השמע האמיתי יושבת בדיוק בזמן שבו היא הוקלטה.
+                pacer.clear()
+                lead = min(MAX_LEAD_SECONDS, max(0.0, time.monotonic() - self.start_mono))
+                conn.sendall(bytes(int(lead * self.rate) * pacer.frame_bytes))
             self.connected.set()
             while not self._stop.is_set():
                 chunk = pacer.pull()

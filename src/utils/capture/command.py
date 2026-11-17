@@ -33,6 +33,9 @@ class CaptureSpec:
     device_codec: Optional[str] = None         # pixel_format / vcodec של המצב
     device_fps: Optional[str] = None           # הקצב המדויק של המצב ("59.94") ל-dshow; fps נשאר שלם בשביל ה-GOP
     note: str = ""                             # הערה למשתמש על המצב שנבחר (כרטיס שנותן פחות ממה שהכריז)
+    # 17.11.2026: רגע ההתחלה המשותף לכל הקלטים (המנוע קובע אותו רגע לפני שהוא מפעיל את ffmpeg). 0 = בלי יישור, כמו ב-2.0.0.
+    clock_wall: float = 0.0                    # time.time() - לכידת המסך נחתמת בשעון הקיר
+    clock_mono: float = 0.0                    # time.monotonic() - השעון של DirectShow (כרטיס לכידה, מיקרופון, מצלמה)
     game_audio_port: int = 0                   # loopback של המחשב (source=screen): ffmpeg מאזין ב-tcp://127.0.0.1:<port>
     game_audio_rate: int = PCM_RATE
     game_audio_channels: int = PCM_CHANNELS
@@ -62,6 +65,20 @@ def title_args(spec: "CaptureSpec", key: str) -> List[str]:
     return args
 
 
+# 17.11.2026 (2.0.1): כל הקלטים על שעון אחד. ffmpeg מאפס כל קלט לזמן שבו הוא עצמו נפתח, והקלטים נפתחים אחד אחרי השני -
+# אז כל ערוץ התחיל בזמן אחר: בהקלטת מסך השמע הקדים את התמונה ב-0.3 שנייה (נמדד בהבהוב וצפצוף), ומיקרופון ומצלמה זזו
+# לפי כמה זמן לקח להם להיפתח. עכשיו לכל קלט מוחסר אותו רגע התחלה, ו--copyts שומר על ההפרשים ביניהם:
+#   - לכידת מסך (ddagrab / gdigrab חותמים מ-0): חותמת של שעון הקיר, פחות clock_wall.
+#   - DirectShow: החותמות שלו הן השעון של time.monotonic(), פחות clock_mono.
+#   - שמע המשחק (PCM בלי חותמות): השולח מוסיף בתחילת הזרם שקט באורך הזמן שעבר מאז clock_mono (loopback.py).
+def _screen_clock(spec: "CaptureSpec") -> List[str]:
+    return ["-use_wallclock_as_timestamps", "1", "-itsoffset", f"{-spec.clock_wall:.6f}"] if spec.clock_wall else []
+
+
+def _dshow_clock(spec: "CaptureSpec") -> List[str]:
+    return ["-itsoffset", f"{-spec.clock_mono:.6f}"] if spec.clock_mono else []
+
+
 def _dshow_device(kind: str, name: str) -> str:
     return f"{kind}={name}"
 
@@ -77,10 +94,10 @@ def build_command(ffmpeg_exe: str, spec: CaptureSpec) -> List[str]:
 
     if spec.source == "screen":
         if spec.use_gdigrab:
-            cmd += ["-thread_queue_size", "512", "-f", "gdigrab", "-framerate", str(spec.fps), "-i", "desktop"]
+            cmd += _screen_clock(spec) + ["-thread_queue_size", "512", "-f", "gdigrab", "-framerate", str(spec.fps), "-i", "desktop"]
             filters.append(f"[{inputs}:v]format=yuv420p[game]")
         else:
-            cmd += ["-f", "lavfi", "-i", f"ddagrab=output_idx={spec.screen_index}:framerate={spec.fps}"]
+            cmd += _screen_clock(spec) + ["-f", "lavfi", "-i", f"ddagrab=output_idx={spec.screen_index}:framerate={spec.fps}"]
             filters.append(f"[{inputs}:v]hwdownload,format=bgra,format=yuv420p[game]")
         video_maps.append("[game]")
         inputs += 1
@@ -96,7 +113,7 @@ def build_command(ffmpeg_exe: str, spec: CaptureSpec) -> List[str]:
         device = _dshow_device("video", spec.device_video)
         if spec.device_audio:
             device += ":" + _dshow_device("audio", spec.device_audio)
-        cmd += ["-thread_queue_size", "1024", "-f", "dshow", "-rtbufsize", "512M"]
+        cmd += _dshow_clock(spec) + ["-thread_queue_size", "1024", "-f", "dshow", "-rtbufsize", "512M"]
         if spec.device_size:
             cmd += ["-video_size", spec.device_size]
         if spec.device_codec:
@@ -109,15 +126,17 @@ def build_command(ffmpeg_exe: str, spec: CaptureSpec) -> List[str]:
         inputs += 1
 
     if spec.mic:
-        cmd += ["-thread_queue_size", "1024", "-f", "dshow", "-i", _dshow_device("audio", spec.mic)]
+        cmd += _dshow_clock(spec) + ["-thread_queue_size", "1024", "-f", "dshow", "-i", _dshow_device("audio", spec.mic)]
         audio_maps.append(f"{inputs}:a")
         inputs += 1
     if spec.facecam:
-        cmd += ["-thread_queue_size", "512", "-f", "dshow", "-i", _dshow_device("video", spec.facecam)]
+        cmd += _dshow_clock(spec) + ["-thread_queue_size", "512", "-f", "dshow", "-i", _dshow_device("video", spec.facecam)]
         filters.append(f"[{inputs}:v]format=yuv420p[cam]")
         video_maps.append("[cam]")
         inputs += 1
 
+    if spec.clock_wall or spec.clock_mono:
+        cmd += ["-copyts"]
     cmd += ["-filter_complex", ";".join(filters)]
     for label in video_maps:
         cmd += ["-map", label]

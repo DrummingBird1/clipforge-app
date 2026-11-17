@@ -132,3 +132,23 @@ def test_recordings_are_written_at_a_constant_frame_rate():
     assert _pick_frame_rate("30000/1001", "30000/1001") == "30000/1001"
     assert _pick_frame_rate("90/1", "41300/1000") == "41300/1000"            # ממוצע שלא קרוב לשום קצב נפוץ
     assert _pick_frame_rate("0/0", "25/1") == "25/1" and _pick_frame_rate(None, None) is None
+
+
+def test_every_input_is_put_on_one_clock():
+    # 2.0.1: בהקלטת מסך השמע הקדים את התמונה ב-0.3 שנייה (נמדד), כי ffmpeg מאפס כל קלט לרגע שבו הוא נפתח
+    spec = CaptureSpec(game_audio_port=50123, mic="Mic (USB)", facecam="Cam", output="out.mkv", clock_wall=1794936436.5, clock_mono=333555.25)
+    cmd = build_command("ffmpeg", spec)
+    screen = cmd.index("ddagrab=output_idx=0:framerate=60")
+    assert cmd[screen - 7:screen - 3] == ["-use_wallclock_as_timestamps", "1", "-itsoffset", "-1794936436.500000"]
+    for device in ("audio=Mic (USB)", "video=Cam"):
+        i = cmd.index(device)
+        before = cmd[:i]
+        assert before[len(before) - 1 - before[::-1].index("-itsoffset") + 1] == "-333555.250000", device
+    tcp = next(i for i, part in enumerate(cmd) if part.startswith("tcp://"))
+    assert "-itsoffset" not in cmd[screen + 1:tcp]            # שמע המשחק בלי היסט: השולח ממלא שקט עד רגע ההתחלה
+    assert "-copyts" in cmd and cmd.index("-copyts") < cmd.index("-filter_complex")
+    card = build_command("ffmpeg", CaptureSpec(source="device", device_video="Card", device_audio="Card Audio", output="o.mkv",
+                                               clock_wall=5.0, clock_mono=7.5))
+    assert card[card.index("dshow") - 5:card.index("dshow") - 3] == ["-itsoffset", "-7.500000"] and "-use_wallclock_as_timestamps" not in card
+    plain = build_command("ffmpeg", CaptureSpec(game_audio_port=50123, output="out.mkv"))
+    assert "-copyts" not in plain and "-itsoffset" not in plain    # בלי רגע התחלה (בדיקות ישנות, כלים אחרים) - הפקודה כמו קודם
