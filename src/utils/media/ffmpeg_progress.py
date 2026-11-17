@@ -183,8 +183,11 @@ def run_ffmpeg_with_progress_and_nvenc_retry(
     is_nvenc: bool = False, max_retries: int = 6, retry_delay_seconds: float = 15.0,
     backoff_factor: float = 1.8, max_retry_delay_seconds: float = 90.0, control: Optional[ControlFn] = None,
     on_stderr: Optional[Callable[[str], None]] = None,
+    on_failure: Optional[Callable[[str], None]] = None,
 ) -> bool:
-    """כמו run_ffmpeg_with_progress, עם ניסיון חוזר אוטומטי (item: תור/המתנה
+    """on_failure(stderr_tail) - 17.11.2026: נקרא כשהקידוד נכשל סופית, כדי שהקורא יחליט אם לנסות מקודד אחר.
+
+    כמו run_ffmpeg_with_progress, עם ניסיון חוזר אוטומטי (item: תור/המתנה
     כש-NVENC session-limited, במקום להיכשל) - רק כש-is_nvenc=True *וגם*
     ה-stderr מכיל אחד מהסימנים המוכרים למגבלת-session שהושגה
     (_NVENC_SESSION_LIMIT_MARKERS) - לא לכל כשל NVENC, כדי לא להסתיר כשלים
@@ -206,8 +209,12 @@ def run_ffmpeg_with_progress_and_nvenc_retry(
         if ok and on_stderr is not None:
             on_stderr(stderr_tail)   # 24.10.2026: למשל הסיכום של loudnorm בסוף הקידוד (video_editor.py, LUFS על הפלט)
         if ok or not is_nvenc or attempt > max_retries:
+            if not ok and on_failure is not None:
+                on_failure(stderr_tail)
             return ok
         if not any(marker in stderr_tail.lower() for marker in _NVENC_SESSION_LIMIT_MARKERS):
+            if on_failure is not None:
+                on_failure(stderr_tail)
             return False
         delay = compute_backoff_delay(attempt - 1, retry_delay_seconds, backoff_factor, max_retry_delay_seconds)
         delay *= random.uniform(0.85, 1.15)

@@ -175,3 +175,18 @@ def test_only_the_environment_variable_skips_the_check(monkeypatch):
 def test_no_ffmpeg_means_no_answer(tmp_path, monkeypatch):
     monkeypatch.setenv("CLIPFORGE_WORKSPACE_DIR", str(tmp_path / "ws"))
     assert encoders.detect_backends(str(tmp_path / "missing" / "ffmpeg.exe")) is None
+
+
+def test_a_card_encoder_that_fails_in_the_render_is_recognised():
+    # 2.0.1: הבדיקה לפני הרינדור קטנה (256x144, 8 ביט). כרטיס שעבר אותה ונפל ברינדור האמיתי - מנסים שוב במעבד.
+    amd = "[hevc_amf @ 000001] CreateComponent(AMFVideoEncoderHW_HEVC) failed" + chr(10) + "Error while opening encoder"
+    assert encoders.is_encoder_failure(amd, "hevc", "amf")
+    assert encoders.is_encoder_failure("[av1_qsv @ 0x1] Error initializing the encoder", "av1", "qsv")
+    assert encoders.is_encoder_failure("Error initializing output stream: could not open encoder", "hevc", "nvenc")
+    assert not encoders.is_encoder_failure("No space left on device", "hevc", "nvenc")          # דיסק מלא - לא המקודד
+    assert not encoders.is_encoder_failure("[Parsed_scale_0] Invalid size", "hevc", "amf")       # פילטר - לא המקודד
+    assert not encoders.is_encoder_failure(amd, "hevc", "cpu") and not encoders.is_encoder_failure(amd, "h264", "amf")
+    cmd = ["ffmpeg", "-i", "in.mp4"] + encoders.codec_args("hevc", "amf") + ["out.mp4"]
+    swapped = encoders.swap_args(cmd, encoders.codec_args("hevc", "amf"), encoders.codec_args("hevc", "cpu"))
+    assert swapped == ["ffmpeg", "-i", "in.mp4", "-c:v", "libx265", "-preset", "slow", "-crf", "22", "out.mp4"]
+    assert encoders.swap_args(cmd, ["-c:v", "nope"], ["x"]) is None and encoders.swap_args(cmd, [], ["x"]) is None

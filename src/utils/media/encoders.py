@@ -67,6 +67,29 @@ def forced_by_env() -> Optional[str]:
     return env if env in CHOICES else None
 
 
+# 17.11.2026: סימנים ב-stderr של ffmpeg לכך שהמקודד של הכרטיס הוא שנכשל (ולא פילטר, קובץ חסר או דיסק מלא)
+ENCODER_FAILURE_MARKERS = ("error while opening encoder", "could not open encoder", "no capable devices found",
+                           "error initializing output stream", "encoder not found", "cannot load", "driver does not support",
+                           "failed to create", "not supported by the device")
+
+
+def is_encoder_failure(stderr_tail: str, codec: str, backend: str) -> bool:
+    """True כשהכישלון נראה כמו כישלון של מקודד החומרה עצמו: הבדיקה לפני הרינדור עברה (256x144, 8 ביט), והרינדור האמיתי
+    (רזולוציה, 10 ביט, דרייבר שנתקע) נפל. אז שווה לנסות שוב במעבד, במקום לסמן את הקובץ כנכשל."""
+    if backend not in HARDWARE or codec not in GPU_CODECS:
+        return False
+    text = (stderr_tail or "").lower()
+    return f"[{_ENCODER_NAMES[(backend, codec)]} @" in text or any(marker in text for marker in ENCODER_FAILURE_MARKERS)
+
+
+def swap_args(cmd: List[str], old: List[str], new: List[str]) -> Optional[List[str]]:
+    """cmd עם new במקום הרצף old, או None כש-old לא נמצא בו."""
+    for index in range(len(cmd) - len(old) + 1):
+        if old and cmd[index:index + len(old)] == old:
+            return cmd[:index] + list(new) + cmd[index + len(old):]
+    return None
+
+
 def _amf_qp(codec: str, quality: str) -> str:
     return str(min(255, int(quality) * AMF_AV1_QP_SCALE)) if codec == "av1" else quality
 

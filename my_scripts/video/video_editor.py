@@ -2051,10 +2051,29 @@ def process_video(video_path, results, output_dir, overrides=None, variant=None,
     # ואז ייתקלו בכשל session-limit שהניסיון-החוזר הקיים צריך לספוג בדיעבד.
     nvenc_guard = cfg.NVENC_SEMAPHORE if cfg.NVENC_SEMAPHORE is not None else contextlib.nullcontext()
     encode_stderr = []   # 24.10.2026: הסוף של ה-stderr של הקידוד - הסיכום של loudnorm (LUFS על הפלט, בלי מעבר נוסף)
+    encode_failure = []  # 17.11.2026: הסוף של ה-stderr כשהקידוד נכשל - כדי לזהות כישלון של מקודד הכרטיס
+    locals_bitrate = locals().get("bitrate_kbps")   # קיים רק ביעד גודל קובץ
     try:
         with nvenc_guard:
             ok = run_ffmpeg_with_progress_and_nvenc_retry(cmd, total_frames, progress_label, is_nvenc=cfg.CODEC in ("hevc", "av1"), control=_file_control(filename),
-                                                          on_stderr=encode_stderr.append)
+                                                          on_stderr=encode_stderr.append, on_failure=encode_failure.append)
+            # 17.11.2026: המקודד של הכרטיס נכשל ברינדור עצמו (הבדיקה המוקדמת עברה) - ניסיון אחד נוסף במעבד, במקום קובץ שנכשל.
+            # לא במצב שני מעברים (המעבר הראשון כבר נעשה בכרטיס) ולא כשהפריימים נשארים על ה-GPU (--hwaccel מלא).
+            cpu_cmd = None
+            if (ok is False and encode_failure and passlog_path is None and not use_hwaccel_for_file
+                    and encoders.is_encoder_failure(encode_failure[-1], cfg.CODEC, cfg.ENCODER_BACKEND)):
+                for build in (lambda backend: get_codec_args(cfg.CODEC, preset=file_nvenc_preset, cq=cfg.CODEC_QUALITY, backend=backend),
+                              lambda backend: get_two_pass_codec_args(cfg.CODEC, locals_bitrate, 2, "", preset=file_nvenc_preset, backend=backend)):
+                    try:
+                        cpu_cmd = cpu_cmd or encoders.swap_args(cmd, build(cfg.ENCODER_BACKEND), build("cpu"))
+                    except (TypeError, ValueError):
+                        continue
+            if cpu_cmd:
+                print(f"[WARN] {filename}: הקידוד ב-{encoders.LABELS[cfg.ENCODER_BACKEND]} נכשל - מנסה שוב במעבד "
+                      f"({encoders.encoder_name(cfg.CODEC, 'cpu')}). זה איטי יותר.")
+                sys.stdout.flush()
+                ok = run_ffmpeg_with_progress_and_nvenc_retry(cpu_cmd, total_frames, progress_label, is_nvenc=False,
+                                                              control=_file_control(filename), on_stderr=encode_stderr.append)
     except FfmpegCancelled:
         # item 95: בוטל מהווב באמצע הקידוד - מנקים את הפלט החלקי, ממשיכים לקבצים הבאים
         ok = None
