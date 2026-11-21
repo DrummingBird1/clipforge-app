@@ -2,16 +2,18 @@
 
 What we'd like ClipForge to do next, by area. Nothing here is a promise or has a date; plans change with what people need. Shipped changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
-## Next: 1.2
+## Where we are: 2.0.1
 
-- The good first issues in [milestone 1.2](https://github.com/DrummingBird1/clipforge-app/milestone/1).
-- Splitting a long recording into Shorts.
-- Public CI.
+ClipForge 2.0.1 is the current release (2026-11-17). It added the Recording screen (screen, PC games and consoles through a capture card, a replay buffer, OBS control), importing clips from other recorders, long recording to Shorts with zoom, slow motion and face tracking, and public CI. Everything shipped is in [CHANGELOG.md](CHANGELOG.md).
+
+## Next: 2.0.x
+
+- Testing recording and encoding on more hardware: other capture cards and AMD graphics cards.
+- Uploading to TikTok and Instagram through their APIs (today ClipForge prepares an upload package for them).
+- A steadier browser test (the focus ring one), and working through the open CodeQL alerts.
 
 ## Studio
 
-- Splitting a long recording into several Shorts, one per highlight.
-- An automatic punch-in zoom at highlights.
 - A vertical crop that follows the action (scene-aware reframe).
 - Keyword highlighting in captions, and automatic chapters.
 - Automatic blurring of faces, usernames and chat on screen.
@@ -30,10 +32,8 @@ What we'd like ClipForge to do next, by area. Nothing here is a promise or has a
 
 ## Distribution
 
-- Public CI and CodeQL code scanning.
-- Releases built and attested by CI from a tag.
-- Installing with winget (Scoop works already, see the README).
-- A documentation site.
+- Installing with winget: the package is submitted and waiting for review (Scoop works already, see the README).
+- Done: public CI, CodeQL code scanning, releases built and attested by CI from a tag, and a documentation site.
 
 ## Get involved
 
