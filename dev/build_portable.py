@@ -8,7 +8,8 @@
 #   python/                       - CPython מההתקנה שמריצה את הסקריפט (sys.base_prefix), עם ספריות זמן הריצה מ-uv.lock
 #                                   (בלי קבוצת dev, ובלי pyautogui ותלויות ה-GPL שלו - רק כלי פיתוח משתמש בהם)
 #   ffmpeg/                       - ffmpeg.exe + ffprobe.exe + הרישיון שלהם, מ---ffmpeg (תיקייה או zip של build). בלי --ffmpeg:
-#                                   ה-build שמוצמד ב-release.yml (FFMPEG_ZIP), מ-CLIPFORGE_FFMPEG או מ-media/ffmpeg/ מעל הריפו
+#                                   ה-build שמוצמד ב-release.yml (FFMPEG_ZIP), מ-CLIPFORGE_FFMPEG או מ-media/tools/ffmpeg/
+#                                   (או media/ffmpeg/) מעל הריפו
 #   src/, my_scripts/, assets/, docs/, README.md, LICENSE, THIRD_PARTY_NOTICES.md, CHANGELOG.md - הקבצים שבמעקב ב-HEAD
 #   portable.json                 - הסימן: "יש גרסה חדשה" מציג קישור ל-Release במקום git pull (utils/shared/update_checker)
 # ליד ה-zip: SHA256SUMS.txt בפורמט של sha256sum - release.yml מצרף אותו ל-Release, ומי שהוריד בודק איתו את ה-zip.
@@ -52,7 +53,7 @@ RUNTIME_SKIP_DIRS = {"site-packages", "test", "tests", "idlelib", "ensurepip", "
 REQUIRED_ENCODERS = ("libx264",)
 REQUIRED_FILTERS = ("vidstabdetect", "vidstabtransform", "zscale", "drawtext")
 # 30.10.2026: ברירת המחדל של --ffmpeg - אותו build ש-.github/workflows/release.yml מוריד ובודק (gyan essentials, ‏GPLv3).
-# CLIPFORGE_FFMPEG גובר; אחרת media/ffmpeg/<FFMPEG_DIR>/<FFMPEG_ZIP> בתיקיית הריפו או באחת שמעליה
+# CLIPFORGE_FFMPEG גובר; אחרת media/tools/ffmpeg/<FFMPEG_DIR>/<FFMPEG_ZIP> (או media/ffmpeg/...) בתיקיית הריפו או באחת שמעליה
 FFMPEG_ZIP = "ffmpeg-9.0.2-essentials_build.zip"
 FFMPEG_DIR = "9.0.2-essentials"
 FFMPEG_SHA256 = "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba"
@@ -155,15 +156,17 @@ def missing_ffmpeg_features(encoders_text, filters_text):
 
 
 def default_ffmpeg(root=ROOT, environ=None):
-    """ה-zip של ffmpeg כשאין --ffmpeg: CLIPFORGE_FFMPEG, או media/ffmpeg/<FFMPEG_DIR>/<FFMPEG_ZIP> מעל root. None = לא נמצא."""
+    """ה-zip של ffmpeg כשאין --ffmpeg: CLIPFORGE_FFMPEG, או <FFMPEG_DIR>/<FFMPEG_ZIP> תחת media/tools/ffmpeg/ (ואם אין,
+    תחת media/ffmpeg/) מעל root. None = לא נמצא."""
     environ = os.environ if environ is None else environ
     if environ.get("CLIPFORGE_FFMPEG"):
         return environ["CLIPFORGE_FFMPEG"]
     current = os.path.abspath(root)
     while True:
-        candidate = os.path.join(current, "media", "ffmpeg", FFMPEG_DIR, FFMPEG_ZIP)
-        if os.path.isfile(candidate):
-            return candidate
+        for folders in (("media", "tools", "ffmpeg"), ("media", "ffmpeg")):
+            candidate = os.path.join(current, *folders, FFMPEG_DIR, FFMPEG_ZIP)
+            if os.path.isfile(candidate):
+                return candidate
         parent = os.path.dirname(current)
         if parent == current:
             return None
@@ -279,7 +282,7 @@ def write_checksums(zip_path):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="בונה dist/ClipForge-<גרסה>-win64.zip - חבילה ניידת ל-Windows")
     parser.add_argument("--ffmpeg", help=f"תיקיית build של ffmpeg (עם bin/ffmpeg.exe) או ה-zip שלו. ברירת מחדל: {FFMPEG_ZIP}, "
-                                         f"מ-CLIPFORGE_FFMPEG או מ-media/ffmpeg/{FFMPEG_DIR}/ מעל הריפו")
+                                         f"מ-CLIPFORGE_FFMPEG או מ-media/tools/ffmpeg/{FFMPEG_DIR}/ מעל הריפו")
     parser.add_argument("--python-home", default=sys.base_prefix, help="התקנת CPython להעתקה (ברירת מחדל: זו שמריצה את הסקריפט)")
     parser.add_argument("--out", default=os.path.join(ROOT, "dist"), help="לאן לכתוב את ה-zip")
     parser.add_argument("--ref", default="HEAD", help="מאיזה commit לקחת את הקבצים (ברירת מחדל: HEAD)")
@@ -295,7 +298,7 @@ def main(argv=None):
     if not ffmpeg:
         ffmpeg = default_ffmpeg()
         if not ffmpeg:
-            raise SystemExit(f"אין ffmpeg: להעביר --ffmpeg, או לשים את {FFMPEG_ZIP} ב-media/ffmpeg/{FFMPEG_DIR}/ מעל הריפו "
+            raise SystemExit(f"אין ffmpeg: להעביר --ffmpeg, או לשים את {FFMPEG_ZIP} ב-media/tools/ffmpeg/{FFMPEG_DIR}/ מעל הריפו "
                              "(או להצביע עליו ב-CLIPFORGE_FFMPEG)")
         check_pinned_zip(ffmpeg)
     version = read_version()

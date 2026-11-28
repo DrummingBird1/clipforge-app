@@ -85,6 +85,18 @@ def test_without_ffmpeg_the_pinned_zip_is_found_above_the_repo(tmp_path):
     assert bp.default_ffmpeg(str(repo), environ={}) is None
 
 
+def test_the_tools_folder_is_searched_before_the_older_media_folder(tmp_path):
+    older = tmp_path / "media" / "ffmpeg" / bp.FFMPEG_DIR / bp.FFMPEG_ZIP
+    tools = tmp_path / "media" / "tools" / "ffmpeg" / bp.FFMPEG_DIR / bp.FFMPEG_ZIP
+    _touch(older)
+    _touch(tools)
+    repo = tmp_path / "projects" / "clipforge"
+    repo.mkdir(parents=True)
+    assert bp.default_ffmpeg(str(repo), environ={}) == str(tools)
+    tools.unlink()
+    assert bp.default_ffmpeg(str(repo), environ={}) == str(older)
+
+
 def test_the_default_zip_must_be_the_exact_file_release_yml_pins(tmp_path, monkeypatch):
     import hashlib
     import pytest
