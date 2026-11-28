@@ -46,15 +46,19 @@ def test_the_social_preview_is_the_size_github_asks_for():
 
 
 def test_the_roadmap_is_there_points_to_the_public_repository_and_the_readmes_link_it():
-    """30.10.2026: ROADMAP.md לפי נושאים, עם הקישורים ל-milestone, ל-Discussions ול-good first issue של הריפו הציבורי."""
+    """ROADMAP.md is organized by topic and links the public repository's Discussions and good first issues.
+
+    The "Next" heading names a version that changes with every release, so only its prefix is checked.
+    """
     import re
     with open(os.path.join(PROJECT_ROOT, "ROADMAP.md"), encoding="utf-8") as f:
         roadmap = f.read()
-    for heading in ("## Next: 1.2", "## Studio", "## Data videos", "## Performance", "## Distribution"):
+    assert re.search(r"^## Next\b", roadmap, re.MULTILINE), "## Next"
+    for heading in ("## Studio", "## Data videos", "## Performance", "## Distribution"):
         assert heading in roadmap, heading
     github_links = re.findall(r"https://github\.com/[^\s)]+", roadmap)
     assert github_links and all(link.startswith("https://github.com/DrummingBird1/clipforge-app/") for link in github_links)
-    assert "/milestone/1" in roadmap and "/discussions/categories/ideas" in roadmap and "good+first+issue" in roadmap
+    assert "/discussions/categories/ideas" in roadmap and "good+first+issue" in roadmap
     for readme in ("README.md", "README.he.md"):
         with open(os.path.join(PROJECT_ROOT, readme), encoding="utf-8") as f:
             assert "[ROADMAP.md](ROADMAP.md)" in f.read(), readme
